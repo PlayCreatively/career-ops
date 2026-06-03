@@ -1016,6 +1016,102 @@ try {
   fail(`recruitee provider tests crashed: ${e.message}`);
 }
 
+// ── 15. PROVIDERS — Hitmarker (games / esports board) ───────────────
+
+console.log('\n15. Provider — hitmarker');
+
+try {
+  const hitmarker = (await import(pathToFileURL(join(ROOT, 'providers/hitmarker.mjs')).href)).default;
+  const { parseHitmarkerResponse } = await import(pathToFileURL(join(ROOT, 'providers/hitmarker.mjs')).href);
+
+  if (hitmarker.id === 'hitmarker') pass('hitmarker.id is "hitmarker"');
+  else fail(`hitmarker.id is ${JSON.stringify(hitmarker.id)}`);
+
+  const hit = hitmarker.detect({ name: 'Hitmarker', careers_url: 'https://hitmarker.net/jobs' });
+  if (hit && hit.url === 'https://search.hitmarker.com/multi_search') {
+    pass('hitmarker.detect() claims hitmarker.net careers URLs');
+  } else {
+    fail(`hitmarker.detect() returned ${JSON.stringify(hit)}`);
+  }
+
+  if (hitmarker.detect({ name: 'X', careers_url: 'https://boards.greenhouse.io/x' }) === null) {
+    pass('hitmarker.detect() returns null for non-hitmarker URLs');
+  } else {
+    fail('hitmarker.detect() should return null for non-hitmarker URLs');
+  }
+
+  // SSRF / spoof guards: lookalike host and path-embedded domain must not match.
+  if (
+    hitmarker.detect({ name: 'Spoof', careers_url: 'https://evil-hitmarker.net' }) === null &&
+    hitmarker.detect({ name: 'Spoof', careers_url: 'https://evil.example/hitmarker.net/jobs' }) === null &&
+    hitmarker.detect({ name: 'X', careers_url: null }) === null
+  ) {
+    pass('hitmarker.detect() rejects lookalike hosts, path-spoofs, and non-string URLs');
+  } else {
+    fail('hitmarker.detect() must reject spoofed/invalid careers URLs');
+  }
+
+  // parseHitmarkerResponse against a Typesense multi_search shape.
+  const sample = {
+    results: [{
+      hits: [
+        {
+          document: {
+            id: '1700866',
+            title: 'Gameplay Programmer',
+            url: 'https://hitmarker.net/jobs/larian-studios-gameplay-programmer-1700866',
+            jobCompany: { title: 'Larian Studios' },
+            jobLocation: [{
+              title: 'Guildford',
+              parents: [
+                { id: 'x4', title: 'Europe', type: 'continent' },
+                { id: '232', title: 'UK', type: 'country' },
+              ],
+            }],
+          },
+        },
+        // Remote-only doc: no city, country falls back to title alone.
+        {
+          document: {
+            id: '2',
+            title: 'Technical Artist',
+            url: 'https://hitmarker.net/jobs/remote-ta-2',
+            jobCompany: { title: 'Remote Studio' },
+            jobLocation: [{ title: 'Remote', parents: [] }],
+          },
+        },
+        // Malformed docs that must be dropped (no title / no url).
+        { document: { id: '3', url: 'https://hitmarker.net/jobs/3' } },
+        { document: { id: '4', title: 'No URL' } },
+      ],
+    }],
+  };
+  const jobs = parseHitmarkerResponse(sample);
+  if (jobs.length === 2) pass('parseHitmarkerResponse keeps only docs with title + url');
+  else fail(`parseHitmarkerResponse returned ${jobs.length} jobs (expected 2)`);
+
+  if (jobs[0]?.company === 'Larian Studios' && jobs[0]?.location === 'Guildford, UK') {
+    pass('parseHitmarkerResponse composes "City, Country" location');
+  } else {
+    fail(`row 0 = ${JSON.stringify(jobs[0])}`);
+  }
+
+  if (jobs[1]?.location === 'Remote') {
+    pass('parseHitmarkerResponse falls back to city title when no country parent');
+  } else {
+    fail(`row 1 location = ${JSON.stringify(jobs[1]?.location)}`);
+  }
+
+  if (parseHitmarkerResponse({}).length === 0 && parseHitmarkerResponse({ results: [{ hits: null }] }).length === 0) {
+    pass('parseHitmarkerResponse handles empty/null shapes without crashing');
+  } else {
+    fail('parseHitmarkerResponse should yield empty result for empty/null shapes');
+  }
+
+} catch (e) {
+  fail(`hitmarker provider tests crashed: ${e.message}`);
+}
+
 // ── 12. TRACKER REPORT LINK NORMALIZATION (#760) ────────────────
 
 console.log('\n12. Tracker report-link normalization');

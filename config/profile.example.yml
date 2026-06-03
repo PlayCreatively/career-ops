@@ -3,68 +3,90 @@
 # This is the single source of truth for your personal data across all modes.
 
 candidate:
-  full_name: "Jane Smith"
-  email: "jane@example.com"
+  full_name: "Alex Rivers"
+  email: "alex@example.com"
   phone: "+1-555-0123"
-  location: "San Francisco, CA"
-  linkedin: "linkedin.com/in/janesmith"
-  portfolio_url: "https://janesmith.dev"
-  github: "github.com/janesmith"
-  twitter: "https://x.com/janesmith"
+  location: "Montréal, QC"
+  linkedin: "linkedin.com/in/alexrivers"
+  portfolio_url: "https://alexrivers.dev"   # itch.io / personal site / demo reel
+  github: "github.com/alexrivers"
+  twitter: "https://x.com/alexrivers"
 
 target_roles:
   # Your North Star roles — what you're optimizing for
   primary:
-    - "Senior AI Engineer"
-    - "Staff ML Engineer"
-  # Archetypes help the evaluation system score fit
+    - "Gameplay Programmer"
+    - "Senior Gameplay Programmer"
+  # Archetypes help the evaluation system score fit.
+  # Game-industry archetypes: Gameplay Programmer, Engine / Tools Programmer,
+  # Game / Systems Designer, Technical Artist, Producer / PM, QA / QA Automation.
   archetypes:
-    - name: "AI/ML Engineer"
-      level: "Senior/Staff"
+    - name: "Gameplay Programmer"
+      level: "Mid/Senior"
       fit: "primary"        # primary = dream role, secondary = good fit, adjacent = stretch
-    - name: "AI Product Manager"
-      level: "Senior"
+    - name: "Engine / Tools Programmer"
+      level: "Mid"
       fit: "secondary"
-    - name: "Solutions Architect"
-      level: "Mid-Senior"
+    - name: "Technical Designer"
+      level: "Mid"
       fit: "adjacent"
+
+# Engine and platform focus — used by evaluation Block A and CV tailoring.
+craft:
+  engines:
+    - "Unreal Engine (UE5, C++ + Blueprint)"
+    - "Unity (C#)"
+  shipped_titles:
+    # The single strongest signal in games hiring — list what you shipped,
+    # your role, platform, and engine. Leave empty if pre-shipping.
+    - title: "Untitled Co-op Shooter"
+      role: "Gameplay Programmer"
+      platform: "PC / console"
+      engine: "Unreal Engine 5"
+  platforms:
+    - "PC"
+    - "Console (PS5 / Xbox Series)"
+  # Studio types you'd consider (AAA / AA / indie / mobile / live-service)
+  studio_preference:
+    - "AA"
+    - "Indie"
 
 narrative:
   # Your professional headline (1 line)
-  headline: "ML Engineer turned AI product builder"
+  headline: "Gameplay programmer who turns design intent into shippable mechanics"
   # Your exit story — what makes you unique
-  exit_story: "Built and sold my SaaS after 5 years. Now focused on applied AI at scale."
+  exit_story: "Shipped a co-op shooter as solo gameplay programmer; now targeting a larger combat/systems team."
   # Your top 3-5 superpowers
   superpowers:
-    - "End-to-end ML pipelines"
-    - "Fast prototyping (idea to prod in 2 weeks)"
-    - "Cross-functional communication"
-  # Proof points — projects, articles, case studies with measurable impact
+    - "Translating design docs into responsive, tunable game-feel"
+    - "Profiling and optimizing gameplay code on console hardware"
+    - "Building designer-facing tools so non-engineers can iterate"
+  # Proof points — shipped titles, prototypes, demo reels, jam games with measurable impact
   proof_points:
-    - name: "Project Alpha"
-      url: "https://janesmith.dev/project-alpha"
-      hero_metric: "Reduced inference latency 40%"
-    - name: "Open Source Tool"
-      url: "https://github.com/janesmith/tool"
-      hero_metric: "2K+ GitHub stars"
-  # Optional: dashboard/demo URL with credentials
+    - name: "Combat prototype (devlog)"
+      url: "https://alexrivers.dev/combat-prototype"
+      hero_metric: "Hitstop + input-buffer system, 6 enemy archetypes"
+    - name: "Game jam — 48h winner"
+      url: "https://alexrivers.itch.io/jam-game"
+      hero_metric: "1st of 240 entries, Ludum Dare"
+  # Optional: playable build / demo reel URL with credentials
   # dashboard:
-  #   url: "https://janesmith.dev/demo"
+  #   url: "https://alexrivers.dev/demo-reel"
   #   password: "demo-2026"
 
 compensation:
-  target_range: "$150K-200K"     # Your target total comp
-  currency: "USD"
-  minimum: "$120K"               # Walk-away number
-  location_flexibility: "Remote preferred, 1 week/month on-site possible"
+  target_range: "$90K-130K CAD"  # Your target total comp
+  currency: "CAD"
+  minimum: "$80K CAD"            # Walk-away number
+  location_flexibility: "Remote preferred; open to hybrid in Montréal. Relocation possible for the right studio."
 
 location:
-  country: "United States"
-  city: "San Francisco"
-  timezone: "PST"
-  visa_status: "No sponsorship needed"
-  # For remote roles outside your country:
-  # onsite_availability: "1 week/month in any city"
+  country: "Canada"
+  city: "Montréal"
+  timezone: "EST"
+  visa_status: "No sponsorship needed in Canada; would need sponsorship for US/UK/EU"
+  # For remote roles or studios that require relocation:
+  # onsite_availability: "Open to relocation for established studios"
 
 cv:
   output_format: "html" # "html" (default) or "latex"

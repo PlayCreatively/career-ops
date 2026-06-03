@@ -4,7 +4,7 @@ When the candidate pastes a job (text or URL), ALWAYS deliver the 7 blocks (A-F 
 
 ## Step 0 — Archetype Detection
 
-Classify the job into one of the 6 archetypes (see `_shared.md`). If it is a hybrid, indicate the 2 closest ones. This determines:
+Classify the job into one of the 6 game-industry archetypes (see `_shared.md`). If it is a hybrid, indicate the 2 closest ones. This determines:
 - Which proof points to prioritize in block B
 - How to rewrite the summary in block E
 - Which STAR stories to prepare in block F
@@ -13,11 +13,13 @@ Classify the job into one of the 6 archetypes (see `_shared.md`). If it is a hyb
 
 Table with:
 - Archetype detected
-- Domain (platform/agentic/LLMOps/ML/enterprise)
-- Function (build/consult/manage/deploy)
+- Engine (Unreal / Unity / proprietary / N-A)
+- Platform (PC / console / mobile / VR / cross-platform)
+- Project stage (pre-production / production / live-service / unannounced)
+- Function (build/design/manage/test)
 - Seniority
-- Remote (full/hybrid/onsite)
-- Team size (if mentioned)
+- Remote (full/hybrid/onsite — note relocation/visa if onsite)
+- Team / studio size (if mentioned)
 - TL;DR in 1 sentence
 
 ## Block B — Match with CV
@@ -25,12 +27,14 @@ Table with:
 Read `cv.md`. Create a table with each JD requirement mapped to exact lines in the CV.
 
 **Adapted to the archetype:**
-- If FDE → prioritize delivery speed and client-facing proof points
-- If SA → prioritize system design and integrations
-- If PM → prioritize product discovery and metrics
-- If LLMOps → prioritize evals, observability, pipelines
-- If Agentic → prioritize multi-agent, HITL, orchestration
-- If Transformation → prioritize change management, adoption, scaling
+- If Gameplay Programmer → prioritize shipped mechanics, engine/C++ depth, game-feel work
+- If Engine/Tools Programmer → prioritize performance wins, tooling/pipelines, low-level systems
+- If Game/Systems Designer → prioritize shipped systems, balancing, prototypes that became features
+- If Technical Artist → prioritize shaders/VFX, art pipelines, artist-facing tools
+- If Producer/PM → prioritize shipped milestones, team size led, cross-discipline coordination
+- If QA → prioritize test coverage, automation built, bugs caught pre-ship
+
+**Always surface, when present in the CV:** shipped titles (with platform + role), engine familiarity (Unreal/Unity/proprietary), and team/project scale.
 
 **Gaps** section with mitigation strategy for each. For each gap:
 1. Is it a hard blocker or a nice-to-have?
@@ -74,16 +78,16 @@ The **Reflection** column captures what was learned or what would be done differ
 **Story Bank:** If `interview-prep/story-bank.md` exists, check if any of these stories are already there. If not, append new ones. Over time this builds a reusable bank of 5-10 master stories that can be adapted to any interview question.
 
 **Selected and framed according to the archetype:**
-- FDE → emphasize delivery speed and client-facing
-- SA → emphasize architectural decisions
-- PM → emphasize discovery and trade-offs
-- LLMOps → emphasize metrics, evals, production hardening
-- Agentic → emphasize orchestration, error handling, HITL
-- Transformation → emphasize adoption, organizational change
+- Gameplay Programmer → emphasize shipped mechanics, debugging hard bugs, collaboration with design
+- Engine/Tools Programmer → emphasize architectural/performance decisions and trade-offs
+- Game/Systems Designer → emphasize design intent, iteration from playtest data, cuts made
+- Technical Artist → emphasize bridging art and engineering, pipeline/tool wins
+- Producer/PM → emphasize milestone delivery, scope cuts, unblocking the team
+- QA → emphasize process built, risk caught, automation that scaled
 
 Also include:
-- 1 recommended case study (which of their projects to present and how)
-- Red-flag questions and how to answer them (e.g., "why did you sell your company?", "do you have a team of reports?")
+- 1 recommended portfolio piece (which shipped title, prototype, or demo reel to present and how)
+- Red-flag questions and how to answer them (e.g., "why did you leave mid-project?", "have you shipped a title start-to-finish?", "are you comfortable with crunch?")
 
 ## Block G — Posting Legitimacy
 

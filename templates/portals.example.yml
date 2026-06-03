@@ -408,6 +408,39 @@ search_queries:
 
 tracked_companies:
 
+  # -- Hitmarker (games / esports job board) ----------------------------
+  # Hitmarker is an aggregated board, not a single company — one entry returns
+  # postings across hundreds of studios. Set `provider: hitmarker` explicitly.
+  # Optional fields:
+  #   query:     free-text search (default "*" = everything)
+  #   filter_by: Typesense filter expression over Hitmarker's facets
+  #   pages:     result pages to pull, 100 jobs each (default 1, max 10)
+  #
+  # Common facet IDs (see hitmarker-context for the full reference):
+  #   jobTags.id   — 122733 Game Dev · 122732 Game Design · 122691 Systems Design
+  #                  122743 Level Design · 122695 Technical Design · 122694 Technical Art
+  #                  122698 Unity · 122699 Unreal Engine · 122707 QA · 122734 Game Production
+  #   jobLevel.id  — entry · junior · intermediate · senior
+  #   jobLocation.parents.id — x4 Europe · rx4 Remote(EU) · x5 North America
+  #                  rx5 Remote(NA) · 233 USA · 232 UK · 207 Spain · 213 Sweden · 82 Germany
+  #
+  # The title_filter and location_filter above still apply to every Hitmarker
+  # hit, so you can keep the server-side filter_by broad and refine locally.
+
+  - name: Hitmarker — Programming (entry/junior)
+    provider: hitmarker
+    query: "*"
+    filter_by: "jobTags.id:[122733,122713,122698,122699] && jobLevel.id:[entry,junior]"
+    pages: 2
+    enabled: true
+
+  - name: Hitmarker — Design & Systems (all levels)
+    provider: hitmarker
+    query: "*"
+    filter_by: "jobTags.id:[122732,122691,122743,122695,122773,122722,122723]"
+    pages: 2
+    enabled: true
+
   # -- AI Labs & LLM providers --
 
   - name: Anthropic

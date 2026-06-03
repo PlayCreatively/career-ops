@@ -25,6 +25,7 @@
  *   node scan.mjs --dry-run        # preview without writing files
  *   node scan.mjs --company Cohere # scan a single company
  *   node scan.mjs --verify         # Playwright-check each new URL; drop expired postings
+ *   node scan.mjs --reset          # clear pending pool + dedup history, then scan fresh
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
@@ -222,6 +223,23 @@ function loadSeenCompanyRoles() {
   return seen;
 }
 
+// ── Reset ───────────────────────────────────────────────────────────
+
+// Clears state for a fresh rescan: drops pending (unchecked) entries from
+// pipeline.md and wipes scan-history.tsv back to its header. Processed (`- [x]`)
+// lines are kept so already-evaluated jobs stay deduped and aren't re-added.
+function resetScanState() {
+  if (existsSync(PIPELINE_PATH)) {
+    const cleaned = readFileSync(PIPELINE_PATH, 'utf-8')
+      .split('\n')
+      .filter(line => !/^\s*- \[ \] https?:\/\//.test(line))
+      .join('\n');
+    writeFileSync(PIPELINE_PATH, cleaned, 'utf-8');
+  }
+  writeFileSync(SCAN_HISTORY_PATH, 'url\tfirst_seen\tportal\ttitle\tcompany\tstatus\tlocation\n', 'utf-8');
+  console.log('🧹 Reset: cleared pending pipeline entries + scan history');
+}
+
 // ── Pipeline writer ─────────────────────────────────────────────────
 
 function appendToPipeline(offers) {
@@ -378,8 +396,13 @@ async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
   const verify = args.includes('--verify');
+  const reset = args.includes('--reset');
   const companyFlag = args.indexOf('--company');
   const filterCompany = companyFlag !== -1 ? args[companyFlag + 1]?.toLowerCase() : null;
+
+  // Fresh rescan: wipe pending pool + dedup memory before discovering. Skipped
+  // on --dry-run so a preview never mutates state.
+  if (reset && !dryRun) resetScanState();
 
   // 1. Load providers
   const providers = await loadProviders(PROVIDERS_DIR);

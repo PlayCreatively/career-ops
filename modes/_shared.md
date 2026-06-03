@@ -73,16 +73,18 @@ Block G assesses whether a posting is likely a real, active opening. It does NOT
 
 ## Archetype Detection
 
-Classify every offer into one of these types (or hybrid of 2):
+Classify every offer into one of these game-industry types (or hybrid of 2):
 
 | Archetype | Key signals in JD |
 |-----------|-------------------|
-| AI Platform / LLMOps | "observability", "evals", "pipelines", "monitoring", "reliability" |
-| Agentic / Automation | "agent", "HITL", "orchestration", "workflow", "multi-agent" |
-| Technical AI PM | "PRD", "roadmap", "discovery", "stakeholder", "product manager" |
-| AI Solutions Architect | "architecture", "enterprise", "integration", "design", "systems" |
-| AI Forward Deployed | "client-facing", "deploy", "prototype", "fast delivery", "field" |
-| AI Transformation | "change management", "adoption", "enablement", "transformation" |
+| Gameplay Programmer | "gameplay", "mechanics", "player", "combat", "C++", "Blueprint", "game feel" |
+| Engine / Tools Programmer | "engine", "tools", "pipeline", "rendering", "optimization", "build systems", "low-level" |
+| Game / Systems Designer | "game design", "systems design", "balancing", "economy", "level design", "narrative", "encounter" |
+| Technical Artist | "shader", "rigging", "tech art", "DCC", "Houdini", "VFX", "pipeline", "Substance" |
+| Producer / Project Manager | "producer", "milestone", "scrum", "scheduling", "stakeholder", "production", "live ops" |
+| QA / QA Automation | "QA", "test plan", "bug", "test automation", "TestRail", "quality assurance", "compatibility" |
+
+Engine signals to capture in Block A regardless of archetype: **Unreal Engine** ("Unreal", "UE4", "UE5", "Blueprint"), **Unity** ("Unity", "C#"), or **proprietary/in-house engine**.
 
 After detecting archetype, read `modes/_profile.md` for the user's specific framing and proof points for that archetype.
 
