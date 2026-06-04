@@ -25,6 +25,8 @@ writing-samples/*
 
 # User config and customization (never auto-updated)
 config/profile.yml
+# portals.yml holds your PERSONAL targeting/filters only — kept private (ignored).
+# The shared studio list lives in studios.yml, which IS tracked (see scan.mjs).
 portals.yml
 modes/_profile.md
 .update-dismissed
@@ -48,3 +50,4 @@ bun.lock
 .claude/memory/
 career-dashboard
 package-lock.json
+/data

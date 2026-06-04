@@ -212,11 +212,16 @@ export function loadLocations(tsv) {
   return lookup;
 }
 
-/** Read the `ranking:` block from portals.yml, or fall back to defaults. */
+/**
+ * Read the ranking config from portals.yml, or fall back to defaults.
+ * Prefers the unified `targeting:` block (same shape: location/role/seniority/
+ * combine/weights, plus 0-weight excludes that scoreCategory handles natively);
+ * falls back to the legacy `ranking:` block, then to built-in defaults.
+ */
 export function loadRanking(portalsPath = PORTALS_PATH) {
   if (!existsSync(portalsPath)) return DEFAULT_RANKING;
   const config = yaml.load(readFileSync(portalsPath, 'utf-8')) || {};
-  return config.ranking || DEFAULT_RANKING;
+  return config.targeting || config.ranking || DEFAULT_RANKING;
 }
 
 // ── Rendering ───────────────────────────────────────────────────────

@@ -1,0 +1,784 @@
+# Studio list — GAME INDUSTRY (TRACKED in git; shared with collaborators)
+#
+# Read by scan.mjs. This file holds ONLY the company list. Your personal
+# targeting/filters (location/role/seniority weights) live in portals.yml, which
+# is gitignored and NOT shared. Edit studios here; edit filters in portals.yml.
+# scan.mjs reads companies from this file and filters from portals.yml.
+
+# -- Tracked sources --
+# Provider routing: greenhouse/lever/ashby auto-detect from careers_url; the
+# `provider: hitmarker` entries are explicit (Hitmarker is an aggregated board,
+# not one company — see providers/hitmarker.mjs).
+
+tracked_companies:
+
+  # ── Hitmarker — aggregated games / esports board ──────────────────
+  # Facet IDs: 122733 Game Dev · 122713 Software Eng · 122698 Unity · 122699 Unreal
+  #            122732 Game Design · 122691 Systems Design · 122743 Level Design
+  #            122695 Technical Design · 122694 Technical Art · 122707 QA · 122734 Production
+
+  # Location is filtered SERVER-SIDE here via jobLocation.parents.id — Hitmarker
+  # has already geocoded every posting to a continent, so this is exhaustive by
+  # construction (no string-matching, nothing silently dropped). Continent IDs:
+  #   x4 Europe · rx4 Remote(EU) · x5 North America · rx5 Remote(NA) · x6 Oceania
+  #   (x3 Asia is simply omitted, so it never leaves Hitmarker's server)
+  - name: Hitmarker — Programming
+    provider: hitmarker
+    query: "*"
+    filter_by: "jobTags.id:[122733,122713,122698,122699] && jobLocation.parents.id:[x4,rx4,x5,rx5,x6]"
+    pages: 3
+    enabled: true
+
+  - name: Hitmarker — Design & Systems
+    provider: hitmarker
+    query: "*"
+    filter_by: "jobTags.id:[122732,122691,122743,122695,122773,122722,122723] && jobLocation.parents.id:[x4,rx4,x5,rx5,x6]"
+    pages: 2
+    enabled: true
+
+  - name: Hitmarker — Technical Art & QA
+    provider: hitmarker
+    query: "*"
+    filter_by: "jobTags.id:[122694,122707]"
+    pages: 2
+    enabled: true
+
+  # ── Aggregator boards ─────────────────────────────────────────────
+  # Like Hitmarker: one entry, many studios. See providers/workwithindies.mjs.
+
+  - name: Work With Indies
+    provider: work-with-indies
+    notes: "Indie / remote-heavy aggregator. Junior-friendly. RSS-backed."
+    enabled: true
+
+  # ── Studios on Greenhouse ─────────────────────────────────────────
+
+  - name: Riot Games
+    careers_url: https://job-boards.greenhouse.io/riotgames
+    api: https://boards-api.greenhouse.io/v1/boards/riotgames/jobs
+    notes: "LA + global. League, Valorant, TFT. ~190 roles."
+    enabled: true
+
+  - name: Epic Games
+    careers_url: https://job-boards.greenhouse.io/epicgames
+    api: https://boards-api.greenhouse.io/v1/boards/epicgames/jobs
+    notes: "Cary NC + remote. Fortnite, Unreal Engine. ~135 roles."
+    enabled: true
+
+  - name: Rockstar Games
+    careers_url: https://job-boards.greenhouse.io/rockstargames
+    api: https://boards-api.greenhouse.io/v1/boards/rockstargames/jobs
+    notes: "NYC / Edinburgh / global. GTA, RDR. ~80 roles."
+    enabled: true
+
+  - name: PlayStation (Sony Interactive)
+    careers_url: https://job-boards.greenhouse.io/sonyinteractiveentertainmentglobal
+    api: https://boards-api.greenhouse.io/v1/boards/sonyinteractiveentertainmentglobal/jobs
+    notes: "Global first-party. ~195 roles."
+    enabled: true
+
+  - name: Naughty Dog
+    careers_url: https://job-boards.greenhouse.io/naughtydog
+    api: https://boards-api.greenhouse.io/v1/boards/naughtydog/jobs
+    notes: "Santa Monica. Sony first-party (TLOU, Uncharted)."
+    enabled: true
+
+  - name: Bungie
+    careers_url: https://job-boards.greenhouse.io/bungie
+    api: https://boards-api.greenhouse.io/v1/boards/bungie/jobs
+    notes: "Bellevue WA. Destiny, Marathon."
+    enabled: true
+
+  - name: Discord
+    careers_url: https://job-boards.greenhouse.io/discord
+    api: https://boards-api.greenhouse.io/v1/boards/discord/jobs
+    notes: "Remote-friendly US. Games-adjacent platform. ~70 roles."
+    enabled: true
+
+  - name: Roblox
+    careers_url: https://job-boards.greenhouse.io/roblox
+    api: https://boards-api.greenhouse.io/v1/boards/roblox/jobs
+    notes: "San Mateo CA. UGC game platform. ~235 roles."
+    enabled: true
+
+  - name: Scopely
+    careers_url: https://job-boards.greenhouse.io/scopely
+    api: https://boards-api.greenhouse.io/v1/boards/scopely/jobs
+    notes: "LA + global. Mobile games (Monopoly GO). ~200 roles."
+    enabled: true
+
+  - name: Take-Two Interactive
+    careers_url: https://job-boards.greenhouse.io/taketwo
+    api: https://boards-api.greenhouse.io/v1/boards/taketwo/jobs
+    notes: "Parent of Rockstar / 2K. Corporate + studio roles."
+    enabled: true
+
+  - name: Media Molecule
+    careers_url: https://job-boards.greenhouse.io/mm
+    api: https://boards-api.greenhouse.io/v1/boards/mm/jobs
+    notes: "Guildford UK. Sony first-party (LittleBigPlanet, Dreams). 0 open when added — auto-updates."
+    enabled: true
+
+  # -- Added via probe-ats.mjs mining pass (2026-06-04) --
+  - name: Housemarque
+    careers_url: https://job-boards.greenhouse.io/housemarque
+    api: https://boards-api.greenhouse.io/v1/boards/housemarque/jobs
+    notes: "Helsinki. Sony first-party (Returnal, Saros)."
+    enabled: true
+
+  - name: Tripledot Studios
+    careers_url: https://job-boards.greenhouse.io/tripledotstudios
+    api: https://boards-api.greenhouse.io/v1/boards/tripledotstudios/jobs
+    notes: "London + global. Mobile (Solitaire, Woodoku). ~50 roles."
+    enabled: true
+
+  - name: Klang Games
+    careers_url: https://job-boards.greenhouse.io/klanggames
+    api: https://boards-api.greenhouse.io/v1/boards/klanggames/jobs
+    notes: "Berlin. Seed (MMO). 0 open when added — auto-updates."
+    enabled: true
+
+  - name: Wooga
+    careers_url: https://job-boards.greenhouse.io/wooga
+    api: https://boards-api.greenhouse.io/v1/boards/wooga/jobs
+    notes: "Berlin. Story-driven mobile (June's Journey). Playtika-owned."
+    enabled: true
+
+  - name: Dream Games
+    careers_url: https://job-boards.greenhouse.io/dreamgames
+    api: https://boards-api.greenhouse.io/v1/boards/dreamgames/jobs
+    notes: "Istanbul. Royal Match. 0 open when added — auto-updates."
+    enabled: true
+
+  # ── Studios on Lever ──────────────────────────────────────────────
+
+  - name: Larian Studios
+    careers_url: https://jobs.lever.co/larian
+    notes: "Belgium / global. Baldur's Gate 3. ~200 roles."
+    enabled: true
+
+  - name: Voodoo
+    careers_url: https://jobs.ashbyhq.com/voodoo
+    notes: "Paris. Hypercasual & hybrid-casual mobile. ~120 roles. (Repointed Lever→Ashby: the Ashby board carries ~3.5x more roles.)"
+    enabled: true
+
+  # -- Added via probe-ats.mjs mining pass (2026-06-04) --
+  - name: Jagex
+    careers_url: https://jobs.lever.co/jagex
+    notes: "Cambridge UK. RuneScape. 0 open when added — auto-updates."
+    enabled: true
+
+  - name: Sumo Digital
+    careers_url: https://jobs.lever.co/sumo-digital
+    notes: "Sheffield UK + studios. Work-for-hire + own IP. 0 open when added — auto-updates."
+    enabled: true
+
+  - name: Crytek
+    careers_url: https://jobs.lever.co/crytek
+    notes: "Frankfurt. CryEngine, Hunt: Showdown."
+    enabled: true
+
+  - name: Kolibri Games
+    careers_url: https://jobs.lever.co/kolibrigames
+    notes: "Berlin. Idle mobile (Idle Miner Tycoon). Ubisoft-owned."
+    enabled: true
+
+  # ── Studios on Ashby ──────────────────────────────────────────────
+
+  - name: Second Dinner
+    careers_url: https://jobs.ashbyhq.com/seconddinner
+    notes: "Remote US. Marvel Snap. Small, high-bar studio."
+    enabled: true
+
+  - name: Supercell
+    careers_url: https://jobs.ashbyhq.com/supercell
+    notes: "Helsinki. Clash of Clans, Brawl Stars, Clash Royale. ~45 roles."
+    enabled: true
+
+  # ── Studios on Teamtailor ─────────────────────────────────────────
+  # Teamtailor runs on custom domains, so routing is explicit (provider:
+  # teamtailor). The provider reads {site-origin}/jobs.json — see
+  # providers/teamtailor.mjs. Popular among Nordic / EU studios.
+
+  - name: Envar Studio
+    provider: teamtailor
+    careers_url: https://careers.envarstudio.com
+    notes: "Stockholm, hybrid. Art outsourcing + game dev."
+    enabled: true
+
+  - name: Paradox Interactive
+    provider: teamtailor
+    careers_url: https://career.paradoxplaza.com
+    notes: "Stockholm. Grand strategy (Crusader Kings, Cities Skylines)."
+    enabled: true
+
+  - name: Sharkmob
+    provider: teamtailor
+    careers_url: https://career.sharkmob.com
+    notes: "Malmö / London. Exoborne, The Division devs."
+    enabled: true
+
+  - name: Coffee Stain
+    provider: teamtailor
+    careers_url: https://coffeestainstudios.teamtailor.com
+    notes: "Skövde. Satisfactory, Valheim publisher."
+    enabled: true
+
+  - name: 10 Chambers
+    provider: teamtailor
+    careers_url: https://10chambers.teamtailor.com
+    notes: "Stockholm. GTFO, Den of Wolves."
+    enabled: true
+
+  - name: Raw Fury
+    provider: teamtailor
+    careers_url: https://rawfury.teamtailor.com
+    notes: "Stockholm. Indie publisher."
+    enabled: true
+
+  - name: Star Stable
+    provider: teamtailor
+    careers_url: https://starstable.teamtailor.com
+    notes: "Stockholm. Star Stable Online."
+    enabled: true
+
+  - name: Neon Giant
+    provider: teamtailor
+    careers_url: https://neongiant.teamtailor.com
+    notes: "Uppsala. The Ascent."
+    enabled: true
+
+  - name: Hadean Supercomputing
+    provider: teamtailor
+    careers_url: https://hadean.teamtailor.com
+    notes: "London. Distributed compute for games."
+    enabled: true
+
+  - name: Fatshark
+    provider: teamtailor
+    careers_url: https://jobs.fatsharkgames.com
+    notes: "Stockholm. Warhammer Vermintide / Darktide."
+    enabled: true
+
+  - name: Resolution Games
+    provider: teamtailor
+    careers_url: https://jobs.resolutiongames.com
+    notes: "Stockholm. VR/XR (Demeo, Racket Club)."
+    enabled: true
+
+  - name: Embark Studios
+    provider: teamtailor
+    careers_url: https://careers.embark-studios.com
+    notes: "Stockholm. The Finals, Arc Raiders."
+    enabled: true
+
+  - name: IO Interactive
+    provider: teamtailor
+    careers_url: https://apply.ioi.dk
+    notes: "Copenhagen / Malmö / Barcelona / Brighton / Istanbul. Hitman, Project 007."
+    enabled: true
+
+  # -- Added via probe-ats.mjs mining pass (2026-06-04). Company name confirmed
+  #    in each jobs.json feed (a Teamtailor DEMO board would say "DEMO – ...").
+  - name: Funcom
+    provider: teamtailor
+    careers_url: https://funcom.teamtailor.com
+    notes: "Oslo / Lisbon / Bucharest. Conan Exiles, Dune Awakening. 0 open when added — auto-updates."
+    enabled: true
+
+  - name: Snowprint Studios
+    provider: teamtailor
+    careers_url: https://snowprintstudios.teamtailor.com
+    notes: "Stockholm. Mobile strategy (Warhammer 40K: Tacticus)."
+    enabled: true
+
+  - name: MAG Interactive
+    provider: teamtailor
+    careers_url: https://mag.teamtailor.com
+    notes: "Stockholm. Word/casual mobile (Wordzee, Ruzzle)."
+    enabled: true
+
+  - name: Liquid Swords
+    provider: teamtailor
+    careers_url: https://liquidswords.teamtailor.com
+    notes: "Stockholm. Christofer Sundberg (ex-Avalanche) new studio."
+    enabled: true
+
+  - name: Goodbye Kansas Studios
+    provider: teamtailor
+    careers_url: https://goodbyekansas.teamtailor.com
+    notes: "Stockholm. VFX / mocap / cinematics — games-adjacent."
+    enabled: true
+
+  - name: Sandbox Interactive
+    provider: teamtailor
+    careers_url: https://sandboxinteractive.teamtailor.com
+    notes: "Berlin. Albion Online (sandbox MMO)."
+    enabled: true
+
+  - name: Sloclap
+    provider: teamtailor
+    careers_url: https://sloclap.teamtailor.com
+    notes: "Paris. Sifu, Absolver, Rematch."
+    enabled: true
+
+  # ── Studios on Lever ──────────────────────────────────────────────
+
+  - name: Avalanche Studios
+    careers_url: https://jobs.lever.co/avalanchestudios
+    notes: "Stockholm / NYC / Liverpool. Just Cause, Mad Max, contracts."
+    enabled: true
+
+  # ── Studios on Workday ────────────────────────────────────────────
+  # Workday's public cxs JSON API — see providers/workday.mjs. Auto-detects
+  # *.myworkdayjobs.com; custom domains need explicit tenant:/site:.
+  # NOTE: some big publishers (King/Activision) sit behind Cloudflare bot
+  # protection and won't respond to a plain fetch — they're omitted here.
+
+  - name: Toca Boca (Spin Master)
+    careers_url: https://spinmaster.wd3.myworkdayjobs.com/TocaBoca_Careers
+    notes: "Stockholm / SF / Toronto. Toca Boca, Sago Mini."
+    enabled: true
+
+  # ── Studios on Hailey HR ──────────────────────────────────────────
+  # Hailey HR career pages SSR their job list into the page; the provider
+  # parses it (keyless). See providers/hailey.mjs. Common for Nordic studios.
+
+  - name: Thunderful Games
+    provider: hailey
+    careers_url: https://thunderfulgames.careers.haileyhr.app
+    notes: "Gothenburg. ~500 staff. (0 open roles when added — auto-updates.)"
+    enabled: true
+
+  # ══════════════════════════════════════════════════════════════════
+  # -- Mining pass #2 (2026-06-04): studios verified via the ASGC board
+  #    (games-jobs-workbook.replit.app JSON API, 45k jobs / 1.8k companies)
+  #    + Wikipedia's Swedish-studios list. Each entity confirmed against the
+  #    LIVE ATS feed (real games company + a games job title). Gambling,
+  #    film/VFX, non-games SaaS, and slug-namesakes were routed to
+  #    data/ats-research.md instead. Prune freely — these are bulk additions.
+  # ══════════════════════════════════════════════════════════════════
+
+  # ── Studios on Greenhouse (mining pass #2) ────────────────────────
+  - name: 2K
+    careers_url: https://job-boards.greenhouse.io/2k
+    api: https://boards-api.greenhouse.io/v1/boards/2k/jobs
+    notes: "Novato CA + global. Publisher (NBA 2K, Borderlands, BioShock)."
+    enabled: true
+  - name: Krafton
+    careers_url: https://job-boards.greenhouse.io/krafton
+    api: https://boards-api.greenhouse.io/v1/boards/krafton/jobs
+    notes: "Seoul + global. PUBG, parent of Bluehole/PUBG Studios."
+    enabled: true
+  - name: Wargaming
+    careers_url: https://job-boards.greenhouse.io/wargamingen
+    api: https://boards-api.greenhouse.io/v1/boards/wargamingen/jobs
+    notes: "Belgrade / Prague / global. World of Tanks & Warships."
+    enabled: true
+  - name: Zynga
+    careers_url: https://job-boards.greenhouse.io/zyngacareers
+    api: https://boards-api.greenhouse.io/v1/boards/zyngacareers/jobs
+    notes: "Global. Mobile (Take-Two). FarmVille, Words With Friends."
+    enabled: true
+  - name: The Pokemon Company Intl
+    careers_url: https://job-boards.greenhouse.io/pokemoncareers
+    api: https://boards-api.greenhouse.io/v1/boards/pokemoncareers/jobs
+    notes: "London / Bellevue. Pokémon franchise."
+    enabled: true
+  - name: Absurd Ventures
+    careers_url: https://job-boards.greenhouse.io/absurdventures
+    api: https://boards-api.greenhouse.io/v1/boards/absurdventures/jobs
+    notes: "Santa Monica. Dan Houser (ex-Rockstar) new studio."
+    enabled: true
+  - name: Cloud Chamber (2K)
+    careers_url: https://job-boards.greenhouse.io/cloudchamberen
+    api: https://boards-api.greenhouse.io/v1/boards/cloudchamberen/jobs
+    notes: "Novato / Montréal. Next BioShock."
+    enabled: true
+  - name: Team LFG
+    careers_url: https://job-boards.greenhouse.io/teamlfg
+    api: https://boards-api.greenhouse.io/v1/boards/teamlfg/jobs
+    notes: "US remote. New AAA studio (ex-Bungie/Riot)."
+    enabled: true
+  - name: Mob Entertainment
+    careers_url: https://job-boards.greenhouse.io/mobentertainment
+    api: https://boards-api.greenhouse.io/v1/boards/mobentertainment/jobs
+    notes: "US remote. Poppy Playtime."
+    enabled: true
+  - name: NetEase Games
+    careers_url: https://job-boards.greenhouse.io/neteasegames
+    api: https://boards-api.greenhouse.io/v1/boards/neteasegames/jobs
+    notes: "Global / UK remote. Marvel Rivals, Naraka."
+    enabled: true
+  - name: Socialpoint (Take-Two)
+    careers_url: https://job-boards.greenhouse.io/spcareers
+    api: https://boards-api.greenhouse.io/v1/boards/spcareers/jobs
+    notes: "Barcelona. Mobile (Dragon City, Monster Legends)."
+    enabled: true
+  - name: Eleventh Hour Games
+    careers_url: https://job-boards.greenhouse.io/eleventhhourgames
+    api: https://boards-api.greenhouse.io/v1/boards/eleventhhourgames/jobs
+    notes: "Remote. Last Epoch (ARPG)."
+    enabled: true
+  - name: 2K (Las Vegas)
+    careers_url: https://job-boards.greenhouse.io/2kvegas
+    api: https://boards-api.greenhouse.io/v1/boards/2kvegas/jobs
+    notes: "Las Vegas NV. 2K shared-services studio."
+    enabled: true
+  - name: Hangar 13 (2K)
+    careers_url: https://job-boards.greenhouse.io/hangar13
+    api: https://boards-api.greenhouse.io/v1/boards/hangar13/jobs
+    notes: "Brighton UK / Brno. Mafia series."
+    enabled: true
+  - name: Gram Games (Zynga)
+    careers_url: https://job-boards.greenhouse.io/gramgamescareers
+    api: https://boards-api.greenhouse.io/v1/boards/gramgamescareers/jobs
+    notes: "London / Istanbul. Mobile (Merge Dragons, 1010!)."
+    enabled: true
+  - name: Atari
+    careers_url: https://job-boards.greenhouse.io/atariinc
+    api: https://boards-api.greenhouse.io/v1/boards/atariinc/jobs
+    notes: "US remote. Classic IP revivals + publishing."
+    enabled: true
+  - name: Rushdown Studios
+    careers_url: https://job-boards.greenhouse.io/rushdownstudios
+    api: https://boards-api.greenhouse.io/v1/boards/rushdownstudios/jobs
+    notes: "Saratoga Springs NY. Co-dev + own IP."
+    enabled: true
+  - name: 2K Czech
+    careers_url: https://job-boards.greenhouse.io/2kczech
+    api: https://boards-api.greenhouse.io/v1/boards/2kczech/jobs
+    notes: "Brno, Czechia. 2K shared tech / art."
+    enabled: true
+  - name: Ravenwake Games
+    careers_url: https://job-boards.greenhouse.io/ravenwakegames
+    api: https://boards-api.greenhouse.io/v1/boards/ravenwakegames/jobs
+    notes: "Vancouver. EverQuest (Daybreak-adjacent)."
+    enabled: true
+  - name: MobilityWare
+    careers_url: https://job-boards.greenhouse.io/mobilityware
+    api: https://boards-api.greenhouse.io/v1/boards/mobilityware/jobs
+    notes: "Irvine CA + remote. Mobile (Solitaire, Spider)."
+    enabled: true
+  - name: 2K Madrid
+    careers_url: https://job-boards.greenhouse.io/2kmadrid
+    api: https://boards-api.greenhouse.io/v1/boards/2kmadrid/jobs
+    notes: "Madrid. 2K studio."
+    enabled: true
+  - name: Firaxis (2K)
+    careers_url: https://job-boards.greenhouse.io/firaxis
+    api: https://boards-api.greenhouse.io/v1/boards/firaxis/jobs
+    notes: "Cary NC. Civilization, XCOM."
+    enabled: true
+  - name: Insomniac Games (Sony)
+    careers_url: https://job-boards.greenhouse.io/insomniac
+    api: https://boards-api.greenhouse.io/v1/boards/insomniac/jobs
+    notes: "US remote. Spider-Man, Ratchet & Clank."
+    enabled: true
+  - name: Turtle Rock Studios
+    careers_url: https://job-boards.greenhouse.io/turtlerockstudios
+    api: https://boards-api.greenhouse.io/v1/boards/turtlerockstudios/jobs
+    notes: "Irvine CA. Back 4 Blood, Left 4 Dead."
+    enabled: true
+  - name: Digital Extremes
+    careers_url: https://job-boards.greenhouse.io/digitalextremes
+    api: https://boards-api.greenhouse.io/v1/boards/digitalextremes/jobs
+    notes: "London ON, Canada. Warframe."
+    enabled: true
+  - name: 31st Union (2K)
+    careers_url: https://job-boards.greenhouse.io/31stunion
+    api: https://boards-api.greenhouse.io/v1/boards/31stunion/jobs
+    notes: "San Mateo CA + Spain. 2K new-gen studio."
+    enabled: true
+  - name: Krafton Montréal
+    careers_url: https://job-boards.greenhouse.io/studiokraftonboard
+    api: https://boards-api.greenhouse.io/v1/boards/studiokraftonboard/jobs
+    notes: "Montréal. Krafton AAA studio."
+    enabled: true
+  - name: Small Giant Games (Zynga)
+    careers_url: https://job-boards.greenhouse.io/sggcareers
+    api: https://boards-api.greenhouse.io/v1/boards/sggcareers/jobs
+    notes: "Helsinki. Mobile (Empires & Puzzles)."
+    enabled: true
+  - name: Digital Eclipse
+    careers_url: https://job-boards.greenhouse.io/digitaleclipse
+    api: https://boards-api.greenhouse.io/v1/boards/digitaleclipse/jobs
+    notes: "Emeryville CA. Remasters / interactive docs."
+    enabled: true
+  - name: That's No Moon
+    careers_url: https://job-boards.greenhouse.io/thatsnomoonentertainment
+    api: https://boards-api.greenhouse.io/v1/boards/thatsnomoonentertainment/jobs
+    notes: "US remote. AAA action (ex-Naughty Dog leads)."
+    enabled: true
+  - name: Kano
+    careers_url: https://job-boards.greenhouse.io/kano
+    api: https://boards-api.greenhouse.io/v1/boards/kano/jobs
+    notes: "Remote. Social / web games (Kano Apps)."
+    enabled: true
+  - name: Coatsink
+    careers_url: https://job-boards.greenhouse.io/coatsink
+    api: https://boards-api.greenhouse.io/v1/boards/coatsink/jobs
+    notes: "Newcastle UK. Indie + co-dev (VR / console)."
+    enabled: true
+  - name: Gravity Well
+    careers_url: https://job-boards.greenhouse.io/gravitywell
+    api: https://boards-api.greenhouse.io/v1/boards/gravitywell/jobs
+    notes: "US remote. New studio (ex-Respawn founders)."
+    enabled: true
+  - name: Night Dive Studios
+    careers_url: https://job-boards.greenhouse.io/nightdivestudios
+    api: https://boards-api.greenhouse.io/v1/boards/nightdivestudios/jobs
+    notes: "US remote. Classic remasters (System Shock)."
+    enabled: true
+  - name: A Thinking Ape
+    careers_url: https://job-boards.greenhouse.io/athinkingape
+    api: https://boards-api.greenhouse.io/v1/boards/athinkingape/jobs
+    notes: "Vancouver. Mobile games."
+    enabled: true
+  - name: Azra Games
+    careers_url: https://job-boards.greenhouse.io/azragames
+    api: https://boards-api.greenhouse.io/v1/boards/azragames/jobs
+    notes: "California. RPG (ex-EA/Maxis)."
+    enabled: true
+  - name: Tactile Games
+    careers_url: https://job-boards.greenhouse.io/tactilegames
+    api: https://boards-api.greenhouse.io/v1/boards/tactilegames/jobs
+    notes: "Copenhagen. Mobile puzzle (Lily's Garden)."
+    enabled: true
+  - name: Hasbro / Wizards of the Coast
+    careers_url: https://job-boards.greenhouse.io/hasbro
+    api: https://boards-api.greenhouse.io/v1/boards/hasbro/jobs
+    notes: "Renton WA + remote. MTG, D&D, games + tabletop."
+    enabled: true
+  - name: Twitch
+    careers_url: https://job-boards.greenhouse.io/twitch
+    api: https://boards-api.greenhouse.io/v1/boards/twitch/jobs
+    notes: "US remote. Games-adjacent streaming platform (Amazon)."
+    enabled: true
+  - name: NCSOFT West
+    careers_url: https://job-boards.greenhouse.io/ncamerica
+    api: https://boards-api.greenhouse.io/v1/boards/ncamerica/jobs
+    notes: "Irvine CA. NCSOFT's western publishing/dev arm."
+    enabled: true
+  - name: Wildlife Studios
+    careers_url: https://job-boards.greenhouse.io/wildlifestudios
+    api: https://boards-api.greenhouse.io/v1/boards/wildlifestudios/jobs
+    notes: "São Paulo + remote. Mobile (Brazil HQ filtered; remote roles surface)."
+    enabled: true
+  - name: PUBG Studios (Krafton)
+    careers_url: https://job-boards.greenhouse.io/pubgcorporation
+    api: https://boards-api.greenhouse.io/v1/boards/pubgcorporation/jobs
+    notes: "Seoul (Korea filtered) + global. PUBG, Palworld Mobile."
+    enabled: true
+
+  # ── Studios on Lever (mining pass #2) ─────────────────────────────
+  - name: Xsolla
+    careers_url: https://jobs.lever.co/xsolla
+    notes: "Global. Game commerce / payments / publishing services."
+    enabled: true
+  - name: Behaviour Interactive
+    careers_url: https://jobs.lever.co/bhvr
+    notes: "Montréal. Dead by Daylight (largest Canadian indie)."
+    enabled: true
+  - name: Neowiz
+    careers_url: https://jobs.lever.co/neowiz
+    notes: "Santa Monica + Seoul. Lies of P, DJMAX."
+    enabled: true
+  - name: Kabam
+    careers_url: https://jobs.lever.co/kabam
+    notes: "Vancouver. Mobile (Marvel Contest of Champions)."
+    enabled: true
+  - name: Fanatee
+    careers_url: https://jobs.lever.co/fanatee
+    notes: "Remote. Mobile word/puzzle (CodyCross, Stop)."
+    enabled: true
+  - name: Easybrain
+    careers_url: https://jobs.lever.co/easybrain
+    notes: "Warsaw / Cyprus. Mobile puzzle (Sudoku, Art Puzzle)."
+    enabled: true
+  - name: Mistplay
+    careers_url: https://jobs.lever.co/mistplay
+    notes: "Montréal + remote. Mobile-gaming loyalty platform."
+    enabled: true
+  - name: Poki
+    careers_url: https://jobs.lever.co/poki
+    notes: "Amsterdam. Web games platform."
+    enabled: true
+  - name: Modulate
+    careers_url: https://jobs.lever.co/modulate
+    notes: "Somerville MA. Voice AI for games (ToxMod)."
+    enabled: true
+  - name: Loop Games
+    careers_url: https://jobs.lever.co/loopgames
+    notes: "Ankara. Mobile games."
+    enabled: true
+  - name: Immutable
+    careers_url: https://jobs.lever.co/immutable
+    notes: "Sydney + remote. Web3 gaming platform (Gods Unchained)."
+    enabled: true
+
+  # ── Studios on Ashby (mining pass #2) ─────────────────────────────
+  - name: thatgamecompany
+    careers_url: https://jobs.ashbyhq.com/thatgamecompany
+    notes: "LA + remote. Sky: Children of the Light, Journey."
+    enabled: true
+  - name: Bad Robot Games
+    careers_url: https://jobs.ashbyhq.com/badrobotgames
+    notes: "US. J.J. Abrams' games division."
+    enabled: true
+  - name: Stellar Entertainment
+    careers_url: https://jobs.ashbyhq.com/stellarentertainment
+    notes: "Guildford UK. F1 / racing co-dev."
+    enabled: true
+  - name: Bigger Games
+    careers_url: https://jobs.ashbyhq.com/biggergames
+    notes: "Istanbul. Mobile puzzle (ex-Peak / Dream Games founders)."
+    enabled: true
+  - name: Medal.tv
+    careers_url: https://jobs.ashbyhq.com/medal
+    notes: "NYC + remote. Games clip-capture platform."
+    enabled: true
+  - name: HYPERHUG
+    careers_url: https://jobs.ashbyhq.com/hyperhug
+    notes: "Remote. Indie studio."
+    enabled: true
+  - name: Spellbrush
+    careers_url: https://jobs.ashbyhq.com/spellbrush
+    notes: "SF + Tokyo. Anime AI games (Unity)."
+    enabled: true
+  - name: Arb Interactive
+    careers_url: https://jobs.ashbyhq.com/arb-interactive
+    notes: "Miami. Mobile (Family Island)."
+    enabled: true
+  - name: Voldex
+    careers_url: https://jobs.ashbyhq.com/Voldex
+    notes: "Remote. Roblox games studio (Brookhaven)."
+    enabled: true
+  - name: Volka Games
+    careers_url: https://jobs.ashbyhq.com/volka
+    notes: "Limassol, Cyprus. Mobile (Taonga)."
+    enabled: true
+  - name: ArenaNet
+    careers_url: https://jobs.ashbyhq.com/arenanet
+    notes: "Bellevue WA + remote. Guild Wars 2."
+    enabled: true
+  - name: Joyteractive
+    careers_url: https://jobs.ashbyhq.com/Joyteractive
+    notes: "Poland + remote. Mobile games."
+    enabled: true
+  - name: TapBlaze
+    careers_url: https://jobs.ashbyhq.com/tapblaze
+    notes: "LA. Mobile (Good Pizza, Great Pizza)."
+    enabled: true
+  - name: Improbable
+    careers_url: https://jobs.ashbyhq.com/Improbable
+    notes: "London + remote. Metaverse / large-scale game tech."
+    enabled: true
+  - name: Believer Entertainment
+    careers_url: https://jobs.ashbyhq.com/believer
+    notes: "Remote. AAA studio (Brandon Beck, ex-Riot CEO)."
+    enabled: true
+  - name: Sorare
+    careers_url: https://jobs.ashbyhq.com/Sorare
+    notes: "Paris. Fantasy-sports NFT games."
+    enabled: true
+  - name: Colonist
+    careers_url: https://jobs.ashbyhq.com/colonist
+    notes: "Remote. Web board game (Catan-like)."
+    enabled: true
+  - name: Inworld AI
+    careers_url: https://jobs.ashbyhq.com/inworld-ai
+    notes: "Mountain View + remote. AI NPC engine for games."
+    enabled: true
+  - name: Rocket Science
+    careers_url: https://jobs.ashbyhq.com/rocketsciencegg
+    notes: "Cardiff UK + remote. Game services / co-dev."
+    enabled: true
+  - name: Battle Creek Games
+    careers_url: https://jobs.ashbyhq.com/battle-creek-games
+    notes: "US. Unity studio."
+    enabled: true
+  - name: Redly Games
+    careers_url: https://jobs.ashbyhq.com/redlygames
+    notes: "Remote (EU/Canada). Mobile/indie."
+    enabled: true
+  - name: Balor Games
+    careers_url: https://jobs.ashbyhq.com/balorgames
+    notes: "Remote. Mobile games."
+    enabled: true
+
+  # ── Studios on Teamtailor (mining pass #2) ────────────────────────
+  - name: Stillfront Group
+    provider: teamtailor
+    careers_url: https://stillfrontgroup.teamtailor.com
+    notes: "Stockholm. Mobile games group (Nanobit, Goodgame, etc.)."
+    enabled: true
+  - name: Twin Harbour Interactive
+    provider: teamtailor
+    careers_url: https://twinharbour.teamtailor.com
+    notes: "Mobile games studio."
+    enabled: true
+  - name: Goodgame Studios
+    provider: teamtailor
+    careers_url: https://goodgamestudios.teamtailor.com
+    notes: "Hamburg. Browser/mobile strategy (Empire)."
+    enabled: true
+  - name: Nanobit (Stillfront)
+    provider: teamtailor
+    careers_url: https://nanobit.teamtailor.com
+    notes: "Zagreb. Mobile (story / lifestyle apps)."
+    enabled: true
+  - name: Plummy Games
+    provider: teamtailor
+    careers_url: https://plummygames.teamtailor.com
+    notes: "Mobile puzzle games."
+    enabled: true
+  - name: Vira Games
+    provider: teamtailor
+    careers_url: https://viragames.teamtailor.com
+    notes: "Mobile games studio."
+    enabled: true
+  - name: Pixion Games
+    provider: teamtailor
+    careers_url: https://pixiongames.teamtailor.com
+    notes: "Web3 / mobile games."
+    enabled: true
+  - name: New Moon Production
+    provider: teamtailor
+    careers_url: https://newmoonproduction.teamtailor.com
+    notes: "Game studio."
+    enabled: true
+  - name: SYBO Games
+    provider: teamtailor
+    careers_url: https://sybo.teamtailor.com
+    notes: "Copenhagen. Subway Surfers."
+    enabled: true
+  - name: Arrowhead Game Studios
+    provider: teamtailor
+    careers_url: https://jobs.arrowheadgamestudios.com
+    notes: "Stockholm. Helldivers 2, Magicka."
+    enabled: true
+  - name: Hazelight Studios
+    provider: teamtailor
+    careers_url: https://careers.hazelight.se
+    notes: "Stockholm. It Takes Two, Split Fiction. 0 open when added — auto-updates."
+    enabled: true
+  - name: Starbreeze Studios
+    provider: teamtailor
+    careers_url: https://starbreeze.teamtailor.com
+    notes: "Stockholm. PAYDAY. 0 open when added — auto-updates."
+    enabled: true
+  - name: The Gang
+    provider: teamtailor
+    careers_url: https://thegang.teamtailor.com
+    notes: "Stockholm + remote. Roblox / Fortnite UEFN studio. 0 open when added — auto-updates."
+    enabled: true
+  - name: Beyond Frames Entertainment
+    provider: teamtailor
+    careers_url: https://beyondframesentertainment.teamtailor.com
+    notes: "Stockholm. VR/XR games."
+    enabled: true
+
+  # Not yet covered (need a browser):
+  #   King (Stockholm) — Workday but Cloudflare bot-protected (activision.wd1.myworkdayjobs.com/King_External_Careers)
+  #   EA / DICE (Stockholm) — custom jobs.ea.com portal, not standard Workday

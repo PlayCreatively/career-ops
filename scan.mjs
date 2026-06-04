@@ -34,12 +34,22 @@ import path from 'path';
 import yaml from 'js-yaml';
 
 import { makeHttpCtx } from './providers/_http.mjs';
+import { scoreCategory } from './rank.mjs';
 
 const parseYaml = yaml.load;
 
 // ── Config ──────────────────────────────────────────────────────────
 
+// Config is split across two files:
+//   studios.yml  — the company list (tracked in git, shared with collaborators)
+//   portals.yml  — your targeting/filters (gitignored, personal, NOT shared)
+// scan reads companies from studios.yml and filters from portals.yml. A fresh
+// clone that has studios.yml but no personal portals.yml falls back to the
+// example targeting so it still scans. (For back-compat, if studios.yml is
+// absent, companies are read from portals.yml's tracked_companies.)
 const PORTALS_PATH = process.env.CAREER_OPS_PORTALS || 'portals.yml';
+const STUDIOS_PATH = process.env.CAREER_OPS_STUDIOS || 'studios.yml';
+const PORTALS_EXAMPLE_PATH = 'templates/portals.example.yml';
 const SCAN_HISTORY_PATH = 'data/scan-history.tsv';
 const PIPELINE_PATH = 'data/pipeline.md';
 const APPLICATIONS_PATH = 'data/applications.md';
@@ -128,6 +138,36 @@ function buildTitleFilter(titleFilter) {
     const hasPositive = positive.length === 0 || positive.some(k => lower.includes(k));
     const hasNegative = negative.some(k => lower.includes(k));
     return hasPositive && !hasNegative;
+  };
+}
+
+// ── Unified targeting filter ────────────────────────────────────────
+// The `targeting:` block (location/role/seniority weight maps) drives BOTH the
+// scan gate and the rank order. A job is dropped if its role OR location
+// dimension scores 0 — using the SAME scoring engine as rank.mjs (word-stem /
+// regex matching + `combine`), so a single 0-weight ("excluded") keyword zeroes
+// that dimension (combine: min). role.default: 0 makes role an allowlist;
+// location.default > 0 keeps unknown locations (fail-safe, block-only).
+// Seniority intentionally never gates (its default > 0 and it has no 0s).
+//
+// Returns the same { title, location } predicate pair as the legacy builders so
+// the scan loop is unchanged. The dimension is "passed" when it has no keyword
+// map at all (so an absent dimension never silently drops everything).
+export function buildTargetingFilter(targeting) {
+  const combine = targeting?.combine || 'min';
+  const roleMap = targeting?.role;
+  const locMap = targeting?.location;
+  const companyMap = targeting?.company;
+  return {
+    title: (title) =>
+      !roleMap || scoreCategory(title, roleMap, combine).score > 0,
+    location: (location) =>
+      !locMap || scoreCategory(location, locMap, combine).score > 0,
+    // Gate on the job's company name — chiefly to exclude single studios from
+    // aggregator feeds (Hitmarker / Work With Indies). default: 1 keeps unknown
+    // companies (fail-safe); set a studio to 0 to block it.
+    company: (company) =>
+      !companyMap || scoreCategory(company, companyMap, combine).score > 0,
   };
 }
 
@@ -411,16 +451,40 @@ async function main() {
     process.exit(1);
   }
 
-  // 2. Read portals.yml
-  if (!existsSync(PORTALS_PATH)) {
-    console.error('Error: portals.yml not found. Run onboarding first.');
+  // 2. Load config. Targeting/filters come from portals.yml (personal,
+  //    gitignored); fall back to the example so a fresh clone without a personal
+  //    portals.yml still scans rather than failing.
+  const cfgPath = existsSync(PORTALS_PATH) ? PORTALS_PATH
+    : existsSync(PORTALS_EXAMPLE_PATH) ? PORTALS_EXAMPLE_PATH
+    : null;
+  const config = cfgPath ? (parseYaml(readFileSync(cfgPath, 'utf-8')) || {}) : {};
+
+  // Companies come from studios.yml (tracked, shared). Back-compat: if there's
+  // no studios.yml, read tracked_companies from the targeting config instead.
+  let companies;
+  if (existsSync(STUDIOS_PATH)) {
+    const studios = parseYaml(readFileSync(STUDIOS_PATH, 'utf-8')) || {};
+    companies = studios.tracked_companies || [];
+  } else {
+    companies = config.tracked_companies || [];
+  }
+  if (!companies.length) {
+    console.error(`Error: no studios found. Add tracked_companies to ${STUDIOS_PATH} (or run onboarding).`);
     process.exit(1);
   }
-
-  const config = parseYaml(readFileSync(PORTALS_PATH, 'utf-8'));
-  const companies = config.tracked_companies || [];
-  const titleFilter = buildTitleFilter(config.title_filter);
-  const locationFilter = buildLocationFilter(config.location_filter);
+  // Prefer the unified `targeting:` block; fall back to the legacy
+  // title_filter/location_filter blocks if a config predates unification.
+  let titleFilter, locationFilter, companyFilter;
+  if (config.targeting) {
+    const tf = buildTargetingFilter(config.targeting);
+    titleFilter = tf.title;
+    locationFilter = tf.location;
+    companyFilter = tf.company;
+  } else {
+    titleFilter = buildTitleFilter(config.title_filter);
+    locationFilter = buildLocationFilter(config.location_filter);
+    companyFilter = () => true; // legacy configs have no company filter
+  }
 
   // 3. Resolve a provider for each enabled company
   const targets = [];
@@ -453,6 +517,7 @@ async function main() {
   let totalFound = 0;
   let totalFilteredTitle = 0;
   let totalFilteredLocation = 0;
+  let totalFilteredCompany = 0;
   let totalDupes = 0;
   const newOffers = [];
   const errors = [...resolveErrors];
@@ -489,6 +554,10 @@ async function main() {
         }
         if (!locationFilter(job.location)) {
           totalFilteredLocation++;
+          continue;
+        }
+        if (!companyFilter(job.company)) {
+          totalFilteredCompany++;
           continue;
         }
         if (seenUrls.has(job.url)) {
@@ -563,6 +632,9 @@ async function main() {
   console.log(`Total jobs found:      ${totalFound}`);
   console.log(`Filtered by title:     ${totalFilteredTitle} removed`);
   console.log(`Filtered by location:  ${totalFilteredLocation} removed`);
+  if (totalFilteredCompany > 0) {
+    console.log(`Filtered by company:   ${totalFilteredCompany} removed`);
+  }
   console.log(`Duplicates:            ${totalDupes} skipped`);
   if (verify) {
     console.log(`Expired (verified):    ${expiredOffers.length} dropped`);
