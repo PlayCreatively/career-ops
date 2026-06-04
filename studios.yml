@@ -782,3 +782,88 @@ tracked_companies:
   # Not yet covered (need a browser):
   #   King (Stockholm) — Workday but Cloudflare bot-protected (activision.wd1.myworkdayjobs.com/King_External_Careers)
   #   EA / DICE (Stockholm) — custom jobs.ea.com portal, not standard Workday
+
+  # ══════════════════════════════════════════════════════════════════
+  # -- Research pass #3 (2026-06-04): prior probe-ats.mjs "misses" that
+  #    actually run on ATS we already support — they slipped through only
+  #    because the probe checks Greenhouse/Lever/Ashby/Teamtailor-subdomain.
+  #    Each feed below was validated live (curl 200). See data/ats-research.md.
+  # ══════════════════════════════════════════════════════════════════
+
+  # ── Studios on SmartRecruiters (research pass #3) ─────────────────
+  - name: CD Projekt Red
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/CDPROJEKTRED
+    notes: "Warsaw. Witcher, Cyberpunk 2077."
+    enabled: true
+  - name: Remedy Entertainment
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/RemedyHR
+    notes: "Espoo, FI. Control, Alan Wake."
+    enabled: true
+  - name: Techland
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/techlandsa
+    notes: "Wrocław. Dying Light. (Also runs a Workable board.)"
+    enabled: true
+  - name: Don't Nod
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/DONTNOD
+    notes: "Paris / Montréal. Life is Strange."
+    enabled: true
+  - name: People Can Fly
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/PeopleCanFly
+    notes: "Warsaw. Outriders, Gears of War."
+    enabled: true
+
+  # ── Studios on Recruitee (research pass #3) ───────────────────────
+  - name: 11 bit studios
+    provider: recruitee
+    careers_url: https://11bitstudios.recruitee.com
+    notes: "Warsaw. Frostpunk, This War of Mine."
+    enabled: true
+  - name: Bloober Team
+    provider: recruitee
+    careers_url: https://blooberteam.recruitee.com
+    notes: "Kraków. Silent Hill 2 remake. (Also at careers.blooberteam.com.)"
+    enabled: true
+
+  # ── Studios on Workable (research pass #3) ────────────────────────
+  - name: Rebellion
+    provider: workable
+    careers_url: https://apply.workable.com/rebellion
+    notes: "Oxford. Sniper Elite."
+    enabled: true
+  - name: Supermassive Games
+    provider: workable
+    careers_url: https://apply.workable.com/supermassive-games
+    notes: "Guildford. Until Dawn, The Dark Pictures."
+    enabled: true
+
+  # ── Studios on Teamtailor (research pass #3) ──────────────────────
+  - name: Stunlock Studios
+    provider: teamtailor
+    careers_url: https://jobs.stunlockstudios.com
+    notes: "Skövde. V Rising."
+    enabled: true
+
+  # ── Studios on Lever EU (research pass #3) ────────────────────────
+  # EU data-residency boards on jobs.eu.lever.co — needs the eu.lever
+  # support added to providers/lever.mjs in this same pass.
+  - name: InnoGames
+    careers_url: https://jobs.eu.lever.co/innogames
+    notes: "Hamburg. Forge of Empires, browser/mobile strategy."
+    enabled: true
+  - name: Frontier Developments
+    careers_url: https://jobs.eu.lever.co/frontier
+    notes: "Cambridge. Elite Dangerous, Planet Zoo/Coaster."
+    enabled: true
+  - name: Kwalee
+    careers_url: https://jobs.eu.lever.co/kwalee
+    notes: "Leamington Spa. Mobile + PC publishing."
+    enabled: true
+
+  # Found but not wired (research pass #3, see data/ats-research.md):
+  #   Cloud Imperium Games — Workday (cloudimperiumgames.wd1.myworkdayjobs.com/CIG_Global_Careers), cxs gated (HTTP 422)
+  #   Splash Damage — Jobvite (jobs.jobvite.com/splashdamage), no provider yet
