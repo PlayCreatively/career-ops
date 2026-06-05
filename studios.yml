@@ -840,12 +840,32 @@ tracked_companies:
     careers_url: https://apply.workable.com/supermassive-games
     notes: "Guildford. Until Dawn, The Dark Pictures."
     enabled: true
+  - name: Bossa Studios
+    provider: workable
+    careers_url: https://apply.workable.com/bossa-studios
+    notes: "London, fully remote. I Am Fish, Surgeon Simulator."
+    enabled: true
+  - name: Space Ape Games
+    provider: workable
+    careers_url: https://apply.workable.com/space-ape-games
+    notes: "London. Mobile (Supercell-owned)."
+    enabled: true
+  - name: Hutch Games
+    provider: workable
+    careers_url: https://apply.workable.com/hutch
+    notes: "London. Racing mobile — F1 Clash, Top Drives."
+    enabled: true
 
   # ── Studios on Teamtailor (research pass #3) ──────────────────────
   - name: Stunlock Studios
     provider: teamtailor
     careers_url: https://jobs.stunlockstudios.com
     notes: "Skövde. V Rising."
+    enabled: true
+  - name: Redhill Games
+    provider: teamtailor
+    careers_url: https://careers.redhillgames.com
+    notes: "Helsinki / Nicosia. Co-dev studio, ~70 staff."
     enabled: true
 
   # ── Studios on Lever EU (research pass #3) ────────────────────────
@@ -867,3 +887,244 @@ tracked_companies:
   # Found but not wired (research pass #3, see data/ats-research.md):
   #   Cloud Imperium Games — Workday (cloudimperiumgames.wd1.myworkdayjobs.com/CIG_Global_Careers), cxs gated (HTTP 422)
   #   Splash Damage — Jobvite (jobs.jobvite.com/splashdamage), no provider yet
+
+  # ── Swedish studios from the Wikipedia list probe (research pass #3) ──
+  # Probed all 306 names on "List of video game companies of Sweden": only
+  # ~11% hit a feed, and EVERY Ashby/Greenhouse hit was a slug-namesake (US
+  # tech cos). The only genuine Swedish-studio feeds are Teamtailor. New ones
+  # not already tracked above (Axolot excluded — its board is a Teamtailor DEMO):
+  - name: Frame Break
+    provider: teamtailor
+    careers_url: https://framebreak.teamtailor.com
+    notes: "Stockholm. AAA studio founded by Avalanche/MachineGames vets."
+    enabled: true
+  - name: Kavalri Games
+    provider: teamtailor
+    careers_url: https://kavalrigames.teamtailor.com
+    notes: "Swedish indie studio."
+    enabled: true
+  - name: MindArk
+    provider: teamtailor
+    careers_url: https://mindark.teamtailor.com
+    notes: "Gothenburg. Entropia Universe MMO."
+    enabled: true
+  - name: SolidIcon
+    provider: teamtailor
+    careers_url: https://solidicon.teamtailor.com
+    notes: "Gothenburg game studio."
+    enabled: true
+  - name: Goodbye Kansas
+    provider: teamtailor
+    careers_url: https://career.goodbyekansas.com
+    notes: "Stockholm. VFX/cinematics + game art (VFX-adjacent)."
+    enabled: true
+
+  # ── Studios on Jobylon (research pass #3) ─────────────────────────
+  # Jobylon (Nordic ATS) has no keyless JSON feed, but its public embed widget
+  # at cdn.jobylon.com/jobs/companies/<id>/embed/v1/ is keyless — see
+  # providers/jobylon.mjs. The <id> is the numeric id in the studio's public
+  # board URL (emp.jobylon.com/companies/<id>-<slug>/). 0 open roles when added.
+  - name: NOID
+    provider: jobylon
+    careers_url: https://emp.jobylon.com/companies/2048-noid/
+    notes: "Stockholm game studio."
+    enabled: true
+  - name: Valiant Game Studio
+    provider: jobylon
+    careers_url: https://emp.jobylon.com/companies/1140-valiant-game-studio/
+    notes: "Indie storytelling/social-impact studio."
+    enabled: true
+
+  # ── Studios mined from the ASGC board (research pass #4) ──────────
+  # Source: games-jobs-workbook.replit.app/api/job-listings (keyless JSON,
+  # ~46k jobs / ~1,856 companies). Mined company→ATS slug from each jobLink
+  # host, filtered to games studios by game-dev job-title share, deduped vs
+  # the list above, and validated each against its live feed (count>0).
+  # See mine-asgc.mjs and data/ats-research.md. iGaming/casino (Rush Street,
+  # Yggdrasil) and reward-app (JustPlay) excluded as non-videogames.
+  - name: Sony Interactive Entertainment (Japan)
+    careers_url: https://job-boards.greenhouse.io/siei
+    api: https://boards-api.greenhouse.io/v1/boards/siei/jobs
+    notes: "Konan, Japan. ~49 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Bluehole / Krafton
+    careers_url: https://job-boards.greenhouse.io/bluehole
+    api: https://boards-api.greenhouse.io/v1/boards/bluehole/jobs
+    notes: "~20 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Loonshot Games
+    careers_url: https://job-boards.greenhouse.io/loonshotgames
+    api: https://boards-api.greenhouse.io/v1/boards/loonshotgames/jobs
+    notes: "Seoul, South Korea. ~21 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Bonfire Studios
+    careers_url: https://job-boards.greenhouse.io/bonfirestudiosinc
+    api: https://boards-api.greenhouse.io/v1/boards/bonfirestudiosinc/jobs
+    notes: "Irvine, United States. ~6 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Cat Daddy Games
+    careers_url: https://job-boards.greenhouse.io/catdaddy
+    api: https://boards-api.greenhouse.io/v1/boards/catdaddy/jobs
+    notes: "Kirkland, United States. ~2 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: 5minlab
+    careers_url: https://job-boards.greenhouse.io/5minlab
+    api: https://boards-api.greenhouse.io/v1/boards/5minlab/jobs
+    notes: "Seoul, South Korea. ~6 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Highdive
+    careers_url: https://job-boards.greenhouse.io/highdive
+    api: https://boards-api.greenhouse.io/v1/boards/highdive/jobs
+    notes: "Montreal, Canada. ~11 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Good Job Games
+    careers_url: https://job-boards.greenhouse.io/goodjobgames
+    api: https://boards-api.greenhouse.io/v1/boards/goodjobgames/jobs
+    notes: "Sariyer, Turkey. ~26 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Visual Concepts
+    careers_url: https://job-boards.greenhouse.io/visualconcepts
+    api: https://boards-api.greenhouse.io/v1/boards/visualconcepts/jobs
+    notes: "Novato, Canada. ~4 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Dynamite Games
+    careers_url: https://job-boards.greenhouse.io/dynamitegames
+    api: https://boards-api.greenhouse.io/v1/boards/dynamitegames/jobs
+    notes: "Singapore, Singapore. ~17 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Exploding Kittens
+    careers_url: https://jobs.lever.co/explodingkittens
+    notes: "Los Angeles, United States. ~4 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Amanotes
+    careers_url: https://jobs.lever.co/amanotes
+    notes: "Ho Chi Minh City, Vietnam. ~44 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Asobo Studio
+    careers_url: https://jobs.eu.lever.co/asobostudio
+    notes: "Bordeaux, France. ~5 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Pocket Worlds
+    careers_url: https://jobs.ashbyhq.com/Pocket%20Worlds
+    notes: "~1 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Whalo
+    careers_url: https://jobs.ashbyhq.com/whalo
+    notes: "Tel Aviv, Israel. ~7 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Sunday
+    careers_url: https://jobs.ashbyhq.com/sunday
+    notes: "Redwood City, United States. ~25 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Squeeze Studio Animation
+    careers_url: https://squeezestudio.recruitee.com
+    notes: "Montreal, Canada. ~4 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Huuuge Games
+    careers_url: https://huuuge.recruitee.com
+    notes: "Warsaw, Poland. ~9 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Focus Entertainment
+    careers_url: https://focusentertainment.recruitee.com
+    notes: "Alkmaar, Netherlands. ~8 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Scorewarrior
+    careers_url: https://scorewarrior.recruitee.com
+    notes: "Limassol, Cyprus. ~26 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Old Skull Games
+    careers_url: https://careers.smartrecruiters.com/OldSkullGames1
+    notes: "Lyon, France. ~5 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Frima Studio
+    careers_url: https://careers.smartrecruiters.com/FrimaStudio
+    notes: "Quebec, Canada. ~8 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Epoch Games
+    careers_url: https://careers.smartrecruiters.com/epochgames
+    notes: "Winston-Salem, United States. ~10 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Keywords Studios
+    careers_url: https://careers.smartrecruiters.com/KeywordsStudios
+    notes: "Pacific, Australia. ~34 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Tonic DNA
+    careers_url: https://careers.smartrecruiters.com/TonicDNA1
+    notes: "Montreal, Canada. ~3 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: High Voltage Software
+    careers_url: https://apply.workable.com/high-voltage-software
+    notes: "Ontario, Canada. ~8 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Studio Gobo
+    careers_url: https://apply.workable.com/studiogobo
+    notes: "Brighton, United Kingdom. ~3 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Velan Studios
+    careers_url: https://apply.workable.com/velanstudios
+    notes: "Toronto, Canada. ~6 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Astrid Entertainment
+    careers_url: https://apply.workable.com/astrid-entertainment
+    notes: "~1 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Ninja Theory
+    careers_url: https://apply.workable.com/ninja-theory
+    notes: "Cambridge, United States. ~1 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Lighthouse Games
+    careers_url: https://apply.workable.com/lighthousegames
+    notes: "Royal Leamington Spa, United Kingdom. ~22 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Snowed In Studios
+    careers_url: https://apply.workable.com/snowed-in-studios-3
+    notes: "Ottawa, Canada. ~4 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Sperasoft
+    careers_url: https://apply.workable.com/sperasoft
+    notes: "Yerevan, Armenia. ~94 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Lakshya Digital
+    careers_url: https://apply.workable.com/lakshyadigitalglobal
+    notes: "Gurugram, India. ~69 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Komodo
+    careers_url: https://apply.workable.com/komodo-co-dot-ltd
+    notes: "Akihabara, Japan. ~14 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Big Viking Games
+    careers_url: https://apply.workable.com/big-viking-games-3
+    notes: "Toronto, Canada. ~7 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Escape Velocity Entertainment
+    careers_url: https://apply.workable.com/escape-velocity-entertainment-inc
+    notes: "~5 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: CoolGames
+    careers_url: https://apply.workable.com/coolgames
+    notes: "Amsterdam, Netherlands. ~3 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Devoted Studios
+    careers_url: https://apply.workable.com/devoted-studios-1
+    notes: "Toronto, Canada. ~21 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Pixomondo (PXO)
+    careers_url: https://apply.workable.com/pxo
+    notes: "Stuttgart, Germany. ~12 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: ZeptoLab
+    careers_url: https://apply.workable.com/zeptolab
+    notes: "~5 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Homa Games
+    careers_url: https://apply.workable.com/homa-games
+    notes: "Paris, France. ~25 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Crazy Maple Studio
+    careers_url: https://apply.workable.com/crazymaplestudio
+    notes: "Culver City, United States. ~7 roles (ASGC mining pass #4)."
+    enabled: true
+  - name: Ace Games
+    careers_url: https://apply.workable.com/ace-games
+    notes: "Istanbul, Turkey. ~6 roles (ASGC mining pass #4)."
+    enabled: true
