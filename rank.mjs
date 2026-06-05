@@ -66,8 +66,16 @@ export function combineWeights(weights, mode = 'max') {
  * Build the RegExp for a key, case-insensitive. Two modes:
  *
  *   1. Regex escape hatch — if the key is wrapped in slashes, it's used as a
- *      raw regex: "/programm(er|ing)/" or "/\\bui\\b/" for exact control.
- *      Trailing flags are honored ("i" is always added).
+ *      regex: "/programm(er|ing)/" or "/(game|tools?) engineer/". Trailing flags
+ *      are honored ("i" is always added). Two ergonomic DEFAULTS are applied so
+ *      the common case stays terse — the boilerplate is appended for you:
+ *        • a literal space means "whitespace separator" → compiled as \s+
+ *          (so it also tolerates tabs / multiple spaces);
+ *        • a leading word boundary \b is implied when the pattern opens on a
+ *          word char or a "(" group — so "/(game|engine) engineer/" behaves
+ *          exactly like "/\b(game|engine)\s+engineer/".
+ *      A pattern that opens with its own anchor (^, \b, \B, a lookaround, or any
+ *      backslash-escape) is left untouched, so you can still opt out.
  *
  *   2. Word-stem (default) — the key must START a word, but the end is open, so
  *      "Program" matches Programmer / Programming / Programmers, while "UI"
@@ -82,9 +90,13 @@ export function keyToRegExp(key) {
   if (!trimmed) return null;
   const raw = trimmed.match(/^\/(.+)\/([a-z]*)$/i);
   if (raw) {
+    // Apply the ergonomic defaults (see doc above): literal spaces → \s+, and an
+    // implied leading \b unless the pattern already opens with its own anchor.
+    let body = raw[1].replace(/ +/g, '\\s+');
+    if (/^[\w(]/.test(body)) body = '\\b' + body;
     try {
       const flags = raw[2].includes('i') ? raw[2] : raw[2] + 'i';
-      return new RegExp(raw[1], flags);
+      return new RegExp(body, flags);
     } catch {
       return null;
     }
@@ -171,11 +183,13 @@ export function scoreJob(job, ranking) {
   const location = scoreCategory(job.location, ranking.location || {}, combine);
   const role = scoreCategory(job.title, ranking.role || {}, combine);
   const seniority = scoreCategory(job.title, ranking.seniority || {}, combine);
+  const company = scoreCategory(job.company, ranking.company || {}, combine);
   const fit =
     (w.location || 0) * location.score +
     (w.role || 0) * role.score +
-    (w.seniority || 0) * seniority.score;
-  return { ...job, location_score: location, role_score: role, seniority_score: seniority, fit };
+    (w.seniority || 0) * seniority.score +
+    (w.company || 0) * company.score;
+  return { ...job, location_score: location, role_score: role, seniority_score: seniority, company_score: company, fit };
 }
 
 /** Score and sort a list of jobs, highest fit first. Stable for equal fits. */
@@ -232,17 +246,33 @@ const pct = (n) => `${(n * 100).toFixed(0)}%`;
 // which several job titles contain (e.g. "Gameplay Programmer | Programmeur").
 const cell = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
 
-function renderTable(ranked) {
+// Render a job title as a clickable markdown link to its posting, for one-click
+// access. The link text also escapes square brackets (which would otherwise
+// break the `[text]` part), and the URL is wrapped in <…> so parentheses or
+// other reserved characters in the posting URL can't break the `(…)` part.
+// Falls back to plain text when the job has no URL.
+function roleLink(title, url) {
+  const text = cell(title).replace(/[[\]]/g, '\\$&');
+  const href = String(url ?? '').trim();
+  return href ? `[${text}](<${href}>)` : text;
+}
+
+// `linkify` makes the Role cell a clickable markdown link to the posting —
+// on for the data/ranked.md artifact, off for the terminal preview (where a
+// raw markdown link is just noise).
+function renderTable(ranked, { linkify = false } = {}) {
   const rows = ranked.map((j, i) => {
     const fit = j.fit.toFixed(3);
     const loc = cell(`${pct(j.location_score.score)} ${j.location_score.matched}`);
     const role = cell(`${pct(j.role_score.score)} ${j.role_score.matched}`);
     const sen = cell(`${pct(j.seniority_score.score)} ${j.seniority_score.matched}`);
-    return `| ${i + 1} | ${fit} | ${cell(j.company)} | ${cell(j.title)} | ${cell(j.location) || '—'} | ${loc} | ${role} | ${sen} |`;
+    const co = cell(`${pct(j.company_score.score)} ${j.company_score.matched}`);
+    const title = linkify ? roleLink(j.title, j.url) : cell(j.title);
+    return `| ${i + 1} | ${fit} | ${cell(j.company)} | ${title} | ${cell(j.location) || '—'} | ${loc} | ${role} | ${sen} | ${co} |`;
   });
   return [
-    '| # | Fit | Company | Role | Location | Loc match | Role match | Lvl match |',
-    '|---|-----|---------|------|----------|-----------|------------|-----------|',
+    '| # | Fit | Company | Role | Location | Loc match | Role match | Lvl match | Co match |',
+    '|---|-----|---------|------|----------|-----------|------------|-----------|----------|',
     ...rows,
   ].join('\n');
 }
@@ -255,7 +285,7 @@ function renderRankedFile(ranked, date) {
     '_Weights live in portals.yml under `ranking:`. This does NOT read your CV;',
     'run `/career-ops pipeline` for deep, CV-aware evaluation of the top picks._',
     '',
-    renderTable(ranked),
+    renderTable(ranked, { linkify: true }),
     '',
   ].join('\n');
 }

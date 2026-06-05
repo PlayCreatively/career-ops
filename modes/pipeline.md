@@ -4,8 +4,31 @@ Process job URLs stored in `data/pipeline.md`. The user adds URLs at any time an
 
 ## Workflow
 
+0. **Pre-rank and gate to the top N (default 20).** The inbox can hold hundreds of
+   scanned jobs; deep CV-aware evaluation is the expensive step, so never evaluate
+   the whole inbox blindly. First run the zero-token surface ranker:
+
+   ```bash
+   node rank.mjs --all
+   ```
+
+   This writes `data/ranked.md` (sorted by surface fit: location · role · seniority ·
+   company). Then deep-evaluate only the **top N** rows, in rank order.
+
+   **Choosing N:**
+   - If the user passed `--top {x}` (e.g. `/career-ops pipeline --top 30`), use `x`.
+   - Else if the user passed `--all`, evaluate every pending item (use with care).
+   - Else read `config/profile.yml` → `pipeline_top_default`. If absent, default to **20**.
+
+   Map the top-N ranked rows back to their `- [ ]` pending entries in `data/pipeline.md`
+   (match on URL, or on Company + Role when the URL is blank) and process only those.
+   Mention to the user how many you're evaluating and how many you're skipping (e.g.
+   "Evaluating top 20 of 413 ranked — run `--top 50` or `--all` for more").
+
 1. **Read** `data/pipeline.md` → search for `- [ ]` items in the "Pending" section
-2. **For each pending URL**:
+   (the scanner may write them under a localized heading such as `## Pendientes`;
+   `rank.mjs` already reads every checkbox line regardless of section).
+2. **For each selected URL** (the top-N from step 0):
    a. Calculate the next sequential `REPORT_NUM` (read `reports/`, take the highest number + 1)
    b. **Extract JD** using Playwright (browser_navigate + browser_snapshot) → WebFetch → WebSearch
    c. If the URL is not accessible → mark as `- [!]` with a note and continue
