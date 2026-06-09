@@ -286,6 +286,12 @@ function resetScanState() {
 function appendToPipeline(offers) {
   if (offers.length === 0) return;
 
+  // Create the pipeline file on first use so a fresh clone (where data/ is
+  // gitignored and pipeline.md doesn't exist yet) doesn't crash with ENOENT.
+  if (!existsSync(PIPELINE_PATH)) {
+    writeFileSync(PIPELINE_PATH, '# Pipeline\n\n## Pendientes\n\n## Procesadas\n', 'utf-8');
+  }
+
   let text = readFileSync(PIPELINE_PATH, 'utf-8');
 
   // Find "## Pendientes" section and append after it
