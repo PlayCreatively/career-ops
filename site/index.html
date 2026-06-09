@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Dev Job Board — zero-token scanner</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --txt: #e6e8ee; --dim: #9aa3b2; --accent: #7c5cff; --accent2: #4dd0a7;
+    --chip: #232836; --chipOn: #7c5cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--txt);
+    font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  header {
+    padding: 22px 24px 16px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #14171e, #0f1115);
+  }
+  h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.3px; }
+  h1 .tok { color: var(--accent2); }
+  .sub { color: var(--dim); font-size: 13px; }
+  .sub a { color: var(--accent); text-decoration: none; }
+  .wrap { padding: 18px 24px 60px; max-width: 1200px; margin: 0 auto; }
+  .controls { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .row .label { color: var(--dim); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.5px; width: 78px; flex: none; }
+  input[type=search] {
+    flex: 1; min-width: 220px; background: var(--panel2); border: 1px solid var(--line);
+    color: var(--txt); padding: 10px 12px; border-radius: 8px; font-size: 14px;
+  }
+  select {
+    background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
+    padding: 9px 10px; border-radius: 8px; font-size: 13px;
+  }
+  .chip {
+    background: var(--chip); border: 1px solid var(--line); color: var(--txt);
+    padding: 6px 12px; border-radius: 999px; font-size: 13px; cursor: pointer;
+    user-select: none; transition: background .12s, border-color .12s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip.on { background: var(--chipOn); border-color: var(--chipOn); color: #fff; }
+  .chip .n { opacity: .6; font-size: 11px; margin-left: 5px; }
+  .meta { color: var(--dim); font-size: 13px; margin: 4px 0 12px; }
+  .meta b { color: var(--txt); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+    cursor: pointer; white-space: nowrap; }
+  th.sorted::after { content: " ↓"; color: var(--accent); }
+  tr:hover td { background: var(--panel); }
+  td.role a { color: var(--txt); text-decoration: none; font-weight: 500; }
+  td.role a:hover { color: var(--accent); text-decoration: underline; }
+  td.co { color: var(--accent2); white-space: nowrap; }
+  td.loc { color: var(--dim); font-size: 13px; }
+  .tag { display: inline-block; background: var(--panel2); border: 1px solid var(--line);
+    color: var(--dim); padding: 1px 7px; border-radius: 6px; font-size: 11px; margin-right: 4px; }
+  .fit { font-variant-numeric: tabular-nums; color: var(--dim); font-size: 12px; }
+  .empty { padding: 40px; text-align: center; color: var(--dim); }
+  .more { padding: 16px; text-align: center; color: var(--dim); font-size: 13px; }
+  footer { color: var(--dim); font-size: 12px; padding: 24px; text-align: center; border-top: 1px solid var(--line); }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 Game Dev Job Board <span class="tok">· zero-token</span></h1>
+  <div class="sub">
+    Live openings pulled straight from studio ATS feeds — no AI, no API keys, no cost.
+    Filter by discipline, region and seniority; ranking runs entirely in your browser.
+    <span id="generated"></span>
+  </div>
+</header>
+<div class="wrap">
+  <div class="controls">
+    <div class="row">
+      <span class="label">Search</span>
+      <input id="q" type="search" placeholder="Search role or studio…" autocomplete="off">
+      <select id="sort">
+        <option value="fit">Sort: Best match</option>
+        <option value="company">Sort: Studio A–Z</option>
+        <option value="role">Sort: Role A–Z</option>
+      </select>
+    </div>
+    <div class="row"><span class="label">Discipline</span><span id="disc" class="chips"></span></div>
+    <div class="row"><span class="label">Region</span><span id="region" class="chips"></span></div>
+    <div class="row"><span class="label">Level</span><span id="senior" class="chips"></span></div>
+  </div>
+
+  <div class="meta" id="meta">Loading…</div>
+
+  <table id="tbl">
+    <thead><tr>
+      <th data-sort="company">Studio</th>
+      <th data-sort="role">Role</th>
+      <th data-sort="location">Location</th>
+      <th>Tags</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="more" id="more"></div>
+</div>
+<footer>
+  Built on the <a href="https://github.com/PlayCreatively/career-ops">career-ops</a> zero-token scanner.
+  Studio list and scanner are open source — add your favourite studio with a PR.
+</footer>
+
+<script src="rank.browser.js"></script>
+<script>
+// ── Classification config (keyword maps; reuse Rank.scoreCategory) ──────
+// Word-stem matching: "Program" matches Programmer/Programming. Maximal munch
+// resolves overlaps (e.g. "Technical Artist" → Art, "Gameplay Engineer" → Programming).
+var DISCIPLINES = {
+  "Programming": ["programmer","programming","engineer","developer","software","engine","gameplay engineer","graphics","rendering","backend","back-end","frontend","front-end","full stack","fullstack","tools","devops","network","physics","C++","C#","gameplay programmer","build","SDK","platform","systems engineer"],
+  "Art": ["artist","/\\bart\\b/","/\\bVFX\\b/","animator","animation","character","environment art","concept","modeler","modeller","rigging","lighting","texture","illustrator","outsource","3D art"],
+  "Design": ["designer","design","level design","game design","narrative","writer","systems design","economy","combat design","encounter","quest"],
+  "Audio": ["audio","/\\bsound\\b/","music","composer","/\\bSFX\\b/","foley","dialogue"],
+  "Production": ["producer","production","project manager","program manager","scrum","product manager","delivery","release manager"],
+  "QA": ["QA","quality assurance","tester","/\\btest\\b/","SDET","quality"],
+  "Data/ML": ["data ","analytics","analyst","scientist","machine learning","/\\bML\\b/","/\\bAI\\b/","data engineer"],
+  "Marketing/Community": ["community","marketing","social media","brand","influencer","/\\bPR\\b/","communications"],
+};
+var REGIONS = {
+  "Remote": ["remote","anywhere","distributed","work from home"],
+  "Europe": ["united kingdom","/\\bUK\\b/","england","scotland","london","guildford","brighton","germany","berlin","munich","münchen","hamburg","cologne","france","paris","lyon","montpellier","bordeaux","sweden","stockholm","malmö","finland","helsinki","poland","warsaw","kraków","krakow","wrocław","spain","madrid","barcelona","netherlands","amsterdam","utrecht","ireland","dublin","czech","brno","prague","denmark","copenhagen","norway","oslo","belgium","brussels","portugal","lisbon","porto","italy","milan","austria","vienna","switzerland","zurich","romania","bucharest","hungary","budapest","/\\bCET\\b/","/\\bEU\\b/","europe","malta","cyprus","greece","athens","estonia","lithuania","latvia","ukraine","serbia","croatia","slovenia","slovakia","bulgaria","iceland","luxembourg"],
+  "North America": ["united states","/\\bUSA\\b/","/\\bUS\\b/","canada","california","new york","texas","washington","seattle","san francisco","los angeles","austin","raleigh","cary","north carolina","massachusetts","boston","florida","chicago","montreal","montréal","toronto","vancouver","quebec","québec","ontario","alberta","oregon","colorado","georgia","utah","arizona","nevada","san diego","carlsbad","novato","redmond","irvine"],
+  "Asia/Pacific": ["japan","tokyo","china","shanghai","beijing","singapore","korea","seoul","india","bangalore","bengaluru","hong kong","taiwan","australia","sydney","melbourne","brisbane","new zealand","auckland","philippines","manila","vietnam","malaysia","thailand"],
+};
+var SENIORITY = {
+  "Lead+": ["lead","principal","/\\bhead\\b/","director","chief","staff","/\\bVP\\b/","manager"],
+  "Senior": ["senior","/\\bsr\\b/","expert"],
+  "Junior": ["junior","/\\bjr\\b/","intern","internship","graduate","entry","trainee","apprentice","associate"],
+};
+
+// ── State ───────────────────────────────────────────────────────────────
+var ALL = [];
+var sel = { disc: new Set(), region: new Set(), senior: new Set() };
+var sortMode = "fit";
+var RENDER_CAP = 600;
+
+function classify(text, groups) {
+  var out = [];
+  for (var name in groups) {
+    var map = {}; groups[name].forEach(function (k) { map[k] = 1; });
+    if (Rank.scoreCategory(text, map, "max").score > 0) out.push(name);
+  }
+  return out;
+}
+// One bucket for seniority (priority Lead > Senior > Junior, else Mid).
+function seniorityBucket(title) {
+  var c = classify(title, SENIORITY);
+  if (c.indexOf("Lead+") !== -1) return "Lead+";
+  if (c.indexOf("Senior") !== -1) return "Senior";
+  if (c.indexOf("Junior") !== -1) return "Junior";
+  return "Mid";
+}
+
+function prep(jobs) {
+  return jobs.map(function (j) {
+    var disc = classify(j.title, DISCIPLINES);
+    var region = classify(j.location, REGIONS);
+    if (region.length === 0) region = ["Other"];
+    var sen = seniorityBucket(j.title);
+    return {
+      title: j.title, url: j.url, company: j.company, location: j.location || "",
+      _disc: disc, _region: region, _sen: sen,
+      _search: (j.title + " " + j.company + " " + (j.location || "")).toLowerCase(),
+    };
+  });
+}
+
+// Build a Rank config from current selections: selected keywords weigh 1, so
+// "Best match" surfaces jobs closest to what you picked. Nothing selected → flat.
+function rankingFromSelection() {
+  function mapFor(groups, picked) {
+    var m = { default: picked.size ? 0.2 : 0.5 };
+    picked.forEach(function (name) { (groups[name] || []).forEach(function (k) { m[k] = 1; }); });
+    return m;
+  }
+  return {
+    combine: "max",
+    weights: { role: 0.45, location: 0.35, seniority: 0.20 },
+    role: mapFor(DISCIPLINES, sel.disc),
+    location: mapFor(REGIONS, sel.region),
+    seniority: mapFor(SENIORITY, sel.senior),
+  };
+}
+
+function passes(j) {
+  var q = document.getElementById("q").value.trim().toLowerCase();
+  if (q && j._search.indexOf(q) === -1) return false;
+  if (sel.disc.size && !j._disc.some(function (d) { return sel.disc.has(d); })) return false;
+  if (sel.region.size && !j._region.some(function (r) { return sel.region.has(r); })) return false;
+  if (sel.senior.size && !sel.senior.has(j._sen)) return false;
+  return true;
+}
+
+function render() {
+  var filtered = ALL.filter(passes);
+  if (sortMode === "fit") {
+    var ranked = Rank.rankJobs(filtered, rankingFromSelection());
+    filtered = ranked;
+  } else if (sortMode === "company") {
+    filtered.sort(function (a, b) { return a.company.localeCompare(b.company) || a.title.localeCompare(b.title); });
+  } else {
+    filtered.sort(function (a, b) { return a.title.localeCompare(b.title); });
+  }
+
+  var rows = document.getElementById("rows");
+  rows.innerHTML = "";
+  var shown = filtered.slice(0, RENDER_CAP);
+  var frag = document.createDocumentFragment();
+  shown.forEach(function (j) {
+    var tr = document.createElement("tr");
+    var tags = j._disc.concat([j._sen]).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join("");
+    tr.innerHTML =
+      '<td class="co">' + esc(j.company) + '</td>' +
+      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.title) + '</a></td>' +
+      '<td class="loc">' + (esc(j.location) || "—") + '</td>' +
+      '<td>' + tags + '</td>';
+    frag.appendChild(tr);
+  });
+  rows.appendChild(frag);
+
+  document.getElementById("meta").innerHTML =
+    "Showing <b>" + shown.length + "</b> of <b>" + filtered.length + "</b> matching · " + ALL.length + " total openings";
+  document.getElementById("more").textContent =
+    filtered.length > RENDER_CAP ? "…" + (filtered.length - RENDER_CAP) + " more — narrow your filters to see them." : "";
+  document.getElementById("empty") && document.getElementById("empty").remove();
+  if (filtered.length === 0) {
+    rows.innerHTML = '<tr><td colspan="4" class="empty" id="empty">No openings match these filters.</td></tr>';
+  }
+}
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function buildChips(containerId, groups, key, extra) {
+  var counts = {};
+  var keys = Object.keys(groups).concat(extra || []);
+  keys.forEach(function (k) { counts[k] = 0; });
+  ALL.forEach(function (j) {
+    var arr = key === "disc" ? j._disc : key === "region" ? j._region : [j._sen];
+    arr.forEach(function (v) { if (counts[v] != null) counts[v]++; });
+  });
+  var c = document.getElementById(containerId);
+  c.innerHTML = "";
+  keys.forEach(function (name) {
+    if (!counts[name]) return;
+    var el = document.createElement("span");
+    el.className = "chip";
+    el.innerHTML = esc(name) + '<span class="n">' + counts[name] + "</span>";
+    el.onclick = function () {
+      if (sel[key].has(name)) { sel[key].delete(name); el.classList.remove("on"); }
+      else { sel[key].add(name); el.classList.add("on"); }
+      render();
+    };
+    c.appendChild(el);
+  });
+}
+
+function init(data) {
+  ALL = prep(data.jobs || []);
+  if (data.generated) {
+    var d = new Date(data.generated);
+    document.getElementById("generated").textContent =
+      "· updated " + d.toISOString().slice(0, 10);
+  }
+  buildChips("disc", DISCIPLINES, "disc");
+  buildChips("region", REGIONS, "region", ["Other"]);
+  buildChips("senior", SENIORITY, "senior", ["Mid"]);
+  document.getElementById("q").addEventListener("input", render);
+  document.getElementById("sort").addEventListener("change", function (e) { sortMode = e.target.value; render(); });
+  document.querySelectorAll("th[data-sort]").forEach(function (th) {
+    th.onclick = function () {
+      sortMode = th.getAttribute("data-sort") === "company" ? "company" : "role";
+      document.getElementById("sort").value = sortMode;
+      render();
+    };
+  });
+  render();
+}
+
+fetch("data/jobs.json")
+  .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(init)
+  .catch(function (e) {
+    document.getElementById("meta").innerHTML =
+      "Could not load <code>data/jobs.json</code> (" + e.message + "). If you opened this file directly, run a local server (e.g. <code>npx serve docs</code>) — browsers block <code>fetch</code> over file://.";
+  });
+</script>
+</body>
+</html>
