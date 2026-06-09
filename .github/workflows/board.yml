@@ -65,7 +65,12 @@ jobs:
         # a broken provider, or a bad studios.yml exits non-zero and the job
         # stops here — so the push + deploy below never run and the merge is
         # discarded with the runner. The live board keeps its last good state.
-        run: node scan.mjs --no-filter --json site/data/jobs.json
+        #
+        # --dry-run keeps the scan from writing the personal data/pipeline.md +
+        # scan-history.tsv (which don't exist in this clean checkout — they're
+        # gitignored). The full scan still runs and --json still writes the
+        # snapshot, so this remains a real end-to-end test of the scanner.
+        run: node scan.mjs --no-filter --json site/data/jobs.json --dry-run
 
       - name: Validate snapshot is sane
         # A scan that "succeeds" but returns almost nothing is also a failure
