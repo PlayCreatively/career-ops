@@ -5,64 +5,173 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Game Dev Job Board — zero-token scanner</title>
 <style>
-  :root {
-    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
-    --txt: #e6e8ee; --dim: #9aa3b2; --accent: #7c5cff; --accent2: #4dd0a7;
-    --chip: #232836; --chipOn: #7c5cff; --warm: #ffb454;
+  /* ── Themes ──────────────────────────────────────────────────────────────
+     To add a theme: (1) copy a block below and give it a new
+     html[data-theme="your-id"] selector, (2) add a matching { id, label }
+     entry to the THEMES array in the <head> script. Nothing else to wire. */
+  :root, html[data-theme="cafe-light"] {
+    --bg: #e8dccb;           /* warm latte paper */
+    --panel: #fcf9f3;        /* cream card */
+    --panel2: #f1e7d7;       /* inset surface */
+    --line: #d2c2a8;         /* soft border */
+    --txt: #342c21;          /* roasted brown ink */
+    --dim: #7e7060;          /* faded label */
+    --accent: #9a6336;       /* deep caramel — primary action / links */
+    --accent2: #5f7850;      /* sage — studios / remote */
+    --pink: #ab5f43;         /* clay — highlights */
+    --chip: #ede2cf; --chipOn: #9a6336; --warm: #ab7c2e;  /* gold — boosts */
+    --onAccent: #fdf8f0;     /* text on a filled accent */
+    --danger: #ad5238;
+    --overlay: rgba(52,44,33,.38);
+    --shadow: 0 1px 2px rgba(52,44,33,.08), 0 2px 8px rgba(52,44,33,.07);
+    color-scheme: light;
+  }
+  html[data-theme="cafe-dark"] {
+    --bg: #1e1a15;           /* roasted-bean dark */
+    --panel: #29231c;        /* warm card */
+    --panel2: #332c23;       /* inset surface */
+    --line: #463d31;         /* soft border */
+    --txt: #ece1d0;          /* warm cream ink */
+    --dim: #a0917c;          /* faded label */
+    --accent: #dc9c5f;       /* warm caramel — primary action / links */
+    --accent2: #a3b785;      /* sage — studios / remote */
+    --pink: #d68e6c;         /* clay — highlights */
+    --chip: #352e25; --chipOn: #dc9c5f; --warm: #e2b35e;  /* gold — boosts */
+    --onAccent: #221c14;     /* text on a filled accent */
+    --danger: #df9078;
+    --overlay: rgba(0,0,0,.55);
+    --shadow: 0 1px 2px rgba(0,0,0,.30), 0 2px 10px rgba(0,0,0,.32);
+    color-scheme: dark;
+  }
+  html[data-theme="light"] {
+    --bg: #f4f5f7;           /* neutral light */
+    --panel: #ffffff;        /* card */
+    --panel2: #eef0f3;       /* inset surface */
+    --line: #d8dbe0;         /* border */
+    --txt: #1c1e21;          /* near-black ink */
+    --dim: #6b7280;          /* muted label */
+    --accent: #2563eb;       /* blue — primary action / links */
+    --accent2: #15803d;      /* green — studios / remote */
+    --pink: #dc2626;         /* red — highlights */
+    --chip: #eceef1; --chipOn: #2563eb; --warm: #b45309;  /* amber — boosts */
+    --onAccent: #ffffff;     /* text on a filled accent */
+    --danger: #dc2626;
+    --overlay: rgba(17,24,39,.45);
+    --shadow: 0 1px 2px rgba(17,24,39,.06), 0 2px 8px rgba(17,24,39,.06);
+    color-scheme: light;
+  }
+  html[data-theme="dark"] {
+    --bg: #15171c;           /* neutral dark */
+    --panel: #1e2026;        /* card */
+    --panel2: #272a31;       /* inset surface */
+    --line: #353941;         /* border */
+    --txt: #e7e9ee;          /* light ink */
+    --dim: #9aa1ac;          /* muted label */
+    --accent: #3b82f6;       /* blue — primary action / links */
+    --accent2: #34d399;      /* green — studios / remote */
+    --pink: #f87171;         /* red — highlights */
+    --chip: #2a2e36; --chipOn: #3b82f6; --warm: #fbbf24;  /* amber — boosts */
+    --onAccent: #0b0e13;     /* text on a filled accent */
+    --danger: #f87171;
+    --overlay: rgba(0,0,0,.6);
+    --shadow: 0 1px 2px rgba(0,0,0,.30), 0 2px 10px rgba(0,0,0,.32);
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--txt);
-    font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    font: 15px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
   header {
-    padding: 22px 24px 16px; border-bottom: 1px solid var(--line);
-    background: linear-gradient(180deg, #14171e, #0f1115);
+    padding: 26px 24px 18px; border-bottom: 1px solid var(--line);
+    background: var(--panel); position: relative;
   }
-  h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.3px; }
-  h1 .tok { color: var(--accent2); }
+  .theme-switch { position: absolute; top: 20px; right: 24px; }
+  #theme {
+    background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
+    padding: 7px 28px 7px 11px; border-radius: 10px; font-size: 13px; cursor: pointer;
+    box-shadow: var(--shadow); appearance: none; -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--dim) 50%),
+                      linear-gradient(135deg, var(--dim) 50%, transparent 50%);
+    background-position: right 13px center, right 8px center;
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  }
+  #theme:focus { outline: none; border-color: var(--accent); }
+  h1 {
+    margin: 0 0 6px; font-size: 23px; letter-spacing: -0.2px; font-weight: 700;
+  }
+  h1 .tok {
+    color: var(--dim); font-weight: 500; font-size: 14px;
+  }
   .sub { color: var(--dim); font-size: 13px; }
   .sub a { color: var(--accent); text-decoration: none; }
+  .sub a:hover { text-decoration: underline; }
   .wrap { padding: 18px 24px 60px; max-width: 1200px; margin: 0 auto; }
   .controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .row .label { color: var(--dim); font-size: 12px; text-transform: uppercase;
     letter-spacing: 0.5px; width: 86px; flex: none; }
   input[type=search] {
-    flex: 1; min-width: 220px; background: var(--panel2); border: 1px solid var(--line);
-    color: var(--txt); padding: 10px 12px; border-radius: 8px; font-size: 14px;
+    flex: 1; min-width: 220px; background: var(--panel); border: 1px solid var(--line);
+    color: var(--txt); padding: 10px 12px; border-radius: 10px; font-size: 14px;
+    box-shadow: var(--shadow); outline: none; transition: border-color .15s;
   }
+  input[type=search]:focus { border-color: var(--accent); }
   select {
-    background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
-    padding: 9px 10px; border-radius: 8px; font-size: 13px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--txt);
+    padding: 9px 10px; border-radius: 10px; font-size: 13px; box-shadow: var(--shadow);
   }
   .chip {
     background: var(--chip); border: 1px solid var(--line); color: var(--txt);
     padding: 6px 12px; border-radius: 999px; font-size: 13px; cursor: pointer;
-    user-select: none; transition: background .12s, border-color .12s;
+    user-select: none; transition: background .15s, border-color .15s, color .15s; margin-right: 5px;
   }
   .chip:hover { border-color: var(--accent); }
-  .chip.on { background: var(--chipOn); border-color: var(--chipOn); color: #fff; }
-  .chip .n { opacity: .6; font-size: 11px; margin-left: 5px; }
+  .chip.on { background: var(--chipOn); border-color: var(--chipOn); color: var(--onAccent); font-weight: 600; }
+  .chip .n { opacity: .55; font-size: 11px; margin-left: 5px; }
   .btn {
-    background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
-    padding: 7px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--line); color: var(--txt);
+    padding: 7px 12px; border-radius: 10px; font-size: 13px; cursor: pointer;
+    box-shadow: var(--shadow); transition: border-color .15s;
   }
   .btn:hover { border-color: var(--accent); }
   .btn.clear { color: var(--dim); }
   /* Boost keywords */
   #boostBox { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 280px; }
-  #custom { display: flex; flex-direction: column; gap: 10px; }
-  .boostRow { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
-  .boostRow input[type=text] {
-    flex: 1; min-width: 140px; background: var(--panel2); border: 1px solid var(--line);
-    color: var(--txt); padding: 7px 10px; border-radius: 8px; font-size: 13px;
-  }
-  .boostRow input[type=range] { width: 130px; accent-color: var(--warm); }
-  .boostRow .wlabel { width: 54px; text-align: right; color: var(--warm);
-    font-variant-numeric: tabular-nums; font-size: 12px; }
-  .boostRow .x { cursor: pointer; color: var(--dim); padding: 0 6px; font-size: 16px; }
-  .boostRow .x:hover { color: #ff6b6b; }
+  #custom { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .bpill { display: inline-flex; align-items: center; gap: 7px; background: var(--chip);
+    border: 1px solid color-mix(in srgb, var(--warm) 45%, var(--line));
+    border-radius: 999px; padding: 5px 6px 5px 11px; font-size: 13px; }
+  .bpill .sign { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bpill .rate { color: var(--warm); font-variant-numeric: tabular-nums; font-size: 12px; }
+  .bpill.off { border-color: var(--line); opacity: .6; }
+  .bpill.off .sign { color: var(--dim); }
+  .bpill.soft .sign { color: var(--warm); }
+  .bpill.strong .sign { color: var(--accent2); }
+  .bpill .kw { color: var(--txt); }
+  .bpill .edit { cursor: pointer; background: none; border: none; color: var(--dim);
+    font-size: 13px; line-height: 1; padding: 3px 5px; border-radius: 6px; }
+  .bpill .edit:hover { color: var(--warm); background: var(--panel2); }
+  /* Boost edit modal */
+  .modalBg { position: fixed; inset: 0; background: var(--overlay); z-index: 50;
+    display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modalBg.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px; width: min(420px, 100%); display: flex; flex-direction: column; gap: 14px;
+    box-shadow: 0 8px 30px rgba(60,48,36,.18); }
+  .modal h3 { margin: 0; font-size: 16px; }
+  .modal label { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; }
+  .modal .field { display: flex; flex-direction: column; gap: 6px; }
+  .modal input[type=text] { background: var(--panel2); border: 1px solid var(--line);
+    color: var(--txt); padding: 9px 11px; border-radius: 8px; font-size: 14px; }
+  .modal .sliderRow { display: flex; gap: 10px; align-items: center; }
+  .modal input[type=range] { flex: 1; accent-color: var(--warm); }
+  .modal .mw { width: 70px; text-align: right; color: var(--warm);
+    font-variant-numeric: tabular-nums; font-size: 13px; }
+  .modal .actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 2px; }
+  .modal .actions .rm { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
+  .modal .actions .rm:hover { border-color: var(--danger); }
   .hint { color: var(--dim); font-size: 12px; }
   .meta { color: var(--dim); font-size: 13px; margin: 6px 0 12px; }
   .meta b { color: var(--txt); }
@@ -70,23 +179,47 @@
   th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
     cursor: pointer; white-space: nowrap; }
-  tr:hover td { background: var(--panel); }
+  tr:hover td { background: var(--panel2); }
   td.role a { color: var(--txt); text-decoration: none; font-weight: 500; }
   td.role a:hover { color: var(--accent); text-decoration: underline; }
   td.co { color: var(--accent2); white-space: nowrap; }
   td.loc { color: var(--dim); font-size: 13px; }
   .tag { display: inline-block; background: var(--panel2); border: 1px solid var(--line);
     color: var(--dim); padding: 2px 10px; border-radius: 6px; font-size: 11px; margin-right: 5px; }
-  .tag.remote { color: var(--accent2); border-color: #2f5f50; }
-  .tag.boost { color: var(--warm); border-color: #5f4a2a; }
+  .tag.remote { color: var(--accent2);
+    border-color: color-mix(in srgb, var(--accent2) 40%, var(--line));
+    background: color-mix(in srgb, var(--accent2) 12%, transparent); }
+  .tag.boost { color: var(--warm);
+    border-color: color-mix(in srgb, var(--warm) 40%, var(--line));
+    background: color-mix(in srgb, var(--warm) 13%, transparent); }
   .empty { padding: 40px; text-align: center; color: var(--dim); }
   .more { padding: 16px; text-align: center; color: var(--dim); font-size: 13px; }
   footer { color: var(--dim); font-size: 12px; padding: 24px; text-align: center; border-top: 1px solid var(--line); }
   footer a { color: var(--accent); text-decoration: none; }
 </style>
+<script>
+// ── Theme registry ─────────────────────────────────────────────────────────
+// Add a theme: append { id, label } here AND add a matching
+// html[data-theme="<id>"] block to the CSS above. The dropdown is built from
+// this list, and the choice is remembered across visits.
+window.THEMES = [
+  { id: "light",      label: "🌤 Light" },
+  { id: "dark",       label: "🌑 Dark" },
+  { id: "cafe-light", label: "☕ Café — light" },
+  { id: "cafe-dark",  label: "🌙 Café — dark" },
+];
+window.__themeKey = "gamedevboard.theme";
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem(window.__themeKey); } catch (e) {}
+  var ok = window.THEMES.some(function (t) { return t.id === saved; });
+  document.documentElement.setAttribute("data-theme", ok ? saved : window.THEMES[0].id);
+})();
+</script>
 </head>
 <body>
 <header>
+  <div class="theme-switch"><select id="theme" aria-label="Color theme"></select></div>
   <h1>🎮 Game Dev Job Board <span class="tok">· zero-token</span></h1>
   <div class="sub">
     Live openings pulled straight from studio ATS feeds — no AI, no API keys, no cost.
@@ -113,7 +246,7 @@
     <div class="row">
       <span class="label">Boost</span>
       <div id="boostBox">
-        <div class="hint">Type your own keywords and drag the slider to float matching jobs to the top — compounds with the filters above (applies in “Best match” sort).</div>
+        <div class="hint">Add your own keywords to float matching jobs to the top — tap the ✎ on a pill to set its weight (− off · ~ light · + strong). Compounds with the filters above (applies in “Best match” sort).</div>
         <div id="custom"></div>
         <div><button class="btn" id="addCustom">+ Add keyword</button></div>
       </div>
@@ -138,6 +271,43 @@
   Studio list and scanner are open source — add your favourite studio with a PR.
 </footer>
 
+<div class="modalBg" id="boostModalBg">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="boostModalTitle">
+    <h3 id="boostModalTitle">Edit boost keyword</h3>
+    <div class="field">
+      <label for="bmKw">Keyword</label>
+      <input type="text" id="bmKw" placeholder="e.g. Unreal, multiplayer, Rust…" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="bmRange">Weight</label>
+      <div class="sliderRow">
+        <input type="range" id="bmRange" min="0" max="200" step="5">
+        <span class="mw" id="bmLabel"></span>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn rm" id="bmRemove">Remove</button>
+      <button class="btn" id="bmDone">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Theme picker ────────────────────────────────────────────────────────────
+(function () {
+  var sel = document.getElementById("theme");
+  if (!sel) return;
+  (window.THEMES || []).forEach(function (t) {
+    var o = document.createElement("option");
+    o.value = t.id; o.textContent = t.label; sel.appendChild(o);
+  });
+  sel.value = document.documentElement.getAttribute("data-theme");
+  sel.addEventListener("change", function () {
+    document.documentElement.setAttribute("data-theme", sel.value);
+    try { localStorage.setItem(window.__themeKey, sel.value); } catch (e) {}
+  });
+})();
+</script>
 <script src="rank.browser.js"></script>
 <script>
 // ── Classification config (keyword maps; reuse Rank.scoreCategory) ──────
@@ -347,27 +517,76 @@ function buildChips(containerId, groups, key, extra) {
   });
 }
 
-// ── Custom boost rows ────────────────────────────────────────────────────
-function renderCustom() {
+// ── Custom boost pills ─────────────────────────────────────────────────────
+// Each keyword shows as a small pill: a sign for its weight band
+// (− = 0/off, ~ = 0..1, + = ≥1), the rating, the keyword, and a pencil that
+// opens the edit modal. Editing happens in the modal, not inline.
+function boostBand(w) {
+  if (!w) return { sign: "−", cls: "off" };
+  if (w < 1) return { sign: "~", cls: "soft" };
+  return { sign: "+", cls: "strong" };
+}
+
+function renderBoostPills() {
   var c = document.getElementById("custom");
   c.innerHTML = "";
   custom.forEach(function (entry, i) {
-    var row = document.createElement("div");
-    row.className = "boostRow";
-    row.innerHTML =
-      '<input type="text" placeholder="e.g. Unreal, multiplayer, Rust…" value="' + esc(entry.kw) + '">' +
-      '<input type="range" min="0" max="200" value="' + Math.round((entry.w || 0) * 100) + '">' +
-      '<span class="wlabel">×' + (entry.w || 0).toFixed(2) + '</span>' +
-      '<span class="x" title="Remove">✕</span>';
-    var txt = row.querySelector('input[type=text]');
-    var rng = row.querySelector('input[type=range]');
-    var lbl = row.querySelector('.wlabel');
-    txt.addEventListener("input", function () { custom[i].kw = txt.value; save(); render(); });
-    rng.addEventListener("input", function () {
-      custom[i].w = rng.value / 100; lbl.textContent = "×" + custom[i].w.toFixed(2); save(); render();
-    });
-    row.querySelector(".x").onclick = function () { custom.splice(i, 1); save(); renderCustom(); render(); };
-    c.appendChild(row);
+    var w = entry.w || 0;
+    var band = boostBand(w);
+    var pill = document.createElement("span");
+    pill.className = "bpill " + band.cls;
+    pill.innerHTML =
+      '<span class="sign">' + band.sign + '</span>' +
+      '<span class="rate">' + w.toFixed(2) + '</span>' +
+      '<span class="kw">' + (entry.kw && entry.kw.trim() ? esc(entry.kw) : "<i>untitled</i>") + '</span>' +
+      '<button class="edit" title="Edit boost keyword" aria-label="Edit boost keyword">✎</button>';
+    pill.querySelector(".edit").onclick = function () { openBoostModal(i); };
+    c.appendChild(pill);
+  });
+}
+
+// ── Boost edit modal ───────────────────────────────────────────────────────
+var boostEditIdx = -1;
+function openBoostModal(i) {
+  boostEditIdx = i;
+  var entry = custom[i];
+  var kw = document.getElementById("bmKw");
+  var rng = document.getElementById("bmRange");
+  kw.value = entry.kw || "";
+  rng.value = Math.round((entry.w || 0) * 100);
+  syncBoostLabel();
+  document.getElementById("boostModalBg").classList.add("open");
+  kw.focus();
+}
+function closeBoostModal() {
+  document.getElementById("boostModalBg").classList.remove("open");
+  boostEditIdx = -1;
+}
+function syncBoostLabel() {
+  var w = document.getElementById("bmRange").value / 100;
+  document.getElementById("bmLabel").textContent = boostBand(w).sign + " " + w.toFixed(2);
+}
+function bindBoostModal() {
+  var kw = document.getElementById("bmKw");
+  var rng = document.getElementById("bmRange");
+  kw.addEventListener("input", function () {
+    if (boostEditIdx < 0) return;
+    custom[boostEditIdx].kw = kw.value; renderBoostPills(); save(); render();
+  });
+  rng.addEventListener("input", function () {
+    if (boostEditIdx < 0) return;
+    custom[boostEditIdx].w = rng.value / 100; syncBoostLabel(); renderBoostPills(); save(); render();
+  });
+  document.getElementById("bmRemove").onclick = function () {
+    if (boostEditIdx < 0) return;
+    custom.splice(boostEditIdx, 1); closeBoostModal(); renderBoostPills(); save(); render();
+  };
+  document.getElementById("bmDone").onclick = closeBoostModal;
+  document.getElementById("boostModalBg").addEventListener("click", function (e) {
+    if (e.target === this) closeBoostModal();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeBoostModal();
   });
 }
 
@@ -387,17 +606,20 @@ function init(data) {
   load();
   document.getElementById("sort").value = sortMode;
   buildAllChips();
-  renderCustom();
+  renderBoostPills();
+  bindBoostModal();
 
   document.getElementById("q").addEventListener("input", function () { save(); render(); });
   document.getElementById("sort").addEventListener("change", function (e) { sortMode = e.target.value; save(); render(); });
-  document.getElementById("addCustom").onclick = function () { custom.push({ kw: "", w: 1 }); save(); renderCustom(); };
+  document.getElementById("addCustom").onclick = function () {
+    custom.push({ kw: "", w: 1 }); save(); renderBoostPills(); openBoostModal(custom.length - 1);
+  };
   document.getElementById("reset").onclick = function () {
     sel = { disc: new Set(), region: new Set(), mode: new Set(), senior: new Set() };
     custom = []; sortMode = "fit";
     document.getElementById("q").value = "";
     document.getElementById("sort").value = "fit";
-    save(); buildAllChips(); renderCustom(); render();
+    save(); buildAllChips(); renderBoostPills(); render();
   };
   document.querySelectorAll("th[data-sort]").forEach(function (th) {
     th.onclick = function () {
