@@ -26,6 +26,7 @@
  *   node scan.mjs --company Cohere # scan a single company
  *   node scan.mjs --verify         # Playwright-check each new URL; drop expired postings
  *   node scan.mjs --reset          # clear pending pool + dedup history, then scan fresh
+ *   node scan.mjs --no-filter      # bypass all targeting; store every role/location (board snapshot)
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
@@ -437,6 +438,9 @@ async function main() {
   const dryRun = args.includes('--dry-run');
   const verify = args.includes('--verify');
   const reset = args.includes('--reset');
+  const noFilter = args.includes('--no-filter');
+  const jsonIdx = args.indexOf('--json');
+  const jsonPath = jsonIdx !== -1 ? args[jsonIdx + 1] : null;
   const companyFlag = args.indexOf('--company');
   const filterCompany = companyFlag !== -1 ? args[companyFlag + 1]?.toLowerCase() : null;
 
@@ -475,7 +479,15 @@ async function main() {
   // Prefer the unified `targeting:` block; fall back to the legacy
   // title_filter/location_filter blocks if a config predates unification.
   let titleFilter, locationFilter, companyFilter;
-  if (config.targeting) {
+  if (noFilter) {
+    // --no-filter: bypass ALL targeting. Stores the full superset of every
+    // role/location/company. Used to feed the public static board, where
+    // filtering + ranking happen client-side per visitor. Personal targeting
+    // in portals.yml is ignored entirely for this run.
+    titleFilter = () => true;
+    locationFilter = () => true;
+    companyFilter = () => true;
+  } else if (config.targeting) {
     const tf = buildTargetingFilter(config.targeting);
     titleFilter = tf.title;
     locationFilter = tf.location;
@@ -520,6 +532,12 @@ async function main() {
   let totalFilteredCompany = 0;
   let totalDupes = 0;
   const newOffers = [];
+  // Full current snapshot for --json: every job that passes the filters,
+  // deduped within this run only (independent of scan-history.tsv), so the
+  // exported file is always the COMPLETE live set regardless of what prior
+  // runs left in data/. Feeds the static board.
+  const snapshot = [];
+  const snapSeen = new Set();
   const errors = [...resolveErrors];
 
   const tasks = targets.map(company => async () => {
@@ -559,6 +577,17 @@ async function main() {
         if (!companyFilter(job.company)) {
           totalFilteredCompany++;
           continue;
+        }
+        // Snapshot collection happens BEFORE history dedup so jobs.json is the
+        // full current set even when data/scan-history.tsv already lists these.
+        if (jsonPath && job.url && !snapSeen.has(job.url)) {
+          snapSeen.add(job.url);
+          snapshot.push({
+            title: job.title,
+            url: job.url,
+            company: job.company,
+            location: job.location || '',
+          });
         }
         if (seenUrls.has(job.url)) {
           totalDupes++;
@@ -622,6 +651,20 @@ async function main() {
     for (const [status, group] of byStatus) {
       appendToScanHistory(group, date, status);
     }
+  }
+
+  // 6.5. Write the JSON snapshot (full current set) for the static board.
+  // Independent of --dry-run: it never touches pipeline.md/scan-history.tsv,
+  // so it's safe to generate a snapshot without mutating the personal pipeline.
+  if (jsonPath) {
+    const out = {
+      generated: new Date().toISOString(),
+      count: snapshot.length,
+      jobs: snapshot,
+    };
+    mkdirSync(path.dirname(jsonPath) || '.', { recursive: true });
+    writeFileSync(jsonPath, JSON.stringify(out));
+    console.log(`Snapshot: ${snapshot.length} jobs → ${jsonPath}`);
   }
 
   // 7. Print summary
