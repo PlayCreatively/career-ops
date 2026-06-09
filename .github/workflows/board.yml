@@ -1,0 +1,97 @@
+name: Refresh job board
+
+# Lives on main because GitHub only fires `schedule:` triggers from the default
+# branch — but everything this workflow DOES targets the gh-pages branch. It
+# pulls the latest studio list from main, re-runs the zero-token scan, and only
+# updates the public board if that scan succeeds. main itself never receives a
+# commit from this job: all churn (the merge + the jobs.json snapshot) lands on
+# gh-pages.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'   # daily, ~06:17 UTC
+  workflow_dispatch: {}      # manual "Run workflow" button
+
+# Don't pile up runs; let an in-flight refresh finish before the next starts.
+concurrency:
+  group: job-board-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # push the snapshot to gh-pages
+  pages: write      # deploy to GitHub Pages
+  id-token: write   # required by deploy-pages
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      # The scanner only needs js-yaml + global fetch; skip the heavy Playwright
+      # browser download triggered by `npm install`.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - name: Checkout gh-pages (full history, so the merge works)
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge latest main into gh-pages
+        # Brings in new studios + scanner changes. The conflict-free invariant
+        # (site/ exists only on gh-pages; studios/scanner edited only on main)
+        # means this never conflicts. If it ever does, the job fails here and
+        # nothing is pushed — main's change does NOT reach the live board.
+        run: |
+          git fetch origin main
+          git merge --no-edit origin/main
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install scanner deps
+        run: npm install --no-audit --no-fund
+
+      - name: Scan test + regenerate snapshot
+        # THE GATE. Runs the whole scan against the just-merged main. A crash,
+        # a broken provider, or a bad studios.yml exits non-zero and the job
+        # stops here — so the push + deploy below never run and the merge is
+        # discarded with the runner. The live board keeps its last good state.
+        #
+        # --dry-run keeps the scan from writing the personal data/pipeline.md +
+        # scan-history.tsv (which don't exist in this clean checkout — they're
+        # gitignored). The full scan still runs and --json still writes the
+        # snapshot, so this remains a real end-to-end test of the scanner.
+        run: node scan.mjs --no-filter --json site/data/jobs.json --dry-run
+
+      - name: Validate snapshot is sane
+        # A scan that "succeeds" but returns almost nothing is also a failure
+        # (e.g. every source silently started blocking the runner's IP).
+        run: |
+          node -e "const j=require('./site/data/jobs.json'); const n=Array.isArray(j.jobs)?j.jobs.length:0; if(n<100){console.error('Snapshot too small ('+n+' jobs) — refusing to publish.');process.exit(1);} console.log('Snapshot OK: '+n+' jobs');"
+
+      - name: Commit & push to gh-pages
+        # Only reached when the scan passed. Pushes the merge commit (fresh
+        # studios) plus the new snapshot. [skip ci] is belt-and-suspenders;
+        # GITHUB_TOKEN pushes don't retrigger workflows anyway.
+        run: |
+          git add site/data/jobs.json
+          git commit -m "chore: refresh job board snapshot [skip ci]" || echo "No snapshot change to commit"
+          git push origin HEAD:gh-pages
+
+      - name: Upload Pages artifact (only the board, not the repo)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
