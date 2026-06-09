@@ -8,7 +8,7 @@
   :root {
     --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
     --txt: #e6e8ee; --dim: #9aa3b2; --accent: #7c5cff; --accent2: #4dd0a7;
-    --chip: #232836; --chipOn: #7c5cff;
+    --chip: #232836; --chipOn: #7c5cff; --warm: #ffb454;
   }
   * { box-sizing: border-box; }
   body {
@@ -24,10 +24,10 @@
   .sub { color: var(--dim); font-size: 13px; }
   .sub a { color: var(--accent); text-decoration: none; }
   .wrap { padding: 18px 24px 60px; max-width: 1200px; margin: 0 auto; }
-  .controls { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+  .controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .row .label { color: var(--dim); font-size: 12px; text-transform: uppercase;
-    letter-spacing: 0.5px; width: 78px; flex: none; }
+    letter-spacing: 0.5px; width: 86px; flex: none; }
   input[type=search] {
     flex: 1; min-width: 220px; background: var(--panel2); border: 1px solid var(--line);
     color: var(--txt); padding: 10px 12px; border-radius: 8px; font-size: 14px;
@@ -44,13 +44,31 @@
   .chip:hover { border-color: var(--accent); }
   .chip.on { background: var(--chipOn); border-color: var(--chipOn); color: #fff; }
   .chip .n { opacity: .6; font-size: 11px; margin-left: 5px; }
-  .meta { color: var(--dim); font-size: 13px; margin: 4px 0 12px; }
+  .btn {
+    background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
+    padding: 7px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.clear { color: var(--dim); }
+  /* Boost keywords */
+  #boostBox { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 280px; }
+  .boostRow { display: flex; gap: 8px; align-items: center; }
+  .boostRow input[type=text] {
+    flex: 1; min-width: 140px; background: var(--panel2); border: 1px solid var(--line);
+    color: var(--txt); padding: 7px 10px; border-radius: 8px; font-size: 13px;
+  }
+  .boostRow input[type=range] { width: 130px; accent-color: var(--warm); }
+  .boostRow .wlabel { width: 54px; text-align: right; color: var(--warm);
+    font-variant-numeric: tabular-nums; font-size: 12px; }
+  .boostRow .x { cursor: pointer; color: var(--dim); padding: 0 6px; font-size: 16px; }
+  .boostRow .x:hover { color: #ff6b6b; }
+  .hint { color: var(--dim); font-size: 12px; }
+  .meta { color: var(--dim); font-size: 13px; margin: 6px 0 12px; }
   .meta b { color: var(--txt); }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
     cursor: pointer; white-space: nowrap; }
-  th.sorted::after { content: " ↓"; color: var(--accent); }
   tr:hover td { background: var(--panel); }
   td.role a { color: var(--txt); text-decoration: none; font-weight: 500; }
   td.role a:hover { color: var(--accent); text-decoration: underline; }
@@ -58,7 +76,8 @@
   td.loc { color: var(--dim); font-size: 13px; }
   .tag { display: inline-block; background: var(--panel2); border: 1px solid var(--line);
     color: var(--dim); padding: 1px 7px; border-radius: 6px; font-size: 11px; margin-right: 4px; }
-  .fit { font-variant-numeric: tabular-nums; color: var(--dim); font-size: 12px; }
+  .tag.remote { color: var(--accent2); border-color: #2f5f50; }
+  .tag.boost { color: var(--warm); border-color: #5f4a2a; }
   .empty { padding: 40px; text-align: center; color: var(--dim); }
   .more { padding: 16px; text-align: center; color: var(--dim); font-size: 13px; }
   footer { color: var(--dim); font-size: 12px; padding: 24px; text-align: center; border-top: 1px solid var(--line); }
@@ -70,7 +89,7 @@
   <h1>🎮 Game Dev Job Board <span class="tok">· zero-token</span></h1>
   <div class="sub">
     Live openings pulled straight from studio ATS feeds — no AI, no API keys, no cost.
-    Filter by discipline, region and seniority; ranking runs entirely in your browser.
+    Filter by discipline, region, work mode and seniority; ranking runs entirely in your browser.
     <span id="generated"></span>
   </div>
 </header>
@@ -84,10 +103,20 @@
         <option value="company">Sort: Studio A–Z</option>
         <option value="role">Sort: Role A–Z</option>
       </select>
+      <button class="btn clear" id="reset">Clear all</button>
     </div>
     <div class="row"><span class="label">Discipline</span><span id="disc" class="chips"></span></div>
     <div class="row"><span class="label">Region</span><span id="region" class="chips"></span></div>
+    <div class="row"><span class="label">Work mode</span><span id="mode" class="chips"></span></div>
     <div class="row"><span class="label">Level</span><span id="senior" class="chips"></span></div>
+    <div class="row">
+      <span class="label">Boost</span>
+      <div id="boostBox">
+        <div class="hint">Type your own keywords and drag the slider to float matching jobs to the top — compounds with the filters above (applies in “Best match” sort).</div>
+        <div id="custom"></div>
+        <div><button class="btn" id="addCustom">+ Add keyword</button></div>
+      </div>
+    </div>
   </div>
 
   <div class="meta" id="meta">Loading…</div>
@@ -111,8 +140,6 @@
 <script src="rank.browser.js"></script>
 <script>
 // ── Classification config (keyword maps; reuse Rank.scoreCategory) ──────
-// Word-stem matching: "Program" matches Programmer/Programming. Maximal munch
-// resolves overlaps (e.g. "Technical Artist" → Art, "Gameplay Engineer" → Programming).
 var DISCIPLINES = {
   "Programming": ["programmer","programming","engineer","developer","software","engine","gameplay engineer","graphics","rendering","backend","back-end","frontend","front-end","full stack","fullstack","tools","devops","network","physics","C++","C#","gameplay programmer","build","SDK","platform","systems engineer"],
   "Art": ["artist","/\\bart\\b/","/\\bVFX\\b/","animator","animation","character","environment art","concept","modeler","modeller","rigging","lighting","texture","illustrator","outsource","3D art"],
@@ -123,23 +150,50 @@ var DISCIPLINES = {
   "Data/ML": ["data ","analytics","analyst","scientist","machine learning","/\\bML\\b/","/\\bAI\\b/","data engineer"],
   "Marketing/Community": ["community","marketing","social media","brand","influencer","/\\bPR\\b/","communications"],
 };
+// Geographic only — "Remote" is now its own axis (see REMOTE_KW), because a
+// remote job isn't open to every region.
 var REGIONS = {
-  "Remote": ["remote","anywhere","distributed","work from home"],
-  "Europe": ["united kingdom","/\\bUK\\b/","england","scotland","london","guildford","brighton","germany","berlin","munich","münchen","hamburg","cologne","france","paris","lyon","montpellier","bordeaux","sweden","stockholm","malmö","finland","helsinki","poland","warsaw","kraków","krakow","wrocław","spain","madrid","barcelona","netherlands","amsterdam","utrecht","ireland","dublin","czech","brno","prague","denmark","copenhagen","norway","oslo","belgium","brussels","portugal","lisbon","porto","italy","milan","austria","vienna","switzerland","zurich","romania","bucharest","hungary","budapest","/\\bCET\\b/","/\\bEU\\b/","europe","malta","cyprus","greece","athens","estonia","lithuania","latvia","ukraine","serbia","croatia","slovenia","slovakia","bulgaria","iceland","luxembourg"],
-  "North America": ["united states","/\\bUSA\\b/","/\\bUS\\b/","canada","california","new york","texas","washington","seattle","san francisco","los angeles","austin","raleigh","cary","north carolina","massachusetts","boston","florida","chicago","montreal","montréal","toronto","vancouver","quebec","québec","ontario","alberta","oregon","colorado","georgia","utah","arizona","nevada","san diego","carlsbad","novato","redmond","irvine"],
+  "Europe": ["united kingdom","/\\bUK\\b/","england","scotland","london","guildford","brighton","germany","berlin","munich","münchen","hamburg","cologne","france","paris","lyon","montpellier","bordeaux","sweden","stockholm","malmö","finland","helsinki","poland","warsaw","warszawa","kraków","krakow","wrocław","spain","madrid","barcelona","netherlands","amsterdam","utrecht","ireland","dublin","czech","brno","prague","denmark","copenhagen","norway","oslo","belgium","brussels","portugal","lisbon","porto","italy","milan","austria","vienna","switzerland","zurich","romania","bucharest","hungary","budapest","/\\bCET\\b/","/\\bEU\\b/","europe","malta","cyprus","greece","athens","estonia","lithuania","latvia","ukraine","serbia","croatia","slovenia","slovakia","bulgaria","iceland","luxembourg"],
+  "North America": ["united states","/\\bUSA\\b/","/\\bUS\\b/","canada","california","new york","texas","washington","seattle","san francisco","los angeles","austin","raleigh","cary","north carolina","massachusetts","boston","florida","chicago","montreal","montréal","toronto","vancouver","quebec","québec","ontario","alberta","oregon","colorado","georgia","utah","arizona","nevada","san diego","carlsbad","novato","redmond","irvine","san mateo","burnaby"],
   "Asia/Pacific": ["japan","tokyo","china","shanghai","beijing","singapore","korea","seoul","india","bangalore","bengaluru","hong kong","taiwan","australia","sydney","melbourne","brisbane","new zealand","auckland","philippines","manila","vietnam","malaysia","thailand"],
 };
+var REMOTE_KW = ["remote","anywhere","distributed","work from home","/\\bwfh\\b/","fully remote"];
 var SENIORITY = {
   "Lead+": ["lead","principal","/\\bhead\\b/","director","chief","staff","/\\bVP\\b/","manager"],
   "Senior": ["senior","/\\bsr\\b/","expert"],
   "Junior": ["junior","/\\bjr\\b/","intern","internship","graduate","entry","trainee","apprentice","associate"],
 };
 
-// ── State ───────────────────────────────────────────────────────────────
+// ── State (persisted to localStorage) ───────────────────────────────────
+var STORE_KEY = "gamedevboard.filters.v2";
 var ALL = [];
-var sel = { disc: new Set(), region: new Set(), senior: new Set() };
+var sel = { disc: new Set(), region: new Set(), mode: new Set(), senior: new Set() };
+var custom = [];          // [{kw, w}]  w in 0..2
 var sortMode = "fit";
 var RENDER_CAP = 600;
+
+function save() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      q: document.getElementById("q").value,
+      sort: sortMode,
+      disc: [...sel.disc], region: [...sel.region], mode: [...sel.mode], senior: [...sel.senior],
+      custom: custom,
+    }));
+  } catch (e) {}
+}
+function load() {
+  try {
+    var s = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+    if (s.disc) sel.disc = new Set(s.disc);
+    if (s.region) sel.region = new Set(s.region);
+    if (s.mode) sel.mode = new Set(s.mode);
+    if (s.senior) sel.senior = new Set(s.senior);
+    if (Array.isArray(s.custom)) custom = s.custom;
+    if (s.sort) sortMode = s.sort;
+    if (s.q != null) document.getElementById("q").value = s.q;
+  } catch (e) {}
+}
 
 function classify(text, groups) {
   var out = [];
@@ -149,7 +203,10 @@ function classify(text, groups) {
   }
   return out;
 }
-// One bucket for seniority (priority Lead > Senior > Junior, else Mid).
+function isRemote(location) {
+  var map = {}; REMOTE_KW.forEach(function (k) { map[k] = 1; });
+  return Rank.scoreCategory(location, map, "max").score > 0;
+}
 function seniorityBucket(title) {
   var c = classify(title, SENIORITY);
   if (c.indexOf("Lead+") !== -1) return "Lead+";
@@ -160,20 +217,21 @@ function seniorityBucket(title) {
 
 function prep(jobs) {
   return jobs.map(function (j) {
-    var disc = classify(j.title, DISCIPLINES);
-    var region = classify(j.location, REGIONS);
+    var loc = j.location || "";
+    var region = classify(loc, REGIONS);
     if (region.length === 0) region = ["Other"];
-    var sen = seniorityBucket(j.title);
     return {
-      title: j.title, url: j.url, company: j.company, location: j.location || "",
-      _disc: disc, _region: region, _sen: sen,
-      _search: (j.title + " " + j.company + " " + (j.location || "")).toLowerCase(),
+      title: j.title, url: j.url, company: j.company, location: loc,
+      _disc: classify(j.title, DISCIPLINES),
+      _region: region,
+      _remote: isRemote(loc),
+      _sen: seniorityBucket(j.title),
+      _search: (j.title + " " + j.company + " " + loc).toLowerCase(),
+      _boostHay: (j.title + " " + j.company + " " + loc),
     };
   });
 }
 
-// Build a Rank config from current selections: selected keywords weigh 1, so
-// "Best match" surfaces jobs closest to what you picked. Nothing selected → flat.
 function rankingFromSelection() {
   function mapFor(groups, picked) {
     var m = { default: picked.size ? 0.2 : 0.5 };
@@ -189,19 +247,39 @@ function rankingFromSelection() {
   };
 }
 
+// Custom keyword boost — compounds on top of the base fit in "Best match" sort.
+function customBoost(job) {
+  var best = 0;
+  for (var i = 0; i < custom.length; i++) {
+    var c = custom[i];
+    if (!c.kw || !c.kw.trim() || !c.w) continue;
+    var m = {}; m[c.kw] = 1;
+    if (Rank.scoreCategory(job._boostHay, m, "max").score > 0) best = Math.max(best, c.w);
+  }
+  return best;
+}
+
 function passes(j) {
   var q = document.getElementById("q").value.trim().toLowerCase();
   if (q && j._search.indexOf(q) === -1) return false;
   if (sel.disc.size && !j._disc.some(function (d) { return sel.disc.has(d); })) return false;
   if (sel.region.size && !j._region.some(function (r) { return sel.region.has(r); })) return false;
   if (sel.senior.size && !sel.senior.has(j._sen)) return false;
+  if (sel.mode.size) {
+    var wantRemote = sel.mode.has("Remote"), wantOnsite = sel.mode.has("On-site");
+    if (wantRemote && !wantOnsite && !j._remote) return false;
+    if (wantOnsite && !wantRemote && j._remote) return false;
+  }
   return true;
 }
 
 function render() {
   var filtered = ALL.filter(passes);
+  var boosted = {};
   if (sortMode === "fit") {
     var ranked = Rank.rankJobs(filtered, rankingFromSelection());
+    ranked.forEach(function (j) { var b = customBoost(j); j._final = j.fit + b; if (b > 0) boosted[j.url] = true; });
+    ranked.sort(function (a, b) { return b._final - a._final || a.company.localeCompare(b.company); });
     filtered = ranked;
   } else if (sortMode === "company") {
     filtered.sort(function (a, b) { return a.company.localeCompare(b.company) || a.title.localeCompare(b.title); });
@@ -215,7 +293,10 @@ function render() {
   var frag = document.createDocumentFragment();
   shown.forEach(function (j) {
     var tr = document.createElement("tr");
-    var tags = j._disc.concat([j._sen]).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join("");
+    var tags = "";
+    if (j._remote) tags += '<span class="tag remote">Remote</span>';
+    if (boosted[j.url]) tags += '<span class="tag boost">★ boosted</span>';
+    tags += j._disc.concat([j._sen]).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join("");
     tr.innerHTML =
       '<td class="co">' + esc(j.company) + '</td>' +
       '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.title) + '</a></td>' +
@@ -225,14 +306,13 @@ function render() {
   });
   rows.appendChild(frag);
 
+  if (filtered.length === 0) {
+    rows.innerHTML = '<tr><td colspan="4" class="empty">No openings match these filters.</td></tr>';
+  }
   document.getElementById("meta").innerHTML =
     "Showing <b>" + shown.length + "</b> of <b>" + filtered.length + "</b> matching · " + ALL.length + " total openings";
   document.getElementById("more").textContent =
     filtered.length > RENDER_CAP ? "…" + (filtered.length - RENDER_CAP) + " more — narrow your filters to see them." : "";
-  document.getElementById("empty") && document.getElementById("empty").remove();
-  if (filtered.length === 0) {
-    rows.innerHTML = '<tr><td colspan="4" class="empty" id="empty">No openings match these filters.</td></tr>';
-  }
 }
 
 function esc(s) {
@@ -243,10 +323,11 @@ function esc(s) {
 
 function buildChips(containerId, groups, key, extra) {
   var counts = {};
-  var keys = Object.keys(groups).concat(extra || []);
+  var keys = (groups ? Object.keys(groups) : []).concat(extra || []);
   keys.forEach(function (k) { counts[k] = 0; });
   ALL.forEach(function (j) {
-    var arr = key === "disc" ? j._disc : key === "region" ? j._region : [j._sen];
+    var arr = key === "disc" ? j._disc : key === "region" ? j._region
+            : key === "mode" ? (j._remote ? ["Remote"] : ["On-site"]) : [j._sen];
     arr.forEach(function (v) { if (counts[v] != null) counts[v]++; });
   });
   var c = document.getElementById(containerId);
@@ -254,34 +335,73 @@ function buildChips(containerId, groups, key, extra) {
   keys.forEach(function (name) {
     if (!counts[name]) return;
     var el = document.createElement("span");
-    el.className = "chip";
+    el.className = "chip" + (sel[key].has(name) ? " on" : "");
     el.innerHTML = esc(name) + '<span class="n">' + counts[name] + "</span>";
     el.onclick = function () {
       if (sel[key].has(name)) { sel[key].delete(name); el.classList.remove("on"); }
       else { sel[key].add(name); el.classList.add("on"); }
-      render();
+      save(); render();
     };
     c.appendChild(el);
   });
 }
 
+// ── Custom boost rows ────────────────────────────────────────────────────
+function renderCustom() {
+  var c = document.getElementById("custom");
+  c.innerHTML = "";
+  custom.forEach(function (entry, i) {
+    var row = document.createElement("div");
+    row.className = "boostRow";
+    row.innerHTML =
+      '<input type="text" placeholder="e.g. Unreal, multiplayer, Rust…" value="' + esc(entry.kw) + '">' +
+      '<input type="range" min="0" max="200" value="' + Math.round((entry.w || 0) * 100) + '">' +
+      '<span class="wlabel">×' + (entry.w || 0).toFixed(2) + '</span>' +
+      '<span class="x" title="Remove">✕</span>';
+    var txt = row.querySelector('input[type=text]');
+    var rng = row.querySelector('input[type=range]');
+    var lbl = row.querySelector('.wlabel');
+    txt.addEventListener("input", function () { custom[i].kw = txt.value; save(); render(); });
+    rng.addEventListener("input", function () {
+      custom[i].w = rng.value / 100; lbl.textContent = "×" + custom[i].w.toFixed(2); save(); render();
+    });
+    row.querySelector(".x").onclick = function () { custom.splice(i, 1); save(); renderCustom(); render(); };
+    c.appendChild(row);
+  });
+}
+
+function buildAllChips() {
+  buildChips("disc", DISCIPLINES, "disc");
+  buildChips("region", REGIONS, "region", ["Other"]);
+  buildChips("mode", null, "mode", ["Remote", "On-site"]);
+  buildChips("senior", SENIORITY, "senior", ["Mid"]);
+}
+
 function init(data) {
   ALL = prep(data.jobs || []);
   if (data.generated) {
-    var d = new Date(data.generated);
     document.getElementById("generated").textContent =
-      "· updated " + d.toISOString().slice(0, 10);
+      "· updated " + new Date(data.generated).toISOString().slice(0, 10);
   }
-  buildChips("disc", DISCIPLINES, "disc");
-  buildChips("region", REGIONS, "region", ["Other"]);
-  buildChips("senior", SENIORITY, "senior", ["Mid"]);
-  document.getElementById("q").addEventListener("input", render);
-  document.getElementById("sort").addEventListener("change", function (e) { sortMode = e.target.value; render(); });
+  load();
+  document.getElementById("sort").value = sortMode;
+  buildAllChips();
+  renderCustom();
+
+  document.getElementById("q").addEventListener("input", function () { save(); render(); });
+  document.getElementById("sort").addEventListener("change", function (e) { sortMode = e.target.value; save(); render(); });
+  document.getElementById("addCustom").onclick = function () { custom.push({ kw: "", w: 1 }); save(); renderCustom(); };
+  document.getElementById("reset").onclick = function () {
+    sel = { disc: new Set(), region: new Set(), mode: new Set(), senior: new Set() };
+    custom = []; sortMode = "fit";
+    document.getElementById("q").value = "";
+    document.getElementById("sort").value = "fit";
+    save(); buildAllChips(); renderCustom(); render();
+  };
   document.querySelectorAll("th[data-sort]").forEach(function (th) {
     th.onclick = function () {
       sortMode = th.getAttribute("data-sort") === "company" ? "company" : "role";
-      document.getElementById("sort").value = sortMode;
-      render();
+      document.getElementById("sort").value = sortMode; save(); render();
     };
   });
   render();
@@ -292,7 +412,7 @@ fetch("data/jobs.json")
   .then(init)
   .catch(function (e) {
     document.getElementById("meta").innerHTML =
-      "Could not load <code>data/jobs.json</code> (" + e.message + "). If you opened this file directly, run a local server (e.g. <code>npx serve docs</code>) — browsers block <code>fetch</code> over file://.";
+      "Could not load <code>data/jobs.json</code> (" + e.message + "). If you opened this file directly, run a local server (e.g. <code>npx serve site</code>) — browsers block <code>fetch</code> over file://.";
   });
 </script>
 </body>
