@@ -111,7 +111,7 @@
   .controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .row .label { color: var(--dim); font-size: 12px; text-transform: uppercase;
-    letter-spacing: 0.5px; width: 86px; flex: none; }
+    letter-spacing: 0.5px; width: 112px; flex: none; }
   input[type=search] {
     flex: 1; min-width: 220px; background: var(--panel); border: 1px solid var(--line);
     color: var(--txt); padding: 10px 12px; border-radius: 10px; font-size: 14px;
@@ -139,20 +139,69 @@
   .btn.clear { color: var(--dim); }
   /* Boost keywords */
   #boostBox { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 280px; }
-  #custom { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .bpill { display: inline-flex; align-items: center; gap: 7px; background: var(--chip);
-    border: 1px solid color-mix(in srgb, var(--warm) 45%, var(--line));
-    border-radius: 999px; padding: 5px 6px 5px 11px; font-size: 13px; }
-  .bpill .sign { font-weight: 700; font-variant-numeric: tabular-nums; }
-  .bpill .rate { color: var(--warm); font-variant-numeric: tabular-nums; font-size: 12px; }
-  .bpill.off { border-color: var(--line); opacity: .6; }
-  .bpill.off .sign { color: var(--dim); }
-  .bpill.soft .sign { color: var(--warm); }
-  .bpill.strong .sign { color: var(--accent2); }
-  .bpill .kw { color: var(--txt); }
-  .bpill .edit { cursor: pointer; background: none; border: none; color: var(--dim);
-    font-size: 13px; line-height: 1; padding: 3px 5px; border-radius: 6px; }
-  .bpill .edit:hover { color: var(--warm); background: var(--panel2); }
+  .chips { flex: 1; display: flex; flex-wrap: wrap; gap: 16px 12px; align-items: center; padding-top: 8px; }
+  /* The pill colour (border + text + bullet) is set inline in JS by lerping
+     --danger → --accent2 across the weight (red at 0, green at ≥1). */
+  .bpill { position: relative; display: inline-flex; align-items: center; gap: 7px;
+    background: var(--chip); border: 1px solid var(--line); color: var(--txt);
+    border-radius: 999px; padding: 5px 13px; font-size: 13px; cursor: pointer; }
+  /* Hover always lifts the outline to green (like the original chips). */
+  .bpill:hover { border-color: var(--accent2); }
+  /* Active (rated) pills carry their weight colour in --pc (red at 0 → green at
+     ≥1): solid full fill, contrasting text, matching border. No transition —
+     the toggle should feel instant. */
+  .bpill.active { background: var(--pc); border-color: var(--pc); color: var(--onAccent); }
+  .bpill.active .n { color: var(--onAccent); }
+  .bpill .sign { font-weight: 800; font-variant-numeric: tabular-nums;
+    user-select: none; padding: 0 2px; font-size: 15px; line-height: 1; }
+  /* Inactive pills are visibly greyed out (no icon, muted text). */
+  .bpill.neutral { color: var(--dim); border-style: solid; opacity: .6; }
+  .bpill.neutral:hover { opacity: .85; }
+  .btn.addkw { padding: 5px 12px; border-radius: 999px; border-style: solid; color: var(--dim); }
+  /* The per-group "+" is just a glyph — tight, square, minimal. */
+  .btn.addfilter { padding: 5px 10px; font-size: 15px; line-height: 1; }
+  .bpill .rate { font-variant-numeric: tabular-nums; font-size: 12px; opacity: .75; }
+  .bpill .kw { color: inherit; font-weight: 600; }
+  .bpill .n { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 11px; opacity: .7; }
+  /* Per-axis combine-mode toggle, sits to the left of the axis label. */
+  .axmode { background: var(--panel2); border: 1px solid var(--line); color: var(--dim);
+    font-size: 10px; line-height: 1; text-transform: uppercase; letter-spacing: .5px;
+    padding: 3px 5px; border-radius: 6px; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .axmode:hover { border-color: var(--accent); color: var(--txt); }
+  .label { display: inline-flex; align-items: center; gap: 6px; }
+  /* Edit pencil: circle extruding from the top-right edge of the pill.
+     Hidden until hover on pointer devices; always visible on touch. */
+  .bpill .edit { position: absolute; top: -9px; right: -9px; width: 20px; height: 20px;
+    padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; cursor: pointer; background: var(--panel); color: var(--dim);
+    border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 11px; line-height: 1;
+    opacity: 0; transition: opacity .12s, color .12s, border-color .12s; }
+  .bpill:hover .edit, .bpill .edit:focus-visible { opacity: 1; }
+  .bpill .edit:hover { color: var(--warm); border-color: var(--warm); }
+  @media (hover: none) { .bpill .edit { opacity: 1; } }
+  /* Editable group name (sits after the combine toggle in a row label). */
+  .gname { background: none; border: none; padding: 0; font: inherit; cursor: pointer;
+    color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+    text-align: left; }
+  .gname:hover { color: var(--txt); text-decoration: underline; }
+  .grouplabel { width: auto; max-width: 150px; }
+  /* Catch-all (else) pills read a touch differently from keyword pills. */
+  .bpill.elsepill { border-style: solid; }
+  .bpill .elsetag { font-size: 9px; opacity: .55; text-transform: uppercase;
+    letter-spacing: .5px; margin-left: 2px; }
+  .addgroup { color: var(--accent); border-style: solid; }
+  /* Keyword list editor inside the filter modal */
+  .kwlist { display: flex; flex-direction: column; gap: 6px; max-height: 210px; overflow-y: auto; }
+  .kwrow { display: flex; gap: 6px; align-items: center; }
+  .kwrow input { flex: 1; }
+  .kwrm { flex: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+    background: var(--panel2); border: 1px solid var(--line); color: var(--dim);
+    font-size: 15px; line-height: 1; }
+  .kwrm:hover { color: var(--danger); border-color: var(--danger); }
+  .elseToggle { display: flex; align-items: center; gap: 8px; cursor: pointer;
+    font-size: 12px; color: var(--dim); text-transform: none; letter-spacing: 0; }
+  .elseToggle input { width: auto; margin: 0; }
+  .modal .field #bmKwAdd { align-self: flex-start; margin-top: 2px; }
   /* Boost edit modal */
   .modalBg { position: fixed; inset: 0; background: var(--overlay); z-index: 50;
     display: none; align-items: center; justify-content: center; padding: 16px; }
@@ -180,6 +229,7 @@
   th { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
     cursor: pointer; white-space: nowrap; }
   tr:hover td { background: var(--panel2); }
+  th:hover { background: var(--panel2); }
   td.role a { color: var(--txt); text-decoration: none; font-weight: 500; }
   td.role a:hover { color: var(--accent); text-decoration: underline; }
   td.co { color: var(--accent2); white-space: nowrap; }
@@ -239,17 +289,10 @@ window.__themeKey = "gamedevboard.theme";
       </select>
       <button class="btn clear" id="reset">Clear all</button>
     </div>
-    <div class="row"><span class="label">Discipline</span><span id="disc" class="chips"></span></div>
-    <div class="row"><span class="label">Region</span><span id="region" class="chips"></span></div>
-    <div class="row"><span class="label">Work mode</span><span id="mode" class="chips"></span></div>
-    <div class="row"><span class="label">Level</span><span id="senior" class="chips"></span></div>
-    <div class="row">
-      <span class="label">Boost</span>
-      <div id="boostBox">
-        <div class="hint">Add your own keywords to float matching jobs to the top — tap the ✎ on a pill to set its weight (− off · ~ light · + strong). Compounds with the filters above (applies in “Best match” sort).</div>
-        <div id="custom"></div>
-        <div><button class="btn" id="addCustom">+ Add keyword</button></div>
-      </div>
+    <div id="groups"></div>
+    <div class="row"><button class="btn addgroup" id="addGroup">+ new group</button></div>
+    <div class="row"><span class="label"></span>
+      <div class="hint">Each row is a <b>group</b> — a named bucket of filters matched against one field (role, studio, location…). Click the group name to rename it, change its field, or delete it; the button by it combines its matched ratings — <b>max</b> (best wins) · <b>min</b> (worst wins) · <b>avg</b>. Every filter is a <b>rating</b> that orders “Best match” — it widens, it doesn't restrict. Click a filter to cycle <b>inactive ▸ on (+) ▸ filter-out</b>; tap the ✎ to edit its name, keyword list, and a fine-grained 0–2 weight (<b>−</b> at 0 hides matches, <b>~</b> below 1 lowers, <b>+</b> 1 is on / above boosts). A <b>catch-all</b> filter matches when nothing else in its group does.</div>
     </div>
   </div>
 
@@ -273,21 +316,50 @@ window.__themeKey = "gamedevboard.theme";
 
 <div class="modalBg" id="boostModalBg">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="boostModalTitle">
-    <h3 id="boostModalTitle">Edit boost keyword</h3>
+    <h3 id="boostModalTitle">Edit filter</h3>
     <div class="field">
-      <label for="bmKw">Keyword</label>
-      <input type="text" id="bmKw" placeholder="e.g. Unreal, multiplayer, Rust…" autocomplete="off">
+      <label for="bmName">Filter name</label>
+      <input type="text" id="bmName" placeholder="e.g. North America" autocomplete="off" spellcheck="false">
     </div>
+    <div class="field" id="bmKwField">
+      <label>Keywords — any match counts · regex ok (e.g. /\bUS\b/)</label>
+      <div id="bmKwList" class="kwlist"></div>
+      <button class="btn addkw" id="bmKwAdd" type="button">+ add keyword</button>
+    </div>
+    <label class="elseToggle" id="bmElseWrap"><input type="checkbox" id="bmElse"> Catch-all — matches jobs that nothing else in this group matched</label>
     <div class="field">
-      <label for="bmRange">Weight</label>
+      <label for="bmRange">Weight — 0 hides · 1 neutral · 2 strong boost</label>
       <div class="sliderRow">
         <input type="range" id="bmRange" min="0" max="200" step="5">
         <span class="mw" id="bmLabel"></span>
       </div>
     </div>
     <div class="actions">
-      <button class="btn rm" id="bmRemove">Remove</button>
+      <button class="btn rm" id="bmRemove">Remove filter</button>
       <button class="btn" id="bmDone">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalBg" id="groupModalBg">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gmTitle">
+    <h3 id="gmTitle">Edit group</h3>
+    <div class="field">
+      <label for="gmName">Group name</label>
+      <input type="text" id="gmName" placeholder="e.g. Region" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="gmField">Match filters against</label>
+      <select id="gmField">
+        <option value="title">Role title</option>
+        <option value="company">Studio / company</option>
+        <option value="location">Location</option>
+        <option value="any">Anywhere (title + studio + location)</option>
+      </select>
+    </div>
+    <div class="actions">
+      <button class="btn rm" id="gmRemove">Delete group</button>
+      <button class="btn" id="gmDone">Done</button>
     </div>
   </div>
 </div>
@@ -336,111 +408,185 @@ var SENIORITY = {
 };
 
 // ── State (persisted to localStorage) ───────────────────────────────────
-var STORE_KEY = "gamedevboard.filters.v2";
+// Everything is a user-editable "group" (a row): a named bucket of "filters".
+// A filter is a named keyword list matched against the group's field (title /
+// company / location / any). A filter's `weight` is null when inactive (greyed,
+// ignored), or 0..2 when rated: 0 hides matching jobs, 1 is "on", >1 boosts. An
+// `else` filter is a catch-all — it matches when nothing else in its group did.
+var STORE_KEY = "gamedevboard.filters.v5";
 var ALL = [];
-var sel = { disc: new Set(), region: new Set(), mode: new Set(), senior: new Set() };
-var custom = [];          // [{kw, w}]  w in 0..2
+var GROUPS = [];          // [{id,name,field,combine,weight,filters:[{id,name,keywords,weight,else}]}]
+var FBYID = {};           // filterId -> {f: filter, g: group}
+var MODES = ["max", "min", "avg"];
+var FIELDS = ["title", "company", "location", "any"];
 var sortMode = "fit";
 var RENDER_CAP = 600;
+// Weight a job gets on a group when it matches no *active* (rated) filter — the
+// neutral baseline that "on" (1) sits above and "lower" (<1) sits below.
+var DEFAULT_W = 0.5;
+
+var _idc = 0;
+function nid() { return "f" + (++_idc); }
+function mkFilter(name, keywords, weight, isElse) {
+  return { id: nid(), name: name || "", keywords: keywords || [],
+           weight: (weight == null ? null : weight), else: !!isElse };
+}
+function mkGroup(name, field, weight, filters) {
+  return { id: nid(), name: name, field: field, combine: "min",
+           weight: weight, filters: filters || [] };
+}
+// Seed groups from the original hardcoded maps so the board looks identical out
+// of the box — but every group, filter and keyword is now editable/deletable.
+function defaultGroups() {
+  function filtersFrom(map) {
+    return Object.keys(map).map(function (name) { return mkFilter(name, map[name].slice(), null, false); });
+  }
+  return [
+    mkGroup("Discipline", "title", 0.30, filtersFrom(DISCIPLINES)),
+    mkGroup("Region", "location", 0.22, filtersFrom(REGIONS).concat([mkFilter("Other", [], null, true)])),
+    mkGroup("Level", "title", 0.13, filtersFrom(SENIORITY).concat([mkFilter("Mid", [], null, true)])),
+    mkGroup("Mode", "location", 0.10, [mkFilter("Remote", REMOTE_KW.slice(), null, false), mkFilter("On-site", [], null, true)]),
+  ];
+}
+
+// filterId -> {filter, group} index, rebuilt whenever GROUPS changes. Also
+// (re)compiles each filter's keyword regexes so recompute() never rebuilds them.
+function reindex() {
+  FBYID = {};
+  GROUPS.forEach(function (g) { g.filters.forEach(function (f) { compileFilter(f); FBYID[f.id] = { f: f, g: g }; }); });
+}
+// Compile a filter's keywords into reusable RegExps once (same semantics as the
+// scanner, via Rank.keyToRegExp). Without this, recompute() rebuilt every regex
+// for every one of ~600 jobs on every keystroke — the main source of lag.
+function compileFilter(f) {
+  f._res = (f.keywords || []).map(function (k) { return Rank.keyToRegExp(k); })
+                             .filter(Boolean);
+}
 
 function save() {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({
-      q: document.getElementById("q").value,
-      sort: sortMode,
-      disc: [...sel.disc], region: [...sel.region], mode: [...sel.mode], senior: [...sel.senior],
-      custom: custom,
+      q: document.getElementById("q").value, sort: sortMode, groups: GROUPS,
     }));
   } catch (e) {}
+}
+// Coerce stored groups back into a valid shape (fresh ids, clamped weights, at
+// most one catch-all per group) so a hand-edited or stale blob can't break us.
+function sanitizeGroups(arr) {
+  var out = [];
+  arr.forEach(function (g) {
+    if (!g || typeof g !== "object") return;
+    var field = FIELDS.indexOf(g.field) !== -1 ? g.field : "any";
+    var combine = MODES.indexOf(g.combine) !== -1 ? g.combine : "min";
+    var weight = typeof g.weight === "number" ? g.weight : 0.1;
+    var seenElse = false;
+    var filters = (Array.isArray(g.filters) ? g.filters : []).map(function (f) {
+      f = f || {};
+      var isElse = !!f.else; if (isElse && seenElse) isElse = false; if (isElse) seenElse = true;
+      return mkFilter(
+        typeof f.name === "string" ? f.name : "",
+        Array.isArray(f.keywords) ? f.keywords.filter(function (k) { return typeof k === "string" && k; }) : [],
+        (typeof f.weight === "number") ? Math.max(0, Math.min(2, f.weight)) : null,
+        isElse);
+    });
+    var ng = mkGroup(typeof g.name === "string" ? g.name : "Group", field, weight, filters);
+    ng.combine = combine;
+    out.push(ng);
+  });
+  return out.length ? out : defaultGroups();
 }
 function load() {
   try {
     var s = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
-    if (s.disc) sel.disc = new Set(s.disc);
-    if (s.region) sel.region = new Set(s.region);
-    if (s.mode) sel.mode = new Set(s.mode);
-    if (s.senior) sel.senior = new Set(s.senior);
-    if (Array.isArray(s.custom)) custom = s.custom;
+    GROUPS = (Array.isArray(s.groups) && s.groups.length) ? sanitizeGroups(s.groups) : defaultGroups();
     if (s.sort) sortMode = s.sort;
     if (s.q != null) document.getElementById("q").value = s.q;
-  } catch (e) {}
-}
-
-function classify(text, groups) {
-  var out = [];
-  for (var name in groups) {
-    var map = {}; groups[name].forEach(function (k) { map[k] = 1; });
-    if (Rank.scoreCategory(text, map, "max").score > 0) out.push(name);
-  }
-  return out;
-}
-function isRemote(location) {
-  var map = {}; REMOTE_KW.forEach(function (k) { map[k] = 1; });
-  return Rank.scoreCategory(location, map, "max").score > 0;
-}
-function seniorityBucket(title) {
-  var c = classify(title, SENIORITY);
-  if (c.indexOf("Lead+") !== -1) return "Lead+";
-  if (c.indexOf("Senior") !== -1) return "Senior";
-  if (c.indexOf("Junior") !== -1) return "Junior";
-  return "Mid";
+  } catch (e) { GROUPS = defaultGroups(); }
 }
 
 function prep(jobs) {
   return jobs.map(function (j) {
-    var loc = j.location || "";
-    var region = classify(loc, REGIONS);
-    if (region.length === 0) region = ["Other"];
+    var loc = j.location || "", title = j.title || "", co = j.company || "";
     return {
       title: j.title, url: j.url, company: j.company, location: loc,
-      _disc: classify(j.title, DISCIPLINES),
-      _region: region,
-      _remote: isRemote(loc),
-      _sen: seniorityBucket(j.title),
-      _search: (j.title + " " + j.company + " " + loc).toLowerCase(),
-      _boostHay: (j.title + " " + j.company + " " + loc),
+      _search: (title + " " + co + " " + loc).toLowerCase(),
+      _hay: { title: title, company: co, location: loc, any: title + " " + co + " " + loc },
+      _mem: {},   // groupId -> [filterId,...] (filled by recompute)
     };
   });
 }
 
-function rankingFromSelection() {
-  function mapFor(groups, picked) {
-    var m = { default: picked.size ? 0.2 : 0.5 };
-    picked.forEach(function (name) { (groups[name] || []).forEach(function (k) { m[k] = 1; }); });
-    return m;
+// Membership is just "does any keyword match" — a boolean — so we skip the
+// scorer's maximal-munch span work and test the precompiled regexes directly.
+function matchFilter(hay, f) {
+  var res = f._res; if (!res) { compileFilter(f); res = f._res; }
+  for (var i = 0; i < res.length; i++) {
+    var re = res[i]; if (re.global) re.lastIndex = 0;
+    if (re.test(hay)) return true;
   }
-  return {
-    combine: "max",
-    weights: { role: 0.45, location: 0.35, seniority: 0.20 },
-    role: mapFor(DISCIPLINES, sel.disc),
-    location: mapFor(REGIONS, sel.region),
-    seniority: mapFor(SENIORITY, sel.senior),
-  };
+  return false;
+}
+// Recompute which filters each job matches, per group, against the group's
+// field (word-boundary, like rank.mjs). An `else` filter matches only when none
+// of its group's keyword filters did. Call whenever groups/keywords/fields change.
+function recompute() {
+  ALL.forEach(function (j) {
+    var mem = {};
+    GROUPS.forEach(function (g) {
+      var hay = j._hay[g.field] != null ? j._hay[g.field] : j._hay.any;
+      var matched = [], anyKw = false, elseF = null;
+      g.filters.forEach(function (f) {
+        if (f.else) { elseF = f; return; }
+        if (matchFilter(hay, f)) { matched.push(f.id); anyKw = true; }
+      });
+      if (elseF && !anyKw) matched.push(elseF.id);
+      mem[g.id] = matched;
+    });
+    j._mem = mem;
+  });
 }
 
-// Custom keyword boost — compounds on top of the base fit in "Best match" sort.
-function customBoost(job) {
-  var best = 0;
-  for (var i = 0; i < custom.length; i++) {
-    var c = custom[i];
-    if (!c.kw || !c.kw.trim() || !c.w) continue;
-    var m = {}; m[c.kw] = 1;
-    if (Rank.scoreCategory(job._boostHay, m, "max").score > 0) best = Math.max(best, c.w);
+// Combine the weights of the *active* filters a job matched in a group via the
+// group's combine mode (max = widen, min = worst wins, avg = mean). No active
+// match → the neutral DEFAULT_W baseline.
+function groupScore(j, g) {
+  var members = j._mem[g.id] || [], vals = [];
+  for (var i = 0; i < members.length; i++) {
+    var rec = FBYID[members[i]];
+    if (rec && rec.f.weight != null) vals.push(rec.f.weight);
   }
-  return best;
+  if (!vals.length) return DEFAULT_W;
+  if (g.combine === "min") return Math.min.apply(null, vals);
+  if (g.combine === "avg") return vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
+  return Math.max.apply(null, vals);
+}
+// Weighted combined fit across groups (group weights normalised at use).
+function fitOf(j) {
+  var total = 0, sum = 0;
+  GROUPS.forEach(function (g) { var w = g.weight || 0; total += w; sum += w * groupScore(j, g); });
+  return total ? sum / total : DEFAULT_W;
+}
+// A weight of exactly 0 is the native "filter against" — hide jobs matching it.
+function excluded(j) {
+  return GROUPS.some(function (g) {
+    return (j._mem[g.id] || []).some(function (fid) {
+      var rec = FBYID[fid]; return rec && rec.f.weight === 0;
+    });
+  });
+}
+// True if the job rode any above-neutral boost (for the ★ tag).
+function isBoosted(j) {
+  return GROUPS.some(function (g) {
+    return (j._mem[g.id] || []).some(function (fid) {
+      var rec = FBYID[fid]; return rec && rec.f.weight != null && rec.f.weight > 1;
+    });
+  });
 }
 
 function passes(j) {
   var q = document.getElementById("q").value.trim().toLowerCase();
   if (q && j._search.indexOf(q) === -1) return false;
-  if (sel.disc.size && !j._disc.some(function (d) { return sel.disc.has(d); })) return false;
-  if (sel.region.size && !j._region.some(function (r) { return sel.region.has(r); })) return false;
-  if (sel.senior.size && !sel.senior.has(j._sen)) return false;
-  if (sel.mode.size) {
-    var wantRemote = sel.mode.has("Remote"), wantOnsite = sel.mode.has("On-site");
-    if (wantRemote && !wantOnsite && !j._remote) return false;
-    if (wantOnsite && !wantRemote && j._remote) return false;
-  }
+  if (excluded(j)) return false;
   return true;
 }
 
@@ -448,10 +594,8 @@ function render() {
   var filtered = ALL.filter(passes);
   var boosted = {};
   if (sortMode === "fit") {
-    var ranked = Rank.rankJobs(filtered, rankingFromSelection());
-    ranked.forEach(function (j) { var b = customBoost(j); j._final = j.fit + b; if (b > 0) boosted[j.url] = true; });
-    ranked.sort(function (a, b) { return b._final - a._final || a.company.localeCompare(b.company); });
-    filtered = ranked;
+    filtered.forEach(function (j) { j._final = fitOf(j); if (isBoosted(j)) boosted[j.url] = true; });
+    filtered.sort(function (a, b) { return b._final - a._final || a.company.localeCompare(b.company); });
   } else if (sortMode === "company") {
     filtered.sort(function (a, b) { return a.company.localeCompare(b.company) || a.title.localeCompare(b.title); });
   } else {
@@ -463,11 +607,19 @@ function render() {
   var shown = filtered.slice(0, RENDER_CAP);
   var frag = document.createDocumentFragment();
   shown.forEach(function (j) {
+    // Tag the buckets the job falls in (skip catch-alls — they're just noise).
+    var names = [];
+    GROUPS.forEach(function (g) {
+      (j._mem[g.id] || []).forEach(function (fid) {
+        var rec = FBYID[fid]; if (rec && !rec.f.else && rec.f.name) names.push(rec.f.name);
+      });
+    });
     var tr = document.createElement("tr");
     var tags = "";
-    if (j._remote) tags += '<span class="tag remote">Remote</span>';
     if (boosted[j.url]) tags += '<span class="tag boost">★ boosted</span>';
-    tags += j._disc.concat([j._sen]).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join("");
+    tags += names.map(function (t) {
+      return '<span class="tag' + (/^remote$/i.test(t) ? " remote" : "") + '">' + esc(t) + '</span>';
+    }).join("");
     tr.innerHTML =
       '<td class="co">' + esc(j.company) + '</td>' +
       '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.title) + '</a></td>' +
@@ -492,109 +644,272 @@ function esc(s) {
   });
 }
 
-function buildChips(containerId, groups, key, extra) {
+// ── Filter pills + group rows ────────────────────────────────────────────────
+// Every filter is a pill. Untouched, it's *inactive* (greyed, no icon) and uses
+// the neutral baseline. Clicking it cycles inactive ▸ on (1) ▸ filter-out (0) ▸
+// inactive. The pencil opens the editor (name, keyword list, catch-all toggle,
+// 0..2 weight). Icon by band: − at 0 (hidden), ~ for 0–1 (lowered), + at ≥1.
+function weightBand(w) {
+  if (w <= 0) return { sign: "−", cls: "out" };
+  return w >= 1 ? { sign: "+", cls: "strong" } : { sign: "~", cls: "soft" };
+}
+// Lerp the pill colour from red (--danger) at 0 to green (--accent2) at ≥1.
+function weightColor(w) {
+  var t = w >= 1 ? 1 : (w <= 0 ? 0 : w);
+  return "color-mix(in srgb, var(--accent2) " + Math.round(t * 100) + "%, var(--danger))";
+}
+// Cycle, on any click: inactive (null) ▸ on (1) ▸ filter-out (0) ▸ inactive.
+function cycleWeight(f) {
+  if (f.weight == null) f.weight = 1;
+  else if (f.weight >= 1) f.weight = 0;
+  else f.weight = null;
+  schedule({ groups: true });
+}
+
+function makePill(g, f, count) {
+  var active = f.weight != null;
+  var w = active ? f.weight : 1;
+  var pill = document.createElement("span");
+  var signHtml = "", showNum = false;
+  if (active) {
+    var band = weightBand(w);
+    signHtml = '<span class="sign">' + band.sign + '</span>';
+    pill.className = "bpill active " + band.cls;
+    pill.style.setProperty("--pc", weightColor(w));   // CSS tints bg/border/text
+    showNum = w !== 0 && w !== 1;        // hide the number at the clean 0 and 1
+  } else {
+    pill.className = "bpill neutral";    // greyed, no icon, CSS-default colours
+  }
+  if (f.else) pill.className += " elsepill";
+  pill.innerHTML =
+    signHtml +
+    (showNum ? '<span class="rate">' + w.toFixed(2) + '</span>' : '') +
+    '<span class="kw">' + esc(f.name || "unnamed") +
+      (f.else ? ' <span class="elsetag">else</span>' : '') + '</span>' +
+    '<span class="n">' + count + '</span>' +
+    '<button class="edit" title="Edit filter" aria-label="Edit filter">✎</button>';
+  pill.title = f.else
+    ? "Catch-all: matches when nothing else in “" + g.name + "” does"
+    : "Click to cycle inactive ▸ on ▸ filter-out";
+  pill.onclick = function () { cycleWeight(f); };
+  pill.querySelector(".edit").onclick = function (e) { e.stopPropagation(); openFilterModal(g, f); };
+  return pill;
+}
+
+// One row per group: combine toggle + editable name, then its filter pills.
+function groupRow(g) {
+  var row = document.createElement("div");
+  row.className = "row";
+  var label = document.createElement("span");
+  label.className = "label grouplabel";
+  var cmb = document.createElement("button");
+  cmb.className = "axmode";
+  cmb.textContent = g.combine;
+  cmb.title = "Combine matched ratings in this group: max (best wins) · min " +
+    "(worst wins) · avg (mean). Now: " + g.combine + ". Click to change.";
+  cmb.onclick = function () {
+    g.combine = MODES[(MODES.indexOf(g.combine) + 1) % MODES.length];
+    cmb.textContent = g.combine; schedule({});
+  };
+  var nameBtn = document.createElement("button");
+  nameBtn.className = "gname";
+  nameBtn.textContent = g.name;
+  nameBtn.title = "Edit group — name, field, delete";
+  nameBtn.onclick = function () { openGroupModal(g); };
+  label.appendChild(cmb); label.appendChild(nameBtn);
+
+  var chips = document.createElement("span");
+  chips.className = "chips";
   var counts = {};
-  var keys = (groups ? Object.keys(groups) : []).concat(extra || []);
-  keys.forEach(function (k) { counts[k] = 0; });
+  g.filters.forEach(function (f) { counts[f.id] = 0; });
   ALL.forEach(function (j) {
-    var arr = key === "disc" ? j._disc : key === "region" ? j._region
-            : key === "mode" ? (j._remote ? ["Remote"] : ["On-site"]) : [j._sen];
-    arr.forEach(function (v) { if (counts[v] != null) counts[v]++; });
+    (j._mem[g.id] || []).forEach(function (fid) { if (counts[fid] != null) counts[fid]++; });
   });
-  var c = document.getElementById(containerId);
-  c.innerHTML = "";
-  keys.forEach(function (name) {
-    if (!counts[name]) return;
-    var el = document.createElement("span");
-    el.className = "chip" + (sel[key].has(name) ? " on" : "");
-    el.innerHTML = esc(name) + '<span class="n">' + counts[name] + "</span>";
-    el.onclick = function () {
-      if (sel[key].has(name)) { sel[key].delete(name); el.classList.remove("on"); }
-      else { sel[key].add(name); el.classList.add("on"); }
-      save(); render();
-    };
-    c.appendChild(el);
-  });
+  g.filters.forEach(function (f) { chips.appendChild(makePill(g, f, counts[f.id] || 0)); });
+  var add = document.createElement("button");
+  add.className = "btn addkw addfilter";
+  add.textContent = "+";
+  add.title = "Add a filter to “" + g.name + "”";
+  add.setAttribute("aria-label", "Add a filter to " + g.name);
+  add.onclick = function () { addFilter(g); };
+  chips.appendChild(add);
+
+  row.appendChild(label); row.appendChild(chips);
+  return row;
 }
 
-// ── Custom boost pills ─────────────────────────────────────────────────────
-// Each keyword shows as a small pill: a sign for its weight band
-// (− = 0/off, ~ = 0..1, + = ≥1), the rating, the keyword, and a pencil that
-// opens the edit modal. Editing happens in the modal, not inline.
-function boostBand(w) {
-  if (!w) return { sign: "−", cls: "off" };
-  if (w < 1) return { sign: "~", cls: "soft" };
-  return { sign: "+", cls: "strong" };
+function buildGroups() {
+  reindex();
+  var host = document.getElementById("groups");
+  host.innerHTML = "";
+  GROUPS.forEach(function (g) { host.appendChild(groupRow(g)); });
 }
 
-function renderBoostPills() {
-  var c = document.getElementById("custom");
-  c.innerHTML = "";
-  custom.forEach(function (entry, i) {
-    var w = entry.w || 0;
-    var band = boostBand(w);
-    var pill = document.createElement("span");
-    pill.className = "bpill " + band.cls;
-    pill.innerHTML =
-      '<span class="sign">' + band.sign + '</span>' +
-      '<span class="rate">' + w.toFixed(2) + '</span>' +
-      '<span class="kw">' + (entry.kw && entry.kw.trim() ? esc(entry.kw) : "<i>untitled</i>") + '</span>' +
-      '<button class="edit" title="Edit boost keyword" aria-label="Edit boost keyword">✎</button>';
-    pill.querySelector(".edit").onclick = function () { openBoostModal(i); };
-    c.appendChild(pill);
-  });
+// Coalesce updates into one frame: rapid input (typing, slider drag) schedules
+// work instead of doing a full recompute + DOM rebuild + table re-render on
+// every event. Flags accumulate; the heaviest requested step wins.
+var _raf = null, _need = { recompute: false, groups: false, save: false };
+function flush() {
+  _raf = null;
+  if (_need.recompute) recompute();
+  if (_need.recompute || _need.groups) buildGroups();
+  render();
+  if (_need.save) save();
+  _need = { recompute: false, groups: false, save: false };
+}
+function schedule(o) {
+  o = o || {};
+  if (o.recompute) _need.recompute = true;
+  if (o.groups) _need.groups = true;
+  if (o.save !== false) _need.save = true;
+  if (!_raf) _raf = requestAnimationFrame(flush);
 }
 
-// ── Boost edit modal ───────────────────────────────────────────────────────
-var boostEditIdx = -1;
-function openBoostModal(i) {
-  boostEditIdx = i;
-  var entry = custom[i];
-  var kw = document.getElementById("bmKw");
-  var rng = document.getElementById("bmRange");
-  kw.value = entry.kw || "";
-  rng.value = Math.round((entry.w || 0) * 100);
-  syncBoostLabel();
+// Spawn a fresh (unnamed) filter and open its editor focused on the name.
+function addFilter(g) {
+  var f = mkFilter("", [], 1, false);   // start "on", unnamed
+  g.filters.push(f);
+  reindex(); recompute(); buildGroups(); save(); render();
+  openFilterModal(g, f);
+}
+function addGroup() {
+  var g = mkGroup("New group", "any", 0.10, []);
+  GROUPS.push(g);
+  reindex(); recompute(); buildGroups(); save(); render();
+  openGroupModal(g);
+}
+
+// ── Filter edit modal ────────────────────────────────────────────────────────
+var efGroup = null, efFilter = null;
+function openFilterModal(g, f) {
+  efGroup = g; efFilter = f;
+  document.getElementById("boostModalTitle").textContent = "Filter in “" + g.name + "”";
+  var nameInput = document.getElementById("bmName");
+  nameInput.value = f.name; nameInput.placeholder = "e.g. North America";
+  // The catch-all toggle is only available if the group has no other catch-all.
+  var hasOtherElse = g.filters.some(function (x) { return x.else && x !== f; });
+  var elseWrap = document.getElementById("bmElseWrap"), elseBox = document.getElementById("bmElse");
+  elseBox.checked = !!f.else; elseBox.disabled = hasOtherElse;
+  elseWrap.style.opacity = hasOtherElse ? ".45" : "";
+  elseWrap.title = hasOtherElse ? "This group already has a catch-all" : "";
+  renderKwEditor(); syncElseUI();
+  var w = f.weight; if (w == null) w = 1;
+  document.getElementById("bmRange").value = Math.round(w * 100); syncRatingLabel();
   document.getElementById("boostModalBg").classList.add("open");
-  kw.focus();
+  nameInput.focus(); nameInput.select();
 }
-function closeBoostModal() {
-  document.getElementById("boostModalBg").classList.remove("open");
-  boostEditIdx = -1;
+function syncElseUI() {
+  // A catch-all carries no keywords, so hide the keyword editor when it's on.
+  document.getElementById("bmKwField").style.display = (efFilter && efFilter.else) ? "none" : "";
 }
-function syncBoostLabel() {
-  var w = document.getElementById("bmRange").value / 100;
-  document.getElementById("bmLabel").textContent = boostBand(w).sign + " " + w.toFixed(2);
-}
-function bindBoostModal() {
-  var kw = document.getElementById("bmKw");
-  var rng = document.getElementById("bmRange");
-  kw.addEventListener("input", function () {
-    if (boostEditIdx < 0) return;
-    custom[boostEditIdx].kw = kw.value; renderBoostPills(); save(); render();
+function renderKwEditor() {
+  var host = document.getElementById("bmKwList");
+  host.innerHTML = "";
+  efFilter.keywords.forEach(function (kw, idx) {
+    var rowEl = document.createElement("div");
+    rowEl.className = "kwrow";
+    var inp = document.createElement("input");
+    inp.type = "text"; inp.value = kw; inp.spellcheck = false;
+    inp.placeholder = "keyword or /\\bregex\\b/";
+    inp.addEventListener("input", function () {
+      efFilter.keywords[idx] = inp.value; compileFilter(efFilter); schedule({ recompute: true, groups: true });
+    });
+    var rm = document.createElement("button");
+    rm.type = "button"; rm.className = "kwrm"; rm.textContent = "×"; rm.title = "Remove keyword";
+    rm.onclick = function () {
+      efFilter.keywords.splice(idx, 1); compileFilter(efFilter); renderKwEditor();
+      schedule({ recompute: true, groups: true });
+    };
+    rowEl.appendChild(inp); rowEl.appendChild(rm); host.appendChild(rowEl);
   });
-  rng.addEventListener("input", function () {
-    if (boostEditIdx < 0) return;
-    custom[boostEditIdx].w = rng.value / 100; syncBoostLabel(); renderBoostPills(); save(); render();
+}
+function removeFilter(g, f) {
+  var i = g.filters.indexOf(f); if (i !== -1) g.filters.splice(i, 1);
+  reindex(); recompute(); buildGroups(); save(); render();
+}
+function closeFilterModal() {
+  if (efFilter) {
+    var realKw = efFilter.keywords.filter(function (k) { return k.trim(); });
+    // Drop an abandoned blank filter (no name, no keywords, not a catch-all).
+    if (!efFilter.else && !efFilter.name.trim() && realKw.length === 0) {
+      removeFilter(efGroup, efFilter);
+    } else {
+      efFilter.keywords = realKw; reindex(); recompute(); buildGroups(); save(); render();
+    }
+  }
+  document.getElementById("boostModalBg").classList.remove("open");
+  efGroup = null; efFilter = null;
+}
+function syncRatingLabel() {
+  var w = document.getElementById("bmRange").value / 100;
+  document.getElementById("bmLabel").textContent = weightBand(w).sign + " " + w.toFixed(2);
+  document.getElementById("bmRange").style.accentColor = weightColor(w);
+}
+function bindFilterModal() {
+  document.getElementById("bmName").addEventListener("input", function () {
+    if (!efFilter) return; efFilter.name = this.value; schedule({ groups: true });
+  });
+  document.getElementById("bmRange").addEventListener("input", function () {
+    if (!efFilter) return;
+    efFilter.weight = Math.max(0, Math.min(2, this.value / 100));
+    syncRatingLabel(); schedule({ groups: true });
+  });
+  document.getElementById("bmKwAdd").onclick = function () {
+    if (!efFilter) return;
+    efFilter.keywords.push(""); renderKwEditor();
+    var inputs = document.querySelectorAll("#bmKwList input");
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  };
+  document.getElementById("bmElse").addEventListener("change", function () {
+    if (!efFilter) return;
+    efFilter.else = this.checked;
+    if (efFilter.else) efFilter.keywords = [];
+    syncElseUI(); compileFilter(efFilter); schedule({ recompute: true, groups: true });
   });
   document.getElementById("bmRemove").onclick = function () {
-    if (boostEditIdx < 0) return;
-    custom.splice(boostEditIdx, 1); closeBoostModal(); renderBoostPills(); save(); render();
+    if (!efGroup || !efFilter) return;
+    removeFilter(efGroup, efFilter);
+    efGroup = null; efFilter = null;
+    document.getElementById("boostModalBg").classList.remove("open");
   };
-  document.getElementById("bmDone").onclick = closeBoostModal;
+  document.getElementById("bmDone").onclick = closeFilterModal;
   document.getElementById("boostModalBg").addEventListener("click", function (e) {
-    if (e.target === this) closeBoostModal();
-  });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") closeBoostModal();
+    if (e.target === this) closeFilterModal();
   });
 }
 
-function buildAllChips() {
-  buildChips("disc", DISCIPLINES, "disc");
-  buildChips("region", REGIONS, "region", ["Other"]);
-  buildChips("mode", null, "mode", ["Remote", "On-site"]);
-  buildChips("senior", SENIORITY, "senior", ["Mid"]);
+// ── Group edit modal ─────────────────────────────────────────────────────────
+var egGroup = null;
+function openGroupModal(g) {
+  egGroup = g;
+  document.getElementById("gmName").value = g.name;
+  document.getElementById("gmField").value = g.field;
+  document.getElementById("groupModalBg").classList.add("open");
+  var n = document.getElementById("gmName"); n.focus(); n.select();
+}
+function closeGroupModal() {
+  if (egGroup && !egGroup.name.trim()) egGroup.name = "Group";
+  buildGroups(); save(); render();
+  document.getElementById("groupModalBg").classList.remove("open");
+  egGroup = null;
+}
+function bindGroupModal() {
+  document.getElementById("gmName").addEventListener("input", function () {
+    if (!egGroup) return; egGroup.name = this.value; schedule({ groups: true });
+  });
+  document.getElementById("gmField").addEventListener("change", function () {
+    if (!egGroup) return; egGroup.field = this.value; schedule({ recompute: true, groups: true });
+  });
+  document.getElementById("gmRemove").onclick = function () {
+    if (!egGroup) return;
+    var i = GROUPS.indexOf(egGroup); if (i !== -1) GROUPS.splice(i, 1);
+    egGroup = null; reindex(); recompute(); buildGroups(); save(); render();
+    document.getElementById("groupModalBg").classList.remove("open");
+  };
+  document.getElementById("gmDone").onclick = closeGroupModal;
+  document.getElementById("groupModalBg").addEventListener("click", function (e) {
+    if (e.target === this) closeGroupModal();
+  });
 }
 
 function init(data) {
@@ -604,28 +919,31 @@ function init(data) {
       "· updated " + new Date(data.generated).toISOString().slice(0, 10);
   }
   load();
+  reindex(); recompute();
   document.getElementById("sort").value = sortMode;
-  buildAllChips();
-  renderBoostPills();
-  bindBoostModal();
+  buildGroups();
+  bindFilterModal(); bindGroupModal();
+  document.getElementById("addGroup").onclick = addGroup;
 
-  document.getElementById("q").addEventListener("input", function () { save(); render(); });
-  document.getElementById("sort").addEventListener("change", function (e) { sortMode = e.target.value; save(); render(); });
-  document.getElementById("addCustom").onclick = function () {
-    custom.push({ kw: "", w: 1 }); save(); renderBoostPills(); openBoostModal(custom.length - 1);
-  };
+  document.getElementById("q").addEventListener("input", function () { schedule({}); });
+  document.getElementById("sort").addEventListener("change", function (e) { sortMode = e.target.value; schedule({}); });
   document.getElementById("reset").onclick = function () {
-    sel = { disc: new Set(), region: new Set(), mode: new Set(), senior: new Set() };
-    custom = []; sortMode = "fit";
+    GROUPS = defaultGroups(); sortMode = "fit";
     document.getElementById("q").value = "";
     document.getElementById("sort").value = "fit";
-    save(); buildAllChips(); renderBoostPills(); render();
+    reindex(); recompute(); save(); buildGroups(); render();
   };
   document.querySelectorAll("th[data-sort]").forEach(function (th) {
     th.onclick = function () {
-      sortMode = th.getAttribute("data-sort") === "company" ? "company" : "role";
+      var col = th.getAttribute("data-sort") === "company" ? "company" : "role";
+      sortMode = (sortMode === col) ? "fit" : col;   // click the active column again → back to ranking order
       document.getElementById("sort").value = sortMode; save(); render();
     };
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (document.getElementById("boostModalBg").classList.contains("open")) closeFilterModal();
+    else if (document.getElementById("groupModalBg").classList.contains("open")) closeGroupModal();
   });
   render();
 }
