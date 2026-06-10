@@ -1,0 +1,47 @@
+name: Deploy board on push
+
+# Lives on gh-pages (NOT main): `push:` workflows run from the file present on
+# the branch that received the push, so a deploy-on-push for gh-pages must live
+# here. This is the fast path — it publishes the site/ that's already on the
+# branch, with no scan or merge. The daily "Refresh job board" workflow (on
+# main, schedule-only) still owns the scan + snapshot + its own deploy.
+#
+# Note: the daily refresh pushes to gh-pages with GITHUB_TOKEN, and token-driven
+# pushes don't retrigger workflows — so the bot's snapshot commits won't double
+# up with this one. Only human/PAT pushes that touch site/ trigger a redeploy.
+
+on:
+  push:
+    branches: [gh-pages]
+    paths:
+      - 'site/**'
+  workflow_dispatch: {}
+
+# Serialize with any in-flight Pages deploy (incl. the daily refresh) so two
+# deploys can't race. Don't cancel a deploy that's already publishing.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Upload Pages artifact (only the board, not the repo)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
