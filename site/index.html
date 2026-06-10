@@ -154,9 +154,9 @@
   .bpill.active .n { color: var(--onAccent); }
   .bpill .sign { font-weight: 800; font-variant-numeric: tabular-nums;
     user-select: none; padding: 0 2px; font-size: 15px; line-height: 1; }
-  /* Inactive pills are visibly greyed out (no icon, muted text). */
-  .bpill.neutral { color: var(--dim); border-style: solid; opacity: .6; }
-  .bpill.neutral:hover { opacity: .85; }
+  /* Inactive pills read as plain chips — the coloured fill on active pills is
+     what signals "on", so no fade is needed here (just slightly muted text). */
+  .bpill.neutral { color: var(--dim); border-style: solid; }
   .btn.addkw { padding: 5px 12px; border-radius: 999px; border-style: solid; color: var(--dim); }
   /* The per-group "+" is just a glyph — tight, square, minimal. */
   .btn.addfilter { padding: 5px 10px; font-size: 15px; line-height: 1; }
@@ -396,7 +396,12 @@ var DISCIPLINES = {
 // Geographic only — "Remote" is now its own axis (see REMOTE_KW), because a
 // remote job isn't open to every region.
 var REGIONS = {
-  "Europe": ["united kingdom","/\\bUK\\b/","england","scotland","london","guildford","brighton","germany","berlin","munich","münchen","hamburg","cologne","france","paris","lyon","montpellier","bordeaux","sweden","stockholm","malmö","finland","helsinki","poland","warsaw","warszawa","kraków","krakow","wrocław","spain","madrid","barcelona","netherlands","amsterdam","utrecht","ireland","dublin","czech","brno","prague","denmark","copenhagen","norway","oslo","belgium","brussels","portugal","lisbon","porto","italy","milan","austria","vienna","switzerland","zurich","romania","bucharest","hungary","budapest","/\\bCET\\b/","/\\bEU\\b/","europe","malta","cyprus","greece","athens","estonia","lithuania","latvia","ukraine","serbia","croatia","slovenia","slovakia","bulgaria","iceland","luxembourg"],
+  // EU/EEA + Schengen — places an EU/EEA citizen can work without a visa. UK is
+  // intentionally excluded (post-Brexit it needs a visa) and lives in its own
+  // filter; non-EU European countries (Ukraine, Serbia…) are dropped here too.
+  "EEU": ["germany","berlin","munich","münchen","hamburg","cologne","frankfurt","france","paris","lyon","montpellier","bordeaux","toulouse","sweden","stockholm","malmö","gothenburg","göteborg","finland","helsinki","poland","warsaw","warszawa","kraków","krakow","wrocław","spain","madrid","barcelona","valencia","netherlands","amsterdam","utrecht","rotterdam","ireland","dublin","czech","brno","prague","denmark","copenhagen","norway","oslo","belgium","brussels","portugal","lisbon","porto","italy","milan","rome","austria","vienna","switzerland","zurich","geneva","romania","bucharest","hungary","budapest","/\\bCET\\b/","/\\bEU\\b/","/\\bEEA\\b/","/\\bEFTA\\b/","schengen","europe","malta","cyprus","greece","athens","estonia","tallinn","lithuania","vilnius","latvia","riga","croatia","zagreb","slovenia","ljubljana","slovakia","bratislava","bulgaria","sofia","iceland","reykjavik","reykjavík","luxembourg"],
+  "Nordic": ["/\\bnordic\\b/","/\\bscandinavia\\b/","scandinavian","sweden","stockholm","malmö","malmo","gothenburg","göteborg","goteborg","uppsala","norway","oslo","bergen","trondheim","denmark","copenhagen","aarhus","odense","finland","helsinki","espoo","tampere","iceland","reykjavik","reykjavík"],
+  "UK": ["united kingdom","/\\bUK\\b/","/\\bGB\\b/","england","scotland","wales","northern ireland","london","guildford","brighton","manchester","cambridge","oxford","leamington","edinburgh","glasgow","bristol","leeds","sheffield","dundee","liverpool","nottingham","newcastle"],
   "North America": ["united states","/\\bUSA\\b/","/\\bUS\\b/","canada","california","new york","texas","washington","seattle","san francisco","los angeles","austin","raleigh","cary","north carolina","massachusetts","boston","florida","chicago","montreal","montréal","toronto","vancouver","quebec","québec","ontario","alberta","oregon","colorado","georgia","utah","arizona","nevada","san diego","carlsbad","novato","redmond","irvine","san mateo","burnaby"],
   "Asia/Pacific": ["japan","tokyo","china","shanghai","beijing","singapore","korea","seoul","india","bangalore","bengaluru","hong kong","taiwan","australia","sydney","melbourne","brisbane","new zealand","auckland","philippines","manila","vietnam","malaysia","thailand"],
 };
@@ -413,7 +418,7 @@ var SENIORITY = {
 // company / location / any). A filter's `weight` is null when inactive (greyed,
 // ignored), or 0..2 when rated: 0 hides matching jobs, 1 is "on", >1 boosts. An
 // `else` filter is a catch-all — it matches when nothing else in its group did.
-var STORE_KEY = "gamedevboard.filters.v5";
+var STORE_KEY = "gamedevboard.filters.v6";
 var ALL = [];
 var GROUPS = [];          // [{id,name,field,combine,weight,filters:[{id,name,keywords,weight,else}]}]
 var FBYID = {};           // filterId -> {f: filter, g: group}
