@@ -382,35 +382,13 @@ window.__themeKey = "gamedevboard.theme";
 </script>
 <script src="rank.browser.js"></script>
 <script>
-// ── Classification config (keyword maps; reuse Rank.scoreCategory) ──────
-var DISCIPLINES = {
-  "Programming": ["programmer","programming","engineer","developer","software","engine","gameplay engineer","graphics","rendering","backend","back-end","frontend","front-end","full stack","fullstack","tools","devops","network","physics","C++","C#","gameplay programmer","build","SDK","platform","systems engineer"],
-  "Art": ["artist","/\\bart\\b/","/\\bVFX\\b/","animator","animation","character","environment art","concept","modeler","modeller","rigging","lighting","texture","illustrator","outsource","3D art"],
-  "Design": ["designer","design","level design","game design","narrative","writer","systems design","economy","combat design","encounter","quest"],
-  "Audio": ["audio","/\\bsound\\b/","music","composer","/\\bSFX\\b/","foley","dialogue"],
-  "Production": ["producer","production","project manager","program manager","scrum","product manager","delivery","release manager"],
-  "QA": ["QA","quality assurance","tester","/\\btest\\b/","SDET","quality"],
-  "Data/ML": ["data ","analytics","analyst","scientist","machine learning","/\\bML\\b/","/\\bAI\\b/","data engineer"],
-  "Marketing/Community": ["community","marketing","social media","brand","influencer","/\\bPR\\b/","communications"],
-};
-// Geographic only — "Remote" is now its own axis (see REMOTE_KW), because a
-// remote job isn't open to every region.
-var REGIONS = {
-  // EU/EEA + Schengen — places an EU/EEA citizen can work without a visa. UK is
-  // intentionally excluded (post-Brexit it needs a visa) and lives in its own
-  // filter; non-EU European countries (Ukraine, Serbia…) are dropped here too.
-  "EEU": ["germany","berlin","munich","münchen","hamburg","cologne","frankfurt","france","paris","lyon","montpellier","bordeaux","toulouse","sweden","stockholm","malmö","gothenburg","göteborg","finland","helsinki","poland","warsaw","warszawa","kraków","krakow","wrocław","spain","madrid","barcelona","valencia","netherlands","amsterdam","utrecht","rotterdam","ireland","dublin","czech","brno","prague","denmark","copenhagen","norway","oslo","belgium","brussels","portugal","lisbon","porto","italy","milan","rome","austria","vienna","switzerland","zurich","geneva","romania","bucharest","hungary","budapest","/\\bCET\\b/","/\\bEU\\b/","/\\bEEA\\b/","/\\bEFTA\\b/","schengen","europe","malta","cyprus","greece","athens","estonia","tallinn","lithuania","vilnius","latvia","riga","croatia","zagreb","slovenia","ljubljana","slovakia","bratislava","bulgaria","sofia","iceland","reykjavik","reykjavík","luxembourg"],
-  "Nordic": ["/\\bnordic\\b/","/\\bscandinavia\\b/","scandinavian","sweden","stockholm","malmö","malmo","gothenburg","göteborg","goteborg","uppsala","norway","oslo","bergen","trondheim","denmark","copenhagen","aarhus","odense","finland","helsinki","espoo","tampere","iceland","reykjavik","reykjavík"],
-  "UK": ["united kingdom","/\\bUK\\b/","/\\bGB\\b/","england","scotland","wales","northern ireland","london","guildford","brighton","manchester","cambridge","oxford","leamington","edinburgh","glasgow","bristol","leeds","sheffield","dundee","liverpool","nottingham","newcastle"],
-  "North America": ["united states","/\\bUSA\\b/","/\\bUS\\b/","canada","california","new york","texas","washington","seattle","san francisco","los angeles","austin","raleigh","cary","north carolina","massachusetts","boston","florida","chicago","montreal","montréal","toronto","vancouver","quebec","québec","ontario","alberta","oregon","colorado","georgia","utah","arizona","nevada","san diego","carlsbad","novato","redmond","irvine","san mateo","burnaby"],
-  "Asia/Pacific": ["japan","tokyo","china","shanghai","beijing","singapore","korea","seoul","india","bangalore","bengaluru","hong kong","taiwan","australia","sydney","melbourne","brisbane","new zealand","auckland","philippines","manila","vietnam","malaysia","thailand"],
-};
-var REMOTE_KW = ["remote","anywhere","distributed","work from home","/\\bwfh\\b/","fully remote"];
-var SENIORITY = {
-  "Lead+": ["lead","principal","/\\bhead\\b/","director","chief","staff","/\\bVP\\b/","manager"],
-  "Senior": ["senior","/\\bsr\\b/","expert"],
-  "Junior": ["junior","/\\bjr\\b/","intern","internship","graduate","entry","trainee","apprentice","associate"],
-};
+// ── Default filter seed ──────────────────────────────────────────────────
+// The board's out-of-box groups are no longer hardcoded here. They're fetched
+// from data/targeting.json — the SAME group-schema definition the scanner uses
+// (projected from portals.yml by `scan.mjs --json`, or the committed neutral
+// game default). One definition, one scorer (window.Rank, shared with rank.mjs).
+// Set at load (see fetch at the bottom); null until then / if the fetch fails.
+var DEFAULT_GROUPS_SEED = null;
 
 // ── State (persisted to localStorage) ───────────────────────────────────
 // Everything is a user-editable "group" (a row): a named bucket of "filters".
@@ -426,6 +404,11 @@ var MODES = ["max", "min", "avg"];
 var FIELDS = ["title", "company", "location", "any"];
 var sortMode = "fit";
 var RENDER_CAP = 600;
+// Local dev: when served from localhost (e.g. `npm run board:dev`), the YAML is
+// the source of truth — the board mirrors data/targeting.json live and ignores
+// saved localStorage groups. On the public site this is false, so visitors' own
+// filter tweaks persist as normal.
+var LIVE = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
 // Weight a job gets on a group when it matches no *active* (rated) filter — the
 // neutral baseline that "on" (1) sits above and "lower" (<1) sits below.
 var DEFAULT_W = 0.5;
@@ -440,19 +423,23 @@ function mkGroup(name, field, weight, filters) {
   return { id: nid(), name: name, field: field, combine: "min",
            weight: weight, filters: filters || [] };
 }
-// Seed groups from the original hardcoded maps so the board looks identical out
-// of the box — but every group, filter and keyword is now editable/deletable.
-function defaultGroups() {
-  function filtersFrom(map) {
-    return Object.keys(map).map(function (name) { return mkFilter(name, map[name].slice(), null, false); });
-  }
-  return [
-    mkGroup("Discipline", "title", 0.30, filtersFrom(DISCIPLINES)),
-    mkGroup("Region", "location", 0.22, filtersFrom(REGIONS).concat([mkFilter("Other", [], null, true)])),
-    mkGroup("Level", "title", 0.13, filtersFrom(SENIORITY).concat([mkFilter("Mid", [], null, true)])),
-    mkGroup("Mode", "location", 0.10, [mkFilter("Remote", REMOTE_KW.slice(), null, false), mkFilter("On-site", [], null, true)]),
-  ];
+// Build editable groups from the fetched seed (data/targeting.json). Each group
+// and filter is cloned into the runtime shape (fresh ids via mkGroup/mkFilter),
+// so the board looks identical out of the box but everything stays editable.
+// A filter with no `weight` in the seed is inactive (null); `else: true` is the
+// catch-all. Returns [] if the seed never loaded — the board still works, just
+// with no default buckets until a reload succeeds.
+function groupsFromSeed(seed) {
+  return ((seed && seed.groups) || []).map(function (g) {
+    var grp = mkGroup(g.name, g.field, g.weight, (g.filters || []).map(function (f) {
+      return mkFilter(f.name, (f.keywords || []).slice(),
+        f.weight == null ? null : f.weight, !!f.else);
+    }));
+    grp.combine = MODES.indexOf(g.combine) !== -1 ? g.combine : "min";
+    return grp;
+  });
 }
+function defaultGroups() { return groupsFromSeed(DEFAULT_GROUPS_SEED); }
 
 // filterId -> {filter, group} index, rebuilt whenever GROUPS changes. Also
 // (re)compiles each filter's keyword regexes so recompute() never rebuilds them.
@@ -513,39 +500,25 @@ function prep(jobs) {
   return jobs.map(function (j) {
     var loc = j.location || "", title = j.title || "", co = j.company || "";
     return {
+      // title/company/location are read directly by Rank.matchGroup (via
+      // fieldText); _search backs the free-text box; _mem caches matches.
       title: j.title, url: j.url, company: j.company, location: loc,
       _search: (title + " " + co + " " + loc).toLowerCase(),
-      _hay: { title: title, company: co, location: loc, any: title + " " + co + " " + loc },
       _mem: {},   // groupId -> [filterId,...] (filled by recompute)
     };
   });
 }
 
-// Membership is just "does any keyword match" — a boolean — so we skip the
-// scorer's maximal-munch span work and test the precompiled regexes directly.
-function matchFilter(hay, f) {
-  var res = f._res; if (!res) { compileFilter(f); res = f._res; }
-  for (var i = 0; i < res.length; i++) {
-    var re = res[i]; if (re.global) re.lastIndex = 0;
-    if (re.test(hay)) return true;
-  }
-  return false;
-}
-// Recompute which filters each job matches, per group, against the group's
-// field (word-boundary, like rank.mjs). An `else` filter matches only when none
-// of its group's keyword filters did. Call whenever groups/keywords/fields change.
+// Recompute which filters each job matches, per group, caching the matched
+// filter ids on the job (_mem) so render/score stay O(1) lookups. Matching is
+// delegated to Rank.matchGroup — the SAME membership + catch-all logic the Node
+// scanner uses (rank.mjs) — so the board and scanner can never drift. Call
+// whenever groups/keywords/fields change.
 function recompute() {
   ALL.forEach(function (j) {
     var mem = {};
     GROUPS.forEach(function (g) {
-      var hay = j._hay[g.field] != null ? j._hay[g.field] : j._hay.any;
-      var matched = [], anyKw = false, elseF = null;
-      g.filters.forEach(function (f) {
-        if (f.else) { elseF = f; return; }
-        if (matchFilter(hay, f)) { matched.push(f.id); anyKw = true; }
-      });
-      if (elseF && !anyKw) matched.push(elseF.id);
-      mem[g.id] = matched;
+      mem[g.id] = Rank.matchGroup(j, g).map(function (f) { return f.id; });
     });
     j._mem = mem;
   });
@@ -561,9 +534,7 @@ function groupScore(j, g) {
     if (rec && rec.f.weight != null) vals.push(rec.f.weight);
   }
   if (!vals.length) return DEFAULT_W;
-  if (g.combine === "min") return Math.min.apply(null, vals);
-  if (g.combine === "avg") return vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
-  return Math.max.apply(null, vals);
+  return Rank.combineGroup(vals, g.combine);   // min/max/avg — shared with rank.mjs
 }
 // Weighted combined fit across groups (group weights normalised at use).
 function fitOf(j) {
@@ -924,6 +895,9 @@ function init(data) {
       "· updated " + new Date(data.generated).toISOString().slice(0, 10);
   }
   load();
+  // On localhost the projected YAML wins: seed groups straight from the file
+  // (ignore any saved board state) so the page always reflects portals.yml.
+  if (LIVE) GROUPS = defaultGroups();
   reindex(); recompute();
   document.getElementById("sort").value = sortMode;
   buildGroups();
@@ -951,11 +925,52 @@ function init(data) {
     else if (document.getElementById("groupModalBg").classList.contains("open")) closeGroupModal();
   });
   render();
+  if (LIVE) startLivePolling();
 }
 
-fetch("data/jobs.json")
-  .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(init)
+// Local dev live-reload: poll data/targeting.json; when it changes (you saved
+// portals.yml and board-dev.mjs re-projected it), reseed the board from the
+// new file and re-render — no refresh, no "Clear all". localhost only.
+function seedKey(seed) { return JSON.stringify((seed && seed.groups) || []); }
+function startLivePolling() {
+  var last = seedKey(DEFAULT_GROUPS_SEED);
+  setInterval(function () {
+    fetch("data/targeting.local.json", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (seed) {
+        if (!seed) return;
+        var k = seedKey(seed);
+        if (k === last) return;          // unchanged — nothing to do
+        last = k;
+        DEFAULT_GROUPS_SEED = seed;
+        GROUPS = defaultGroups();
+        reindex(); recompute(); buildGroups(); render(); save();
+        var m = document.getElementById("meta");
+        if (m) m.innerHTML = "↻ <b>filters reloaded from your YAML</b> · " + m.innerHTML;
+        setTimeout(render, 2000);        // clear the notice on the next render
+      })
+      .catch(function () {});
+  }, 1500);
+}
+
+// jobs.json is required. The filter seed is optional and resolved in two tiers:
+// data/targeting.local.json (a gitignored personal override written by
+// `npm run board:dev`) wins; otherwise the committed neutral data/targeting.json
+// (the public default). Missing both → the board runs with no default buckets.
+function fetchSeed() {
+  return fetch("data/targeting.local.json", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (local) {
+      if (local) return local;
+      return fetch("data/targeting.json").then(function (r) { return r.ok ? r.json() : null; });
+    })
+    .catch(function () { return null; });
+}
+Promise.all([
+  fetch("data/jobs.json").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }),
+  fetchSeed(),
+])
+  .then(function (res) { DEFAULT_GROUPS_SEED = res[1]; init(res[0]); })
   .catch(function (e) {
     document.getElementById("meta").innerHTML =
       "Could not load <code>data/jobs.json</code> (" + e.message + "). If you opened this file directly, run a local server (e.g. <code>npx serve site</code>) — browsers block <code>fetch</code> over file://.";

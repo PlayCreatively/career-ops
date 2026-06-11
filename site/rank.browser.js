@@ -92,6 +92,81 @@
     };
   }
 
+  // ── Group-model scoring (mirrors rank.mjs 1:1) ────────────────────────────
+  // The board's schema, shared with the Node scanner. See rank.mjs for the full
+  // doc. Membership matching (any keyword hits); the rating lives on the filter;
+  // cross-filter conflicts resolve via the group's `combine` (min/max/avg).
+  var DEFAULT_GROUP_WEIGHT = 0.5;
+
+  function combineGroup(weights, mode) {
+    mode = mode || 'min';
+    if (mode === 'max') return Math.max.apply(null, weights);
+    if (mode === 'avg' || mode === 'average') return weights.reduce(function (a, b) { return a + b; }, 0) / weights.length;
+    return Math.min.apply(null, weights); // 'min' — worst match wins (0/exclude wins)
+  }
+
+  function fieldText(job, field) {
+    if (field === 'company') return job.company || '';
+    if (field === 'location') return job.location || '';
+    if (field === 'any') return (job.title || '') + ' ' + (job.company || '') + ' ' + (job.location || '');
+    return job.title || '';
+  }
+
+  function filterRegexes(f) {
+    if (!f._res) f._res = (f.keywords || []).map(keyToRegExp).filter(Boolean);
+    return f._res;
+  }
+
+  function filterMatches(text, f) {
+    var res = filterRegexes(f);
+    for (var i = 0; i < res.length; i++) {
+      var re = res[i]; if (re.global) re.lastIndex = 0;
+      if (re.test(text)) return true;
+    }
+    return false;
+  }
+
+  function matchGroup(job, group) {
+    var text = fieldText(job, group.field);
+    var matched = [], anyKeyword = false, elseFilter = null;
+    var filters = group.filters || [];
+    for (var i = 0; i < filters.length; i++) {
+      var f = filters[i];
+      if (f.else) { elseFilter = f; continue; }
+      if (filterMatches(text, f)) { matched.push(f); anyKeyword = true; }
+    }
+    if (elseFilter && !anyKeyword) matched.push(elseFilter);
+    return matched;
+  }
+
+  function scoreGroup(job, group) {
+    var vals = [];
+    matchGroup(job, group).forEach(function (f) { if (typeof f.weight === 'number') vals.push(f.weight); });
+    if (!vals.length) return DEFAULT_GROUP_WEIGHT;
+    return combineGroup(vals, group.combine || 'min');
+  }
+
+  function isExcluded(job, groups) {
+    return groups.some(function (g) { return matchGroup(job, g).some(function (f) { return f.weight === 0; }); });
+  }
+
+  function fitGroups(job, groups) {
+    var total = 0, sum = 0;
+    groups.forEach(function (g) { var w = g.weight || 0; total += w; sum += w * scoreGroup(job, g); });
+    return total ? sum / total : DEFAULT_GROUP_WEIGHT;
+  }
+
+  function scoreJobGroups(job, groups) {
+    var breakdown = groups.map(function (g) {
+      var matched = matchGroup(job, g);
+      return {
+        name: g.name, field: g.field, score: scoreGroup(job, g),
+        matched: matched.filter(function (f) { return !f.else && f.name; }).map(function (f) { return f.name; }),
+      };
+    });
+    return Object.assign({}, job, { group_scores: breakdown, fit: fitGroups(job, groups), excluded: isExcluded(job, groups) });
+  }
+
   function normalizeWeights(weights) {
     var entries = [];
     for (var k in weights) {
@@ -144,5 +219,15 @@
     normalizeWeights: normalizeWeights,
     scoreJob: scoreJob,
     rankJobs: rankJobs,
+    // Group-model core (shared with rank.mjs)
+    DEFAULT_GROUP_WEIGHT: DEFAULT_GROUP_WEIGHT,
+    combineGroup: combineGroup,
+    fieldText: fieldText,
+    filterMatches: filterMatches,
+    matchGroup: matchGroup,
+    scoreGroup: scoreGroup,
+    isExcluded: isExcluded,
+    fitGroups: fitGroups,
+    scoreJobGroups: scoreJobGroups,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
