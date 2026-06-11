@@ -35,7 +35,7 @@ import path from 'path';
 import yaml from 'js-yaml';
 
 import { makeHttpCtx } from './providers/_http.mjs';
-import { scoreCategory } from './rank.mjs';
+import { scoreCategory, matchGroup, isExcluded } from './rank.mjs';
 
 const parseYaml = yaml.load;
 
@@ -170,6 +170,25 @@ export function buildTargetingFilter(targeting) {
     company: (company) =>
       !companyMap || scoreCategory(company, companyMap, combine).score > 0,
   };
+}
+
+// ── Group-model targeting filter ────────────────────────────────────
+// The unified `targeting.groups` schema (same one the board uses) gates the scan
+// by EXCLUDES: a job is dropped iff it matches an active filter weighted exactly
+// 0 (via rank.mjs `isExcluded`). combine/`else` shape the rank order, not the
+// gate, so the drop decision is independent of a group's combine mode.
+//
+// Returns which dimension caused the drop ('title'|'location'|'company') for the
+// scan summary, or null to keep. The dimension is taken from the offending
+// group's `field` so the per-field counters stay meaningful ('any' → title).
+export function groupDropReason(job, groups) {
+  if (!isExcluded(job, groups)) return null;
+  for (const g of groups) {
+    if (matchGroup(job, g).some((f) => f.weight === 0)) {
+      return g.field === 'location' ? 'location' : g.field === 'company' ? 'company' : 'title';
+    }
+  }
+  return 'title';
 }
 
 // ── Location filter ─────────────────────────────────────────────────
@@ -482,26 +501,34 @@ async function main() {
     console.error(`Error: no studios found. Add tracked_companies to ${STUDIOS_PATH} (or run onboarding).`);
     process.exit(1);
   }
-  // Prefer the unified `targeting:` block; fall back to the legacy
-  // title_filter/location_filter blocks if a config predates unification.
-  let titleFilter, locationFilter, companyFilter;
+  // Unified drop decision: dropTargeting(job) → 'title' | 'location' | 'company'
+  // | null (keep). Supports three config shapes in priority order: the new
+  // `targeting.groups` schema (shared with the board), the legacy flat
+  // `targeting:` maps, and the oldest title_filter/location_filter blocks.
+  let dropTargeting;
   if (noFilter) {
     // --no-filter: bypass ALL targeting. Stores the full superset of every
     // role/location/company. Used to feed the public static board, where
     // filtering + ranking happen client-side per visitor. Personal targeting
     // in portals.yml is ignored entirely for this run.
-    titleFilter = () => true;
-    locationFilter = () => true;
-    companyFilter = () => true;
+    dropTargeting = () => null;
+  } else if (Array.isArray(config.targeting?.groups)) {
+    const groups = config.targeting.groups;
+    dropTargeting = (job) => groupDropReason(job, groups);
   } else if (config.targeting) {
     const tf = buildTargetingFilter(config.targeting);
-    titleFilter = tf.title;
-    locationFilter = tf.location;
-    companyFilter = tf.company;
+    dropTargeting = (job) =>
+      !tf.title(job.title) ? 'title'
+      : !tf.location(job.location) ? 'location'
+      : !tf.company(job.company) ? 'company'
+      : null;
   } else {
-    titleFilter = buildTitleFilter(config.title_filter);
-    locationFilter = buildLocationFilter(config.location_filter);
-    companyFilter = () => true; // legacy configs have no company filter
+    const titleFilter = buildTitleFilter(config.title_filter);
+    const locationFilter = buildLocationFilter(config.location_filter);
+    dropTargeting = (job) =>
+      !titleFilter(job.title) ? 'title'
+      : !locationFilter(job.location) ? 'location'
+      : null; // legacy configs have no company filter
   }
 
   // 3. Resolve a provider for each enabled company
@@ -572,18 +599,10 @@ async function main() {
       totalFound += jobs.length;
 
       for (const job of jobs) {
-        if (!titleFilter(job.title)) {
-          totalFilteredTitle++;
-          continue;
-        }
-        if (!locationFilter(job.location)) {
-          totalFilteredLocation++;
-          continue;
-        }
-        if (!companyFilter(job.company)) {
-          totalFilteredCompany++;
-          continue;
-        }
+        const drop = dropTargeting(job);
+        if (drop === 'title') { totalFilteredTitle++; continue; }
+        if (drop === 'location') { totalFilteredLocation++; continue; }
+        if (drop === 'company') { totalFilteredCompany++; continue; }
         // Snapshot collection happens BEFORE history dedup so jobs.json is the
         // full current set even when data/scan-history.tsv already lists these.
         if (jsonPath && job.url && !snapSeen.has(job.url)) {
@@ -671,6 +690,17 @@ async function main() {
     mkdirSync(path.dirname(jsonPath) || '.', { recursive: true });
     writeFileSync(jsonPath, JSON.stringify(out));
     console.log(`Snapshot: ${snapshot.length} jobs → ${jsonPath}`);
+
+    // Project the group-schema targeting alongside jobs.json so the board seeds
+    // its default filters from the SAME definition the scanner uses — no second,
+    // hand-maintained copy. Only the new `groups:` schema is projected (the board
+    // speaks groups); a legacy flat config emits nothing and the board keeps its
+    // built-in fallback. Written next to jobs.json (e.g. site/data/targeting.json).
+    if (Array.isArray(config.targeting?.groups)) {
+      const targetingPath = path.join(path.dirname(jsonPath) || '.', 'targeting.json');
+      writeFileSync(targetingPath, JSON.stringify({ groups: config.targeting.groups }));
+      console.log(`Targeting: ${config.targeting.groups.length} groups → ${targetingPath}`);
+    }
   }
 
   // 7. Print summary
