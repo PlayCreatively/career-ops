@@ -52,3 +52,10 @@ career-dashboard
 package-lock.json
 /data
 asgc-jobs.json
+
+# Board: personal filter override projected by board:dev (keep private)
+site/data/targeting.local.json
+
+# Personal targeting copies (migration backup + tuned personal config) — private
+portals.personal.yml
+portals.flat-backup.yml

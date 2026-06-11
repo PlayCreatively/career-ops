@@ -78,12 +78,19 @@ jobs:
         run: |
           node -e "const j=require('./site/data/jobs.json'); const n=Array.isArray(j.jobs)?j.jobs.length:0; if(n<100){console.error('Snapshot too small ('+n+' jobs) — refusing to publish.');process.exit(1);} console.log('Snapshot OK: '+n+' jobs');"
 
+      - name: Project board default filters
+        # Regenerate the board's default filter buckets from their editable YAML
+        # source so the live site always matches targeting.default.yml — no manual
+        # `npm run board:default` needed, and a stray/personal targeting.json can't
+        # persist (this overwrites it with the neutral default every refresh).
+        run: node project-targeting.mjs targeting.default.yml site/data/targeting.json
+
       - name: Commit & push to gh-pages
         # Only reached when the scan passed. Pushes the merge commit (fresh
-        # studios) plus the new snapshot. [skip ci] is belt-and-suspenders;
-        # GITHUB_TOKEN pushes don't retrigger workflows anyway.
+        # studios) plus the new snapshot + projected default filters. [skip ci]
+        # is belt-and-suspenders; GITHUB_TOKEN pushes don't retrigger workflows.
         run: |
-          git add site/data/jobs.json
+          git add site/data/jobs.json site/data/targeting.json
           git commit -m "chore: refresh job board snapshot [skip ci]" || echo "No snapshot change to commit"
           git push origin HEAD:gh-pages
 

@@ -165,6 +165,120 @@ export function scoreCategory(text, map, combine = 'max') {
   };
 }
 
+// ── Group-model scoring (the unified scorer) ─────────────────────────
+// The schema the in-browser board uses, now shared by Node. A `targeting.groups`
+// array replaces the flat location/role/seniority/company maps:
+//
+//   group = { name, field, combine, weight, filters: [...] }
+//     field    which job text to match: title | company | location | any
+//     combine  how matched filters reduce to one score: min | max | avg
+//     weight   cross-group importance for the final fit (normalized at use)
+//   filter = { name, keywords: [...], weight, else }
+//     weight   null/absent = INACTIVE (defined but ignored); 0 = EXCLUDE (drop);
+//              <1 lower · 1 neutral · >1 boost
+//     else     catch-all: matches only when no keyword filter in its group did
+//
+// Matching is MEMBERSHIP (does ANY keyword hit), NOT maximal munch — the rating
+// lives on the filter, so every keyword in a filter shares its weight and span
+// resolution is moot. Cross-filter conflicts resolve via `combine` instead.
+
+// Baseline a group contributes when the job matched no *active* (weighted)
+// filter — the neutral value that "on" (1) sits above and "lower" (<1) below.
+export const DEFAULT_GROUP_WEIGHT = 0.5;
+
+// Group combine is limited to the three the board exposes (min/max/avg). 'avg'
+// is accepted as the board spells it; combineWeights() keeps multiply/average
+// for the legacy flat path.
+export function combineGroup(weights, mode = 'min') {
+  if (mode === 'max') return Math.max(...weights);
+  if (mode === 'avg' || mode === 'average') return weights.reduce((a, b) => a + b, 0) / weights.length;
+  return Math.min(...weights); // 'min' default — worst match wins, so 0/exclude wins
+}
+
+// Which job text a group matches against.
+export function fieldText(job, field) {
+  if (field === 'company') return job.company || '';
+  if (field === 'location') return job.location || '';
+  if (field === 'any') return `${job.title || ''} ${job.company || ''} ${job.location || ''}`;
+  return job.title || ''; // 'title' (default)
+}
+
+// Compile a filter's keywords into RegExps once, cached on the filter as `_res`
+// (same field the board uses, so a precompiled board filter is reused as-is).
+function filterRegexes(f) {
+  if (!f._res) f._res = (f.keywords || []).map(keyToRegExp).filter(Boolean);
+  return f._res;
+}
+
+/** True if any of a filter's keywords matches `text`. */
+export function filterMatches(text, f) {
+  for (const re of filterRegexes(f)) {
+    if (re.global) re.lastIndex = 0;
+    if (re.test(text)) return true;
+  }
+  return false;
+}
+
+/**
+ * The filters of `group` that match `job`. An `else` (catch-all) filter is
+ * included only when no keyword filter in the group matched.
+ */
+export function matchGroup(job, group) {
+  const text = fieldText(job, group.field);
+  const matched = [];
+  let anyKeyword = false;
+  let elseFilter = null;
+  for (const f of group.filters || []) {
+    if (f.else) { elseFilter = f; continue; }
+    if (filterMatches(text, f)) { matched.push(f); anyKeyword = true; }
+  }
+  if (elseFilter && !anyKeyword) matched.push(elseFilter);
+  return matched;
+}
+
+/** A group's score: its matched *active* filters combined via `combine`. */
+export function scoreGroup(job, group) {
+  const vals = matchGroup(job, group)
+    .filter((f) => typeof f.weight === 'number')
+    .map((f) => f.weight);
+  if (!vals.length) return DEFAULT_GROUP_WEIGHT;
+  return combineGroup(vals, group.combine || 'min');
+}
+
+/** True if the job matched an active filter weighted exactly 0 (hard exclude). */
+export function isExcluded(job, groups) {
+  return groups.some((g) => matchGroup(job, g).some((f) => f.weight === 0));
+}
+
+/** Weighted fit across groups (group weights normalized at use). */
+export function fitGroups(job, groups) {
+  let total = 0;
+  let sum = 0;
+  for (const g of groups) {
+    const w = g.weight || 0;
+    total += w;
+    sum += w * scoreGroup(job, g);
+  }
+  return total ? sum / total : DEFAULT_GROUP_WEIGHT;
+}
+
+/**
+ * Score one job against a `groups` array. Returns the job enriched with a per
+ * group breakdown, a combined `fit`, and an `excluded` flag (a hard 0 anywhere).
+ */
+export function scoreJobGroups(job, groups) {
+  const breakdown = groups.map((g) => {
+    const matched = matchGroup(job, g);
+    return {
+      name: g.name,
+      field: g.field,
+      score: scoreGroup(job, g),
+      matched: matched.filter((f) => !f.else && f.name).map((f) => f.name),
+    };
+  });
+  return { ...job, group_scores: breakdown, fit: fitGroups(job, groups), excluded: isExcluded(job, groups) };
+}
+
 /** Normalize a {key: number} weight map so the values sum to 1. */
 export function normalizeWeights(weights) {
   const entries = Object.entries(weights).filter(([, v]) => typeof v === 'number' && v > 0);
@@ -178,6 +292,9 @@ export function normalizeWeights(weights) {
  * Returns the job enriched with per-dimension scores and a combined `fit`.
  */
 export function scoreJob(job, ranking) {
+  // New unified schema: a `groups:` array. Falls through to the legacy flat
+  // location/role/seniority path when groups are absent.
+  if (Array.isArray(ranking?.groups)) return scoreJobGroups(job, ranking.groups);
   const w = normalizeWeights(ranking.weights || DEFAULT_RANKING.weights);
   const combine = ranking.combine || 'max';
   const location = scoreCategory(job.location, ranking.location || {}, combine);
@@ -260,7 +377,27 @@ function roleLink(title, url) {
 // `linkify` makes the Role cell a clickable markdown link to the posting —
 // on for the data/ranked.md artifact, off for the terminal preview (where a
 // raw markdown link is just noise).
+// Group-schema results carry `group_scores` (one entry per group) instead of
+// the fixed location/role/seniority columns — render a column per group.
+function renderTableGroups(ranked, { linkify = false } = {}) {
+  const groupNames = ranked[0].group_scores.map((g) => g.name);
+  const rows = ranked.map((j, i) => {
+    const fit = j.fit.toFixed(3);
+    const title = linkify ? roleLink(j.title, j.url) : cell(j.title);
+    const groupCells = j.group_scores
+      .map((g) => cell(`${pct(g.score)} ${g.matched.join(', ') || '—'}`))
+      .join(' | ');
+    return `| ${i + 1} | ${fit} | ${cell(j.company)} | ${title} | ${cell(j.location) || '—'} | ${groupCells} |`;
+  });
+  return [
+    `| # | Fit | Company | Role | Location | ${groupNames.join(' | ')} |`,
+    `|---|-----|---------|------|----------|${groupNames.map(() => '---').join('|')}|`,
+    ...rows,
+  ].join('\n');
+}
+
 function renderTable(ranked, { linkify = false } = {}) {
+  if (ranked.length && ranked[0].group_scores) return renderTableGroups(ranked, { linkify });
   const rows = ranked.map((j, i) => {
     const fit = j.fit.toFixed(3);
     const loc = cell(`${pct(j.location_score.score)} ${j.location_score.matched}`);
