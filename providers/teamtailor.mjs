@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate } from './_util.mjs';
+
 // Teamtailor provider — hits the public JSON Feed every Teamtailor career site
 // ships at `{site-origin}/jobs.json` (JSON Feed 1.1). No auth, no scraping: the
 // feed is the same one Teamtailor exposes for syndication, so this is as clean
@@ -56,11 +58,16 @@ export function parseTeamtailorFeed(json, fallbackCompany) {
       const posting = it._jobposting || {};
       const place = Array.isArray(posting.jobLocation) ? posting.jobLocation[0] : posting.jobLocation;
       const org = posting.hiringOrganization?.name;
+      // The feed carries a JSON Feed `date_published` (mirrored by the
+      // schema.org `datePosted`); it does not expose a structured remote flag
+      // or a department, so only postedDate is set.
+      const postedDate = toIsoDate(it.date_published || posting.datePosted);
       return {
         title: String(it.title),
         url: String(it.url),
         company: typeof org === 'string' && org.trim() ? org.trim() : (fallbackCompany || ''),
         location: formatLocation(place),
+        ...(postedDate ? { postedDate } : {}),
       };
     });
 }

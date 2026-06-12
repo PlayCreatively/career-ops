@@ -206,11 +206,23 @@ export function filterLabel(f) {
   return '';
 }
 
-// Which job text a group matches against.
+// Which job text a group matches against. `field` may be a single field id or
+// an ARRAY of ids — an array reads each source and joins them with a space, so a
+// group can match against e.g. [location, workmode] as one combined string (the
+// keyword sees both, which keeps cross-field filters like "US-only remote" — US
+// from location + remote from workmode — working after we strip mode tokens out
+// of the location text). This generalises the fixed `any` combination.
 export function fieldText(job, field) {
+  if (Array.isArray(field)) return field.map((f) => fieldText(job, f)).join(' ');
   if (field === 'company') return job.company || '';
   if (field === 'location') return job.location || '';
-  if (field === 'any') return `${job.title || ''} ${job.company || ''} ${job.location || ''}`;
+  if (field === 'department') return job.department || '';
+  // `workMode` is already the tri-state token 'remote'|'hybrid'|'onsite'
+  // (providers/_types.js), so keyword filters ("remote"/"hybrid"/"onsite") run
+  // straight through the regex engine. Unknown → '' so the job falls through to
+  // the group's catch-all rather than false-matching.
+  if (field === 'workmode') return job.workMode || '';
+  if (field === 'any') return `${job.title || ''} ${job.company || ''} ${job.location || ''} ${job.department || ''}`;
   return job.title || ''; // 'title' (default)
 }
 

@@ -55,3 +55,6 @@ asgc-jobs.json
 
 # Board: personal filter override projected by board:dev (keep private)
 site/data/targeting.local.json
+# Board: personal job snapshot written by board:local (keep private — the
+# committed site/data/jobs.json is the public one, refreshed only by CI)
+site/data/jobs.local.json

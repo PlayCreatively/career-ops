@@ -63,6 +63,24 @@
 #     - "Brazil"
 #     - "Australia"
 
+# -- Snapshot dedup (optional, board only) --
+# The --json board snapshot can list the same role twice when it's discovered
+# through two sources. dedupeSnapshot collapses these in two conservative passes
+# (neither ever merges two genuinely distinct postings):
+#   1. Posting ID — rows with the SAME company AND the SAME ATS requisition ID
+#      (Greenhouse gh_jid, Teamtailor/Recruitee path id, …) are the same posting,
+#      even if location strings differ slightly. Keep one.
+#   2. Title/company/location, aggregator-gated — an aggregator row (Hitmarker /
+#      WorkWithIndies) is dropped ONLY when a direct (non-aggregator) posting for
+#      the same role also exists. Two distinct direct reqs are never merged.
+# Defaults: enabled, aggregators = ["hitmarker.net", "workwithindies.com"].
+# Personal pipeline unaffected.
+# snapshot_dedup:
+#   enabled: true
+#   aggregators:
+#     - "hitmarker.net"
+#     - "workwithindies.com"
+
 # -- Title filter --
 # The scanner uses these keywords to decide if a title is relevant.
 # At least 1 positive must match AND 0 negatives must match (case-insensitive).

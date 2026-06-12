@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate } from './_util.mjs';
+
 // Hitmarker provider — the largest games / esports job board.
 //
 // Unlike the per-company ATS providers (greenhouse, lever, ...), Hitmarker is a
@@ -44,12 +46,18 @@ export function parseHitmarkerResponse(json) {
   return hits
     .map(h => h?.document)
     .filter(doc => doc && doc.title && doc.url)
-    .map(doc => ({
-      title: String(doc.title),
-      url: String(doc.url),
-      company: doc.jobCompany?.title ? String(doc.jobCompany.title) : '',
-      location: formatLocation(Array.isArray(doc.jobLocation) ? doc.jobLocation[0] : null),
-    }));
+    .map(doc => {
+      // `postDate` is a Unix epoch in SECONDS. No structured remote flag or
+      // department in the Typesense document, so only postedDate is set.
+      const postedDate = toIsoDate(doc.postDate);
+      return {
+        title: String(doc.title),
+        url: String(doc.url),
+        company: doc.jobCompany?.title ? String(doc.jobCompany.title) : '',
+        location: formatLocation(Array.isArray(doc.jobLocation) ? doc.jobLocation[0] : null),
+        ...(postedDate ? { postedDate } : {}),
+      };
+    });
 }
 
 async function fetchPage(ctx, { query, filterBy, page }) {

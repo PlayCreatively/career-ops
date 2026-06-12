@@ -18,6 +18,19 @@
  * @property {string} company  May be empty when the source can't expose it
  *                             at the list-page level; populated downstream.
  * @property {string} location May be empty.
+ * @property {string}  [postedDate] Optional ISO-8601 posting date, when the
+ *                                  source exposes one at the list level.
+ *                                  Normalise via providers/_util.mjs `toIsoDate`.
+ * @property {('remote'|'hybrid'|'onsite'|'anywhere')} [workMode] Optional work
+ *                                  arrangement. Set from a structured field
+ *                                  (ashby/lever `workplaceType`, recruitee
+ *                                  remote/hybrid/on_site, smartrecruiters
+ *                                  location.remote) or derived from the location
+ *                                  text. 'anywhere' is geography-free remote
+ *                                  ("Anywhere"/"Distributed"). Omitted when
+ *                                  unknown. Normalise via providers/_util.mjs
+ *                                  `normalizeWorkMode`.
+ * @property {string}  [department]  Optional department/team label.
  */
 
 /**

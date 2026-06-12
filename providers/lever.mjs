@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate, normalizeWorkMode } from './_util.mjs';
+
 // Lever provider — hits the public postings endpoint.
 // Auto-detects from careers_url patterns:
 //   - US:  `https://jobs.lever.co/<slug>`    → api.lever.co
@@ -39,11 +41,22 @@ export default {
     if (!apiUrl) throw new Error(`lever: cannot derive API URL for ${entry.name}`);
     const json = await ctx.fetchJson(apiUrl);
     if (!Array.isArray(json)) return [];
-    return json.map(j => ({
-      title: j.text || '',
-      url: j.hostedUrl || '',
-      company: entry.name,
-      location: j.categories?.location || '',
-    }));
+    return json.map(j => {
+      const cats = j.categories || {};
+      const postedDate = toIsoDate(j.createdAt);  // epoch milliseconds
+      const department = (cats.department || cats.team || '').trim();
+      // `workplaceType` is 'remote' | 'hybrid' | 'on-site' | 'unspecified';
+      // normalize to the tri-state token ('unspecified' → '' → omitted).
+      const workMode = normalizeWorkMode(j.workplaceType);
+      return {
+        title: j.text || '',
+        url: j.hostedUrl || '',
+        company: entry.name,
+        location: cats.location || '',
+        ...(postedDate ? { postedDate } : {}),
+        ...(department ? { department } : {}),
+        ...(workMode ? { workMode } : {}),
+      };
+    });
   },
 };

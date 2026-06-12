@@ -116,10 +116,18 @@
     return '';
   }
 
+  // `field` may be a single id or an ARRAY of ids (joined with a space → one
+  // combined string the keyword matches against). Mirrors rank.mjs (parity).
   function fieldText(job, field) {
+    if (Array.isArray(field)) return field.map(function (f) { return fieldText(job, f); }).join(' ');
     if (field === 'company') return job.company || '';
     if (field === 'location') return job.location || '';
-    if (field === 'any') return (job.title || '') + ' ' + (job.company || '') + ' ' + (job.location || '');
+    if (field === 'department') return job.department || '';
+    // `workMode` is already the tri-state token 'remote'|'hybrid'|'onsite';
+    // unknown → '' so the job falls through to the group's catch-all. Mirrors
+    // rank.mjs fieldText (parity).
+    if (field === 'workmode') return job.workMode || '';
+    if (field === 'any') return (job.title || '') + ' ' + (job.company || '') + ' ' + (job.location || '') + ' ' + (job.department || '');
     return job.title || '';
   }
 

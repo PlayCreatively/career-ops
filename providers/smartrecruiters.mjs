@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate } from './_util.mjs';
+
 // SmartRecruiters provider — hits the public postings API.
 // Auto-detects from careers_url pattern
 // `https://(careers|jobs).smartrecruiters.com/<slug>`. A tracked_companies
@@ -84,7 +86,8 @@ export default {
  *   { content: [{ id, name, ref, location: { fullLocation?, city?, region?, country?, remote? } }] }
  *
  * - location: prefer `fullLocation`; else assemble from city/region/country
- *   parts (skipping empties); append "Remote" when `location.remote` is true.
+ *   parts (skipping empties). Remoteness is NOT appended here — it is carried by
+ *   the structured `workMode` field (from `location.remote`).
  * - url: `j.ref` is an `api.smartrecruiters.com/v1/companies/<slug>/postings/<id>`
  *   URL — rewrite to the public `jobs.smartrecruiters.com/<slug>/postings/<id>`.
  *   If `ref` is missing, synthesise a URL from the company slug + posting id.
@@ -98,11 +101,18 @@ export function parseSmartRecruitersResponse(json, companyName) {
   if (!Array.isArray(items)) return [];
   return items.map(j => {
     const loc = j.location || {};
-    const fullLocation = loc.fullLocation || [loc.city, loc.region, loc.country].filter(Boolean).join(', ');
-    const remote = loc.remote ? 'Remote' : '';
-    const location = [fullLocation, remote].filter(Boolean).join(', ');
+    // Location stays place-only; remoteness is carried by workMode (below), not
+    // jammed into the location text.
+    const location = loc.fullLocation || [loc.city, loc.region, loc.country].filter(Boolean).join(', ');
     const slugified = (j.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    let url = '';
+    // Build the canonical rendered posting URL: jobs.smartrecruiters.com/<company>/<id>-<slug>.
+    // `j.ref` is the JSON API URL (api.smartrecruiters.com/v1/companies/<company>/postings/<id>);
+    // we mine the exact company slug + posting id from it (more reliable than
+    // slugifying the display name, e.g. "DON'T NOD" → "DONTNOD"). The API `/postings/`
+    // path is NOT valid on the careers host — linking to it 404s — so we always
+    // reconstruct the `<id>-<slug>` form and never pass the ref through verbatim.
+    let companySlug = '';
+    let postingId = j.id != null ? String(j.id) : '';
     if (typeof j.ref === 'string') {
       let parsedRef;
       try { parsedRef = new URL(j.ref); } catch { parsedRef = null; }
@@ -110,16 +120,34 @@ export function parseSmartRecruitersResponse(json, companyName) {
           && parsedRef.protocol === 'https:'
           && parsedRef.hostname === 'api.smartrecruiters.com'
           && parsedRef.pathname.startsWith('/v1/companies/')) {
-        const restOfPath = parsedRef.pathname.slice('/v1/companies/'.length);
-        url = `https://jobs.smartrecruiters.com/${restOfPath}`;
+        const segs = parsedRef.pathname.slice('/v1/companies/'.length).split('/').filter(Boolean);
+        // segs == [<companySlug>, 'postings', <id>]; preserve ref casing for the slug.
+        if (segs[0]) companySlug = segs[0];
+        if (segs[1] === 'postings' && segs[2]) postingId = segs[2];
       }
     }
-    if (!url && j.id) {
-      const companySlug = (companyName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      if (companySlug) {
-        url = `https://jobs.smartrecruiters.com/${companySlug}/${j.id}-${slugified}`;
-      }
+    if (!companySlug) {
+      companySlug = (companyName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     }
-    return { title: j.name || '', url, location, company: companyName };
+    let url = '';
+    if (companySlug && postingId) {
+      url = slugified
+        ? `https://jobs.smartrecruiters.com/${companySlug}/${postingId}-${slugified}`
+        : `https://jobs.smartrecruiters.com/${companySlug}/${postingId}`;
+    }
+    const postedDate = toIsoDate(j.releasedDate);
+    const department = (j.department?.label || '').trim();
+    // SmartRecruiters only exposes a boolean `location.remote` (no hybrid
+    // concept) → map to the tri-state's remote/onsite ends.
+    const workMode = typeof loc.remote === 'boolean' ? (loc.remote ? 'remote' : 'onsite') : '';
+    return {
+      title: j.name || '',
+      url,
+      location,
+      company: companyName,
+      ...(postedDate ? { postedDate } : {}),
+      ...(department ? { department } : {}),
+      ...(workMode ? { workMode } : {}),
+    };
   });
 }

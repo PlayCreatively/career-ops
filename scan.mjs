@@ -35,6 +35,7 @@ import path from 'path';
 import yaml from 'js-yaml';
 
 import { makeHttpCtx } from './providers/_http.mjs';
+import { splitLocationMode } from './providers/_util.mjs';
 import { scoreCategory, matchGroup, isExcluded } from './rank.mjs';
 
 const parseYaml = yaml.load;
@@ -185,7 +186,12 @@ export function groupDropReason(job, groups) {
   if (!isExcluded(job, groups)) return null;
   for (const g of groups) {
     if (matchGroup(job, g).some((f) => f.weight === 0)) {
-      return g.field === 'location' ? 'location' : g.field === 'company' ? 'company' : 'title';
+      // `field` may be an array (multi-source group) — map it to one counter
+      // bucket, preferring location > company > title.
+      const fields = Array.isArray(g.field) ? g.field : [g.field];
+      if (fields.includes('location')) return 'location';
+      if (fields.includes('company')) return 'company';
+      return 'title';
     }
   }
   return 'title';
@@ -231,6 +237,107 @@ export function buildLocationFilter(locationFilter) {
     if (block.length > 0 && block.some(k => lower.includes(k))) return false;
     if (allow.length === 0) return true;
     return allow.some(k => lower.includes(k));
+  };
+}
+
+// Extract the ATS requisition ID from a posting URL — the identifier that stays
+// stable when the same posting is mirrored across hosts (a studio's own domain +
+// its ATS subdomain, or a label studio listed under its parent group). Returns
+// `null` when no reliable numeric ID is present. Greenhouse exposes it as the
+// `gh_jid` query param (survives on branded domains like riotgames.com); most
+// path-based ATSs (Greenhouse, Teamtailor, Recruitee) lead the final `/jobs/<id>`
+// segment with it.
+export function postingId(url) {
+  let u;
+  try { u = new URL(url); } catch { return null; }
+  const gh = u.searchParams.get('gh_jid');
+  if (gh && /^\d{5,}$/.test(gh)) return gh;
+  const segs = u.pathname.split('/').filter(Boolean);
+  const last = segs[segs.length - 1] || '';
+  const m = last.match(/^(\d{5,})/);
+  return m ? m[1] : null;
+}
+
+// Collapse duplicate postings in the board snapshot. The same role is sometimes
+// discovered through two sources, producing two rows with different URLs. Two
+// independent, conservative passes — neither ever merges two genuinely distinct
+// direct postings:
+//
+//   1. Posting ID (high confidence). Rows with the SAME company AND the SAME ATS
+//      requisition ID are the same posting even if their location strings differ
+//      slightly; keep one. Scoping by company makes a cross-ATS ID collision
+//      effectively impossible. Aggregators are excluded here — they reassign
+//      their own IDs, so an aggregator ID would never legitimately match a real
+//      req ID.
+//   2. Title/company/location heuristic, AGGREGATOR-GATED. Within a group of rows
+//      sharing company + title + location, an aggregator row (Hitmarker /
+//      WorkWithIndies) is dropped ONLY when a direct (non-aggregator) row for the
+//      same role also exists. Direct rows are never merged with each other, so an
+//      Epic-style pair of distinct same-title reqs is always preserved.
+//
+// The aggregator host list is configurable (portals.yml → snapshot_dedup).
+export function dedupeSnapshot(jobs, { aggregators = ['hitmarker.net', 'workwithindies.com'] } = {}) {
+  const aggs = aggregators.map(a => String(a).toLowerCase());
+  const hostOf = (u) => {
+    try { return new URL(u).hostname.replace(/^www\./, '').toLowerCase(); }
+    catch { return ''; }
+  };
+  const isAgg = (u) => { const h = hostOf(u); return aggs.some(a => h === a || h.endsWith('.' + a)); };
+  const norm = (s) => (s || '').toLowerCase();
+
+  // ── Pass 1: company + posting ID. Aggregators get no ID (null) so they never
+  //    participate here and fall through to the gated heuristic below. ────────
+  const idCount = new Map();
+  const idKey = (j) => {
+    if (isAgg(j.url)) return null;
+    const id = postingId(j.url);
+    return id == null ? null : `${norm(j.company)}::${id}`;
+  };
+  for (const j of jobs) {
+    const k = idKey(j);
+    if (k) idCount.set(k, (idCount.get(k) || 0) + 1);
+  }
+  let collapsedById = 0;
+  const idSeen = new Set();
+  const stage1 = [];
+  for (const j of jobs) {
+    const k = idKey(j);
+    if (k && idCount.get(k) > 1) {
+      if (idSeen.has(k)) { collapsedById++; continue; } // keep first, drop later mirrors
+      idSeen.add(k);
+    }
+    stage1.push(j);
+  }
+
+  // ── Pass 2: title/company/location, aggregator-gated. ─────────────────────
+  const keyOf = (j) => `${norm(j.company)}::${norm(j.title)}::${norm(j.location)}`;
+  const groups = new Map();
+  const order = [];
+  for (const j of stage1) {
+    const k = keyOf(j);
+    if (!groups.has(k)) { groups.set(k, []); order.push(k); }
+    groups.get(k).push(j);
+  }
+  const result = [];
+  let collapsedByHeuristic = 0;
+  for (const k of order) {
+    const arr = groups.get(k);
+    const directs = arr.filter(j => !isAgg(j.url));
+    const aggsIn = arr.filter(j => isAgg(j.url));
+    // Drop aggregator mirror(s) only when the same role exists as a direct posting.
+    // All-direct or all-aggregator groups are left untouched.
+    if (aggsIn.length && directs.length) {
+      result.push(...directs);
+      collapsedByHeuristic += aggsIn.length;
+    } else {
+      result.push(...arr);
+    }
+  }
+  return {
+    jobs: result,
+    collapsed: collapsedById + collapsedByHeuristic,
+    collapsedById,
+    collapsedByHeuristic,
   };
 }
 
@@ -501,6 +608,35 @@ async function main() {
     console.error(`Error: no studios found. Add tracked_companies to ${STUDIOS_PATH} (or run onboarding).`);
     process.exit(1);
   }
+  // Studio website map for the board: company name → careers_url. Lets each
+  // studio label on the board link to its careers page. Keyed on normalized name
+  // so it also resolves jobs surfaced via aggregators (whose `company` is the
+  // real studio). Aggregator entries are skipped — their careers_url points at
+  // the aggregator, not a studio.
+  const AGG_HOSTS = ['hitmarker.net', 'workwithindies.com'];
+  const studioUrlByName = new Map();
+  // Also register a parenthetical-stripped alias ("PlayStation (Sony Interactive)"
+  // → "playstation") so a job whose company drops the suffix still resolves. Only
+  // when the alias is unambiguous (no other studio strips to the same form).
+  const aliasUrl = new Map();
+  const aliasCount = new Map();
+  for (const c of companies) {
+    if (!c.name || !c.careers_url) continue;
+    let host = '';
+    try { host = new URL(c.careers_url).hostname.replace(/^www\./, '').toLowerCase(); } catch { continue; }
+    if (AGG_HOSTS.some(a => host === a || host.endsWith('.' + a))) continue;
+    const key = c.name.trim().toLowerCase();
+    if (!studioUrlByName.has(key)) studioUrlByName.set(key, c.careers_url);
+    const alias = key.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+    if (alias && alias !== key) {
+      aliasCount.set(alias, (aliasCount.get(alias) || 0) + 1);
+      if (!aliasUrl.has(alias)) aliasUrl.set(alias, c.careers_url);
+    }
+  }
+  // Promote only unambiguous aliases that don't shadow an exact studio name.
+  for (const [alias, n] of aliasCount) {
+    if (n === 1 && !studioUrlByName.has(alias)) studioUrlByName.set(alias, aliasUrl.get(alias));
+  }
   // Unified drop decision: dropTargeting(job) → 'title' | 'location' | 'company'
   // | null (keep). Supports three config shapes in priority order: the new
   // `targeting.groups` schema (shared with the board), the legacy flat
@@ -603,15 +739,34 @@ async function main() {
         if (drop === 'title') { totalFilteredTitle++; continue; }
         if (drop === 'location') { totalFilteredLocation++; continue; }
         if (drop === 'company') { totalFilteredCompany++; continue; }
+        // Normalise work mode baked into the location text ("Berlin, Hybrid",
+        // "United States, Remote", "Remote (US)"…). Fill workMode when the
+        // provider had no structured value, and strip the token so the board's
+        // work-mode badge doesn't duplicate it. Runs AFTER the targeting gate so
+        // location-keyed filters still see the original string; a structured
+        // workMode from the provider always wins over the location-derived one.
+        {
+          const { location: cleanLoc, workMode: locMode } = splitLocationMode(job.location);
+          job.location = cleanLoc;
+          if (!job.workMode && locMode) job.workMode = locMode;
+        }
         // Snapshot collection happens BEFORE history dedup so jobs.json is the
         // full current set even when data/scan-history.tsv already lists these.
         if (jsonPath && job.url && !snapSeen.has(job.url)) {
           snapSeen.add(job.url);
+          const companyUrl = studioUrlByName.get((job.company || '').trim().toLowerCase());
           snapshot.push({
             title: job.title,
             url: job.url,
             company: job.company,
             location: job.location || '',
+            // Optional provider metadata — only set when known, so jobs.json
+            // stays lean. postedDate is ISO-8601; workMode is the tri-state
+            // remote/hybrid/onsite; department is a label. See providers/_types.js.
+            ...(companyUrl ? { companyUrl } : {}),
+            ...(job.postedDate ? { postedDate: job.postedDate } : {}),
+            ...(job.workMode ? { workMode: job.workMode } : {}),
+            ...(job.department ? { department: job.department } : {}),
           });
         }
         if (seenUrls.has(job.url)) {
@@ -682,22 +837,45 @@ async function main() {
   // Independent of --dry-run: it never touches pipeline.md/scan-history.tsv,
   // so it's safe to generate a snapshot without mutating the personal pipeline.
   if (jsonPath) {
+    // Collapse cross-source duplicates (same role mirrored across an aggregator
+    // and a direct ATS). Config-driven and fail-safe: only multi-host groups are
+    // touched, and it's disableable via `snapshot_dedup.enabled: false`.
+    const dedupCfg = config.snapshot_dedup || {};
+    let snapJobs = snapshot;
+    if (dedupCfg.enabled !== false) {
+      const { jobs: deduped, collapsed, collapsedById, collapsedByHeuristic } = dedupeSnapshot(snapshot, {
+        aggregators: dedupCfg.aggregators || ['hitmarker.net', 'workwithindies.com'],
+      });
+      snapJobs = deduped;
+      if (collapsed > 0) {
+        console.log(`Dedup: collapsed ${collapsed} duplicate(s) — ${collapsedById} by posting ID, ${collapsedByHeuristic} aggregator mirror(s)`);
+      }
+    }
     const out = {
       generated: new Date().toISOString(),
-      count: snapshot.length,
-      jobs: snapshot,
+      count: snapJobs.length,
+      jobs: snapJobs,
     };
     mkdirSync(path.dirname(jsonPath) || '.', { recursive: true });
     writeFileSync(jsonPath, JSON.stringify(out));
-    console.log(`Snapshot: ${snapshot.length} jobs → ${jsonPath}`);
+    console.log(`Snapshot: ${snapJobs.length} jobs → ${jsonPath}`);
 
-    // Project the group-schema targeting alongside jobs.json so the board seeds
-    // its default filters from the SAME definition the scanner uses — no second,
-    // hand-maintained copy. Only the new `groups:` schema is projected (the board
-    // speaks groups); a legacy flat config emits nothing and the board keeps its
-    // built-in fallback. Written next to jobs.json (e.g. site/data/targeting.json).
+    // Project the group-schema targeting alongside the snapshot so the board
+    // seeds its default filters from the SAME definition the scanner uses — no
+    // second, hand-maintained copy. Only the new `groups:` schema is projected
+    // (the board speaks groups); a legacy flat config emits nothing and the
+    // board keeps its built-in fallback.
+    //
+    // The sibling's locality MIRRORS the jobs file: a personal jobs.local.json
+    // (gitignored) projects targeting.local.json (also gitignored — the board's
+    // preferred seed), while the committed jobs.json projects the neutral
+    // targeting.json. This is what lets `npm run board:local` refresh a personal
+    // web view WITHOUT clobbering the committed public default.
     if (Array.isArray(config.targeting?.groups)) {
-      const targetingPath = path.join(path.dirname(jsonPath) || '.', 'targeting.json');
+      const targetingBase = /\.local\.json$/.test(path.basename(jsonPath))
+        ? 'targeting.local.json'
+        : 'targeting.json';
+      const targetingPath = path.join(path.dirname(jsonPath) || '.', targetingBase);
       writeFileSync(targetingPath, JSON.stringify({ groups: config.targeting.groups }));
       console.log(`Targeting: ${config.targeting.groups.length} groups → ${targetingPath}`);
     }

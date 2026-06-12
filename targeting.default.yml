@@ -80,11 +80,19 @@ targeting:
         - name: Mid
           else: true
     - name: Mode
-      field: location
+      # Multi-source: work mode now lives in the structured `workMode` field, but
+      # some ATS still phrase it only in the location text. Read both so the
+      # combined text catches either. 'anywhere' is geography-free remote, kept
+      # distinct from 'remote' (most "remote" roles still pin a country/timezone).
+      field: [workmode, location]
       combine: min
       weight: 0.10
       filters:
+        - name: Anywhere
+          keywords: [anywhere, distributed, work from anywhere]
         - name: Remote
-          keywords: [remote, anywhere, distributed, work from home, '/\bwfh\b/', fully remote]
+          keywords: [remote, work from home, '/\bwfh\b/', fully remote]
+        - name: Hybrid
+          keywords: [hybrid]
         - name: On-site
           else: true

@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate, normalizeWorkMode } from './_util.mjs';
+
 // Ashby provider — hits the public posting-api endpoint.
 // Auto-detects from careers_url pattern `https://jobs.ashbyhq.com/<slug>`.
 //
@@ -46,12 +48,25 @@ export default {
       try {
         const json = await ctx.fetchJson(apiUrl, { timeoutMs: ASHBY_TIMEOUT_MS });
         const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
-        return jobs.map((j) => ({
-          title: j.title || '',
-          url: j.jobUrl || '',
-          company: entry.name,
-          location: j.location || '',
-        }));
+        return jobs.map((j) => {
+          const postedDate = toIsoDate(j.publishedAt);
+          const department = (j.department || j.team || '').trim();
+          // Use `workplaceType` (OnSite/Hybrid/Remote) for the tri-state — NOT
+          // `isRemote`, which Ashby sets true for BOTH Hybrid and Remote roles.
+          // Fall back to isRemote only when workplaceType is absent (no hybrid
+          // signal available then).
+          const workMode = normalizeWorkMode(j.workplaceType)
+            || (typeof j.isRemote === 'boolean' ? (j.isRemote ? 'remote' : 'onsite') : '');
+          return {
+            title: j.title || '',
+            url: j.jobUrl || '',
+            company: entry.name,
+            location: j.location || '',
+            ...(postedDate ? { postedDate } : {}),
+            ...(department ? { department } : {}),
+            ...(workMode ? { workMode } : {}),
+          };
+        });
       } catch (e) {
         lastErr = e;
       }

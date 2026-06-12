@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate } from './_util.mjs';
+
 // Workable provider — hits the public markdown feed at /<slug>/jobs.md.
 // Workable's documented JSON API requires an auth token; the markdown feed
 // is the only no-auth public surface. Auto-detects from careers_url pattern
@@ -82,7 +84,9 @@ export function parseWorkableMarkdown(text, companyName) {
     if (cols.length < 8) continue;
     const title = cols[1];
     if (!title || title === 'Title') continue;
+    const department = cols[2] || '';
     const location = cols[3] || '';
+    const postedDate = toIsoDate(cols[6]);  // 'Posted' column; '' if unparseable
     const urlMatch = line.match(/\[View\]\(([^)]+)\)/);
     let url = urlMatch ? urlMatch[1] : '';
     if (url.endsWith('.md')) url = url.slice(0, -3);
@@ -97,7 +101,14 @@ export function parseWorkableMarkdown(text, companyName) {
       continue;
     }
 
-    jobs.push({ title, url, location, company: companyName });
+    jobs.push({
+      title,
+      url,
+      location,
+      company: companyName,
+      ...(postedDate ? { postedDate } : {}),
+      ...(department && department !== 'Department' ? { department } : {}),
+    });
   }
   return jobs;
 }

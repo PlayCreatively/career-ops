@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate } from './_util.mjs';
+
 // Recruitee provider — hits the public per-tenant offers API.
 // Auto-detects from careers_url pattern `https://<slug>.recruitee.com`.
 // Per-tenant subdomains are the variable part — SSRF defence uses a
@@ -65,7 +67,8 @@ export default {
  *   `https://<safe-slug>.recruitee.com` — an off-domain or non-HTTPS URL is
  *   dropped (empty string returned per the Job contract).
  * - location: prefer the explicit `location` field; else assemble from
- *   city/country, appending "Remote" when `remote` is true.
+ *   city/country. Remoteness is carried by the structured `workMode` field
+ *   (from the remote/hybrid/on_site booleans), not appended to the text.
  *
  * @param {any} json
  * @param {string} companyName
@@ -77,8 +80,8 @@ export function parseRecruiteeResponse(json, companyName) {
   return offers.map(j => {
     const city = j.city || '';
     const country = j.country || '';
-    const remote = j.remote ? 'Remote' : '';
-    const location = j.location || [city, country, remote].filter(Boolean).join(', ');
+    // Location stays place-only; remoteness is carried by workMode (below).
+    const location = j.location || [city, country].filter(Boolean).join(', ');
 
     // Validate offer URL: must parse as https://<safe-slug>.recruitee.com/...
     let url = '';
@@ -94,11 +97,20 @@ export function parseRecruiteeResponse(json, companyName) {
       }
     }
 
+    // `published_at`/`created_at` arrive as "YYYY-MM-DD HH:mm:ss UTC".
+    const postedDate = toIsoDate(j.published_at || j.created_at);
+    const department = (typeof j.department === 'string' ? j.department : '').trim();
+    // Recruitee exposes three independent booleans rather than one field;
+    // resolve them to the tri-state token (remote wins, then hybrid, then onsite).
+    const workMode = j.remote ? 'remote' : j.hybrid ? 'hybrid' : j.on_site ? 'onsite' : '';
     return {
       title: j.title || '',
       url,
       location,
       company: companyName,
+      ...(postedDate ? { postedDate } : {}),
+      ...(department ? { department } : {}),
+      ...(workMode ? { workMode } : {}),
     };
   });
 }

@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate } from './_util.mjs';
+
 // Greenhouse provider — hits the public boards-api JSON endpoint.
 // Handles both explicit `api:` URLs and auto-detection from `careers_url`.
 
@@ -56,11 +58,18 @@ export default {
     // assertGreenhouseUrl above it guarantees the final hostname stays in the allowlist.
     const json = await ctx.fetchJson(apiUrl, { redirect: 'error' });
     const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
-    return jobs.filter(j => j.absolute_url).map(j => ({
-      title: j.title || '',
-      url: j.absolute_url,
-      company: entry.name,
-      location: j.location?.name || '',
-    }));
+    return jobs.filter(j => j.absolute_url).map(j => {
+      // `first_published` is the true posting date; `updated_at` is the last
+      // edit (re-published roles bump it). The basic /jobs feed exposes neither
+      // a structured remote flag nor a department, so only postedDate is set.
+      const postedDate = toIsoDate(j.first_published || j.updated_at);
+      return {
+        title: j.title || '',
+        url: j.absolute_url,
+        company: entry.name,
+        location: j.location?.name || '',
+        ...(postedDate ? { postedDate } : {}),
+      };
+    });
   },
 };

@@ -239,6 +239,9 @@
     text-align: left; }
   .gname:hover { color: var(--txt); text-decoration: underline; }
   .grouplabel { width: auto; max-width: 150px; }
+  /* Sit the group name on the first pill row's baseline rather than centering it
+     against the full (often wrapped) height of the pills block. */
+  .row:has(.grouplabel) { align-items: baseline; }
   /* Catch-all (else) pills read a touch differently from keyword pills. */
   .bpill.elsepill { border-style: solid; }
   .bpill .elsetag { font-size: 9px; opacity: .55; text-transform: uppercase;
@@ -266,6 +269,10 @@
   .modal h3 { margin: 0; font-size: 16px; }
   .modal label { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; }
   .modal .field { display: flex; flex-direction: column; gap: 6px; }
+  .modal .fieldchecks { display: flex; flex-direction: column; gap: 7px; margin-top: 2px; }
+  .modal .fieldchecks label { display: flex; align-items: center; gap: 8px; font-size: 14px;
+    color: var(--txt); cursor: pointer; font-weight: 400; }
+  .modal .fieldchecks input[type=checkbox] { width: auto; margin: 0; accent-color: var(--accent); cursor: pointer; }
   .modal input[type=text] { background: var(--panel2); border: 1px solid var(--line);
     color: var(--txt); padding: 9px 11px; border-radius: 8px; font-size: 14px; }
   .modal .sliderRow { display: flex; gap: 10px; align-items: center; }
@@ -290,8 +297,21 @@
   td.fit { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
   td.role a { color: var(--txt); text-decoration: none; font-weight: 500; }
   td.role a:hover { color: var(--accent); text-decoration: underline; }
+  td.role .dept { display: block; margin-top: 2px; color: var(--dim); font-size: 12px; }
+  td.role .dept::before { content: "· "; }
+  td.loc .modeline { display: block; margin-top: 3px; }
+  td.loc .mode { font-weight: 500; white-space: nowrap; font-size: 12px; }
+  td.loc .mode.anywhere { color: var(--accent); }
+  td.loc .mode.remote { color: var(--accent2); }
+  td.loc .mode.hybrid { color: var(--warm); }
   td.co { color: var(--accent2); white-space: nowrap; }
+  td.co a { color: inherit; text-decoration: none; }
+  td.co a:hover { text-decoration: underline; }
   td.loc { color: var(--dim); font-size: 13px; }
+  td.posted { color: var(--dim); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
+  .age-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle; background: var(--line); }
+  .age-dot.na { opacity: .35; }
   .tag { display: inline-block; background: var(--panel2); border: 1px solid var(--line);
     color: var(--dim); padding: 2px 10px; border-radius: 6px; font-size: 11px; margin-right: 5px; }
   .tag.remote { color: var(--accent2);
@@ -345,6 +365,7 @@ window.__themeKey = "gamedevboard.theme";
         <option value="company">Sort: Studio A–Z</option>
         <option value="role">Sort: Role A–Z</option>
         <option value="location">Sort: Location A–Z</option>
+        <option value="posted">Sort: Newest</option>
       </select>
       <span class="split">
         <button class="btn clear" id="reset">Clear all labels</button>
@@ -367,6 +388,7 @@ window.__themeKey = "gamedevboard.theme";
       <th data-sort="role">Role</th>
       <th data-sort="location">Location</th>
       <th>Tags</th>
+      <th data-sort="posted" title="Time since the role was posted (newest first)">Posted</th>
     </tr></thead>
     <tbody id="rows"></tbody>
   </table>
@@ -412,13 +434,15 @@ window.__themeKey = "gamedevboard.theme";
       <input type="text" id="gmName" placeholder="e.g. Region" autocomplete="off" spellcheck="false">
     </div>
     <div class="field">
-      <label for="gmField">Match filters against</label>
-      <select id="gmField">
-        <option value="title">Role title</option>
-        <option value="company">Studio / company</option>
-        <option value="location">Location</option>
-        <option value="any">Anywhere (title + studio + location)</option>
-      </select>
+      <label>Match filters against</label>
+      <div id="gmFields" class="fieldchecks">
+        <label><input type="checkbox" value="title"> Role title</label>
+        <label><input type="checkbox" value="company"> Studio / company</label>
+        <label><input type="checkbox" value="location"> Location</label>
+        <label><input type="checkbox" value="department"> Department / team</label>
+        <label><input type="checkbox" value="workmode"> Work mode (remote / hybrid / onsite)</label>
+      </div>
+      <div class="hint">Pick one or more — filters match against the combined text of the chosen sources.</div>
     </div>
     <div class="actions">
       <button class="btn rm" id="gmRemove">Delete group</button>
@@ -464,8 +488,12 @@ var ALL = [];
 var GROUPS = [];          // [{id,name,field,combine,weight,filters:[{id,name,keywords,weight,else}]}]
 var FBYID = {};           // filterId -> {f: filter, g: group}
 var MODES = ["max", "min", "avg"];
-var FIELDS = ["title", "company", "location", "any"];
+var FIELDS = ["title", "company", "location", "department", "workmode", "any"];
 var sortMode = "fit";
+// Each column's natural (first-click) direction. sortDir holds the live one;
+// clicking the active header again flips it (see the th click handler).
+var NATURAL_DIR = { fit: "desc", company: "asc", role: "asc", location: "asc", posted: "desc" };
+var sortDir = NATURAL_DIR.fit;
 // Isolate lens — null, or { fid, total }. Set by clicking a pill's view/total
 // number; restricts the visible list to that one filter's matches (see passes()).
 // Transient (not persisted): filter ids are regenerated each load, and it's a
@@ -527,17 +555,28 @@ function compileFilter(f) {
 function save() {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({
-      q: document.getElementById("q").value, sort: sortMode, groups: GROUPS,
+      q: document.getElementById("q").value, sort: sortMode, sortDir: sortDir, groups: GROUPS,
     }));
   } catch (e) {}
 }
+// Normalise a group's `field` to a valid atomic id, or an array of them for a
+// multi-source group. Unknown ids are dropped; an array that collapses to one
+// is stored as a plain string (back-compat); empty falls back to "any".
+function sanitizeField(f) {
+  if (Array.isArray(f)) {
+    var arr = f.filter(function (x) { return FIELDS.indexOf(x) !== -1 && x !== "any"; });
+    return arr.length > 1 ? arr : (arr.length === 1 ? arr[0] : "any");
+  }
+  return FIELDS.indexOf(f) !== -1 ? f : "any";
+}
+
 // Coerce stored groups back into a valid shape (fresh ids, clamped weights, at
 // most one catch-all per group) so a hand-edited or stale blob can't break us.
 function sanitizeGroups(arr) {
   var out = [];
   arr.forEach(function (g) {
     if (!g || typeof g !== "object") return;
-    var field = FIELDS.indexOf(g.field) !== -1 ? g.field : "any";
+    var field = sanitizeField(g.field);
     var combine = MODES.indexOf(g.combine) !== -1 ? g.combine : "min";
     var weight = typeof g.weight === "number" ? g.weight : 0.1;
     var seenElse = false;
@@ -561,6 +600,7 @@ function load() {
     var s = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
     GROUPS = (Array.isArray(s.groups) && s.groups.length) ? sanitizeGroups(s.groups) : defaultGroups();
     if (s.sort) sortMode = s.sort;
+    sortDir = (s.sortDir === "asc" || s.sortDir === "desc") ? s.sortDir : (NATURAL_DIR[sortMode] || "desc");
     if (s.q != null) document.getElementById("q").value = s.q;
   } catch (e) { GROUPS = defaultGroups(); }
 }
@@ -572,7 +612,14 @@ function prep(jobs) {
       // title/company/location are read directly by Rank.matchGroup (via
       // fieldText); _search backs the free-text box; _mem caches matches.
       title: j.title, url: j.url, company: j.company, location: loc,
-      _search: (title + " " + co + " " + loc).toLowerCase(),
+      companyUrl: j.companyUrl || "",
+      // Optional provider metadata (see providers/_types.js). postedDate is an
+      // ISO string; _posted caches its epoch ms (0 when absent) for O(1) sort.
+      postedDate: j.postedDate || "",
+      workMode: j.workMode || "",   // 'anywhere' | 'remote' | 'hybrid' | 'onsite' | ''
+      department: j.department || "",
+      _posted: j.postedDate ? (Date.parse(j.postedDate) || 0) : 0,
+      _search: (title + " " + co + " " + loc + " " + (j.department || "")).toLowerCase(),
       _mem: {},      // groupId -> [filterId,...] of VISIBLE (non-muted) matches
       _memFull: {},  // groupId -> [filterId,...] ignoring mute — for pill counts
     };
@@ -643,6 +690,31 @@ function fitColor(w) {
   return "color-mix(in srgb, var(--accent2) " + Math.round(t * 100) + "%, var(--danger))";
 }
 
+// Compact "time since posted" label from an ISO date: today · 5d · 3w · 4mo · 2y.
+function timeSince(iso) {
+  var t = iso ? Date.parse(iso) : NaN;
+  if (isNaN(t)) return "";
+  var days = Math.floor((Date.now() - t) / 86400000);
+  if (days <= 0) return "today";
+  if (days < 14) return days + "d";
+  if (days < 56) return Math.round(days / 7) + "w";
+  if (days < 365) return Math.round(days / 30) + "mo";
+  return Math.floor(days / 365) + "y";
+}
+// STALE_DAYS = age at which the staleness dot is fully red; fresh roles are green.
+var STALE_DAYS = 60;
+// Render the Posted cell: a staleness dot (green→red by age) plus the time-since
+// label. Rows with no provider date show a dim dot and an em dash.
+function postedCell(iso) {
+  var label = timeSince(iso);
+  if (!label) return '<span class="age-dot na"></span><span>—</span>';
+  var days = Math.max(0, (Date.now() - Date.parse(iso)) / 86400000);
+  var f = Math.min(days / STALE_DAYS, 1);     // 0 fresh → 1 stale
+  var hue = Math.round(130 * (1 - f));        // 130° green → 0° red
+  return '<span class="age-dot" style="background:hsl(' + hue + ',68%,45%)" title="Posted ' +
+    esc(iso.slice(0, 10)) + '"></span><span>' + label + '</span>';
+}
+
 // True if a job is a (membership) match of a given filter — uses _memFull so it
 // ignores mute (a muted filter's pill still tallies and isolates its real set).
 function jobMatchesFilter(j, fid) {
@@ -676,15 +748,23 @@ function render() {
   var filtered = ALL.filter(passes);
   // The rating is always shown, so always compute it (not just when sorting by fit).
   filtered.forEach(function (j) { j._final = fitOf(j); });
+  // Each comparator below is written in its column's NATURAL_DIR order; when the
+  // user has flipped to the opposite direction we negate the result.
+  var cmp;
   if (sortMode === "company") {
-    filtered.sort(function (a, b) { return a.company.localeCompare(b.company) || a.title.localeCompare(b.title); });
+    cmp = function (a, b) { return a.company.localeCompare(b.company) || a.title.localeCompare(b.title); };
   } else if (sortMode === "role") {
-    filtered.sort(function (a, b) { return a.title.localeCompare(b.title); });
+    cmp = function (a, b) { return a.title.localeCompare(b.title); };
   } else if (sortMode === "location") {
-    filtered.sort(function (a, b) { return a.location.localeCompare(b.location) || b._final - a._final; });
+    cmp = function (a, b) { return a.location.localeCompare(b.location) || b._final - a._final; };
+  } else if (sortMode === "posted") {
+    // Newest first; rows with no posting date (_posted === 0) fall to the bottom.
+    cmp = function (a, b) { return b._posted - a._posted || b._final - a._final; };
   } else {
-    filtered.sort(function (a, b) { return b._final - a._final || a.company.localeCompare(b.company); });
+    cmp = function (a, b) { return b._final - a._final || a.company.localeCompare(b.company); };
   }
+  var inv = sortDir === (NATURAL_DIR[sortMode] || "desc") ? 1 : -1;
+  filtered.sort(function (a, b) { return inv * cmp(a, b); });
 
   var rows = document.getElementById("rows");
   rows.innerHTML = "";
@@ -703,18 +783,33 @@ function render() {
     var tags = names.map(function (t) {
       return '<span class="tag' + (/^remote$/i.test(t) ? " remote" : "") + '">' + esc(t) + '</span>';
     }).join("");
+    var coCell = j.companyUrl
+      ? '<a href="' + esc(j.companyUrl) + '" target="_blank" rel="noopener">' + esc(j.company) + '</a>'
+      : esc(j.company);
+    // Department as a dim subtitle under the role title (only when known).
+    var deptLine = j.department ? '<span class="dept">' + esc(j.department) + '</span>' : '';
+    // Work mode as a badge on its OWN line below the location text: 🌐 Anywhere /
+    // 🏠 Remote / ⇄ Hybrid; onsite and unknown show no badge. The location string
+    // is now place-only (work-mode tokens stripped during the scan), so no dup.
+    var modeBadge = j.workMode === "anywhere" ? '<span class="mode anywhere">🌐 Anywhere</span>'
+      : j.workMode === "remote" ? '<span class="mode remote">🏠 Remote</span>'
+      : j.workMode === "hybrid" ? '<span class="mode hybrid">⇄ Hybrid</span>' : '';
+    var locText = esc(j.location);
+    var modeLine = modeBadge ? '<span class="modeline">' + modeBadge + '</span>' : '';
+    var locCell = (locText || (modeBadge ? '' : "—")) + modeLine;
     tr.innerHTML =
       '<td class="fit" style="color:' + fitColor(j._final) + '">' + j._final.toFixed(2) + '</td>' +
-      '<td class="co">' + esc(j.company) + '</td>' +
-      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.title) + '</a></td>' +
-      '<td class="loc">' + (esc(j.location) || "—") + '</td>' +
-      '<td>' + tags + '</td>';
+      '<td class="co">' + coCell + '</td>' +
+      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.title) + '</a>' + deptLine + '</td>' +
+      '<td class="loc">' + locCell + '</td>' +
+      '<td>' + tags + '</td>' +
+      '<td class="posted">' + postedCell(j.postedDate) + '</td>';
     frag.appendChild(tr);
   });
   rows.appendChild(frag);
 
   if (filtered.length === 0) {
-    rows.innerHTML = '<tr><td colspan="5" class="empty">No openings match these filters.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="6" class="empty">No openings match these filters.</td></tr>';
   }
   updateSortIndicator();
   var isoNote = "";
@@ -738,13 +833,13 @@ function esc(s) {
   });
 }
 
-// Mark the active sort column header (▼ for the descending Rating, ▲ for the
-// A–Z alpha columns) so the table's order is always legible at a glance.
+// Mark the active sort column header with its direction arrow (↓ descending,
+// ↑ ascending) so the table's order is always legible at a glance.
 function updateSortIndicator() {
   document.querySelectorAll("th[data-sort]").forEach(function (th) {
     var on = th.getAttribute("data-sort") === sortMode;
     th.classList.toggle("sorted", on);
-    th.classList.toggle("asc", on && sortMode !== "fit");
+    th.classList.toggle("asc", on && sortDir === "asc");
   });
 }
 
@@ -1041,10 +1136,28 @@ function bindFilterModal() {
 
 // ── Group edit modal ─────────────────────────────────────────────────────────
 var egGroup = null;
+// What the legacy `any` field expands to as checkboxes (title+studio+location+dept).
+var ANY_FIELDS = ["title", "company", "location", "department"];
+function fieldToList(field) {
+  if (Array.isArray(field)) return field.slice();
+  if (field === "any") return ANY_FIELDS.slice();
+  return [field];
+}
+function setFieldChecks(field) {
+  var sel = fieldToList(field);
+  [].forEach.call(document.querySelectorAll("#gmFields input[type=checkbox]"), function (cb) {
+    cb.checked = sel.indexOf(cb.value) !== -1;
+  });
+}
+function readFieldChecks() {
+  var vals = [];
+  [].forEach.call(document.querySelectorAll("#gmFields input[type=checkbox]:checked"), function (cb) { vals.push(cb.value); });
+  return vals;   // caller decides what to do with an empty selection
+}
 function openGroupModal(g) {
   egGroup = g;
   document.getElementById("gmName").value = g.name;
-  document.getElementById("gmField").value = g.field;
+  setFieldChecks(g.field);
   document.getElementById("groupModalBg").classList.add("open");
   var n = document.getElementById("gmName"); n.focus(); n.select();
 }
@@ -1058,8 +1171,12 @@ function bindGroupModal() {
   document.getElementById("gmName").addEventListener("input", function () {
     if (!egGroup) return; egGroup.name = this.value; schedule({ groups: true });
   });
-  document.getElementById("gmField").addEventListener("change", function () {
-    if (!egGroup) return; egGroup.field = this.value; schedule({ recompute: true, groups: true });
+  document.getElementById("gmFields").addEventListener("change", function () {
+    if (!egGroup) return;
+    var vals = readFieldChecks();
+    if (!vals.length) { setFieldChecks(egGroup.field); return; }   // refuse an empty source set
+    egGroup.field = vals.length === 1 ? vals[0] : vals;
+    schedule({ recompute: true, groups: true });
   });
   document.getElementById("gmRemove").onclick = function () {
     if (!egGroup) return;
@@ -1097,7 +1214,9 @@ function init(data) {
     qEl.value = ""; syncClearQ(); qEl.focus(); schedule({ groups: true });
   };
   syncClearQ();
-  document.getElementById("sort").addEventListener("change", function (e) { sortMode = e.target.value; schedule({}); });
+  document.getElementById("sort").addEventListener("change", function (e) {
+    sortMode = e.target.value; sortDir = NATURAL_DIR[sortMode] || "desc"; schedule({});
+  });
   document.getElementById("reset").onclick = function () {
     GROUPS = []; ISOLATE = null;                 // wipe every label + its rating
     reindex(); recompute(); save(); buildGroups(); render();
@@ -1108,7 +1227,14 @@ function init(data) {
   };
   document.querySelectorAll("th[data-sort]").forEach(function (th) {
     th.onclick = function () {
-      sortMode = th.getAttribute("data-sort");   // fit | company | role | location
+      var col = th.getAttribute("data-sort");     // fit | company | role | location | posted
+      if (col === sortMode) {
+        // Same column → flip direction.
+        sortDir = sortDir === "asc" ? "desc" : "asc";
+      } else {
+        sortMode = col;
+        sortDir = NATURAL_DIR[col] || "desc";     // new column → its natural order
+      }
       document.getElementById("sort").value = sortMode; save(); render();
     };
   });
@@ -1159,10 +1285,20 @@ function fetchSeed() {
     })
     .catch(function () { return null; });
 }
-Promise.all([
-  fetch("data/jobs.json").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }),
-  fetchSeed(),
-])
+// The snapshot is resolved in the SAME two tiers as the filter seed:
+// data/jobs.local.json (a gitignored personal snapshot written by
+// `npm run board:local`) wins; otherwise the committed public data/jobs.json.
+// In production no .local file is deployed, so the fetch 404s and falls back —
+// the public board always shows the committed snapshot.
+function fetchJobs() {
+  return fetch("data/jobs.local.json", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (local) {
+      if (local) return local;
+      return fetch("data/jobs.json").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+    });
+}
+Promise.all([fetchJobs(), fetchSeed()])
   .then(function (res) { DEFAULT_GROUPS_SEED = res[1]; init(res[0]); })
   .catch(function (e) {
     document.getElementById("meta").innerHTML =

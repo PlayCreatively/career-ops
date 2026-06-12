@@ -790,16 +790,23 @@ try {
     fail(`row 0 = ${JSON.stringify(jobs[0])}`);
   }
 
-  if (jobs[1]?.location === 'Paris, France, Remote') {
-    pass('parseSmartRecruitersResponse builds location from city/country/remote when no fullLocation');
+  // Location is place-only; remoteness is carried by workMode, not appended.
+  if (jobs[1]?.location === 'Paris, France' && jobs[1]?.workMode === 'remote') {
+    pass('parseSmartRecruitersResponse builds place-only location + workMode from city/country/remote');
   } else {
-    fail(`row 1 location = ${JSON.stringify(jobs[1]?.location)}, expected "Paris, France, Remote"`);
+    fail(`row 1 = ${JSON.stringify({ location: jobs[1]?.location, workMode: jobs[1]?.workMode })}, expected location "Paris, France" + workMode "remote"`);
   }
 
-  if (jobs[0]?.url === 'https://jobs.smartrecruiters.com/sgs/postings/abc-123') {
-    pass('parseSmartRecruitersResponse rewrites api.smartrecruiters.com → jobs.smartrecruiters.com');
+  if (jobs[0]?.url === 'https://jobs.smartrecruiters.com/sgs/abc-123-senior-pm') {
+    pass('parseSmartRecruitersResponse builds canonical <company>/<id>-<slug> URL from ref (no /postings/ 404)');
   } else {
-    fail(`row 0 url = ${JSON.stringify(jobs[0]?.url)}`);
+    fail(`row 0 url = ${JSON.stringify(jobs[0]?.url)} (expected canonical /sgs/abc-123-senior-pm)`);
+  }
+
+  if (jobs[0]?.url && !jobs[0].url.includes('/postings/')) {
+    pass('parseSmartRecruitersResponse never emits the API-only /postings/ path');
+  } else {
+    fail('parseSmartRecruitersResponse must not emit /postings/ (it 404s on the careers host)');
   }
 
   if (jobs[2]?.url && jobs[2].url.startsWith('https://jobs.smartrecruiters.com/sgs/ghi-789')) {
@@ -959,10 +966,11 @@ try {
     fail(`row 0 = ${JSON.stringify(jobs[0])}`);
   }
 
-  if (jobs[1]?.location === 'Amsterdam, Netherlands, Remote') {
-    pass('parseRecruiteeResponse assembles city/country/remote when no location field');
+  // Location is place-only; remoteness is carried by workMode, not appended.
+  if (jobs[1]?.location === 'Amsterdam, Netherlands' && jobs[1]?.workMode === 'remote') {
+    pass('parseRecruiteeResponse assembles place-only location + workMode from city/country/remote');
   } else {
-    fail(`row 1 location = ${JSON.stringify(jobs[1]?.location)}, expected "Amsterdam, Netherlands, Remote"`);
+    fail(`row 1 = ${JSON.stringify({ location: jobs[1]?.location, workMode: jobs[1]?.workMode })}, expected location "Amsterdam, Netherlands" + workMode "remote"`);
   }
 
   if (jobs[2]?.location === 'Remote, EMEA') {
@@ -1180,6 +1188,140 @@ try {
   }
 } catch (e) {
   fail(`tracker-link normalization tests crashed: ${e.message}`);
+}
+
+console.log('\n16. Snapshot dedup — posting-ID + aggregator-gated collapsing');
+
+try {
+  const { dedupeSnapshot, postingId } = await import(pathToFileURL(join(ROOT, 'scan.mjs')).href);
+
+  // postingId extraction
+  if (postingId('https://www.riotgames.com/en/work-with-us/job/7838553?gh_jid=7838553') === '7838553') pass('postingId reads gh_jid query param');
+  else fail('postingId should read gh_jid');
+  if (postingId('https://goodbyekansas.teamtailor.com/jobs/6607983-realtime-artist') === '6607983') pass('postingId reads leading numeric of /jobs/<id>-slug');
+  else fail('postingId should read Teamtailor path id');
+  if (postingId('https://jobs.lever.co/acme/abc-uuid-def') === null) pass('postingId returns null for non-numeric (Lever UUID)');
+  else fail('postingId should be null for Lever UUID');
+
+  const jobs = [
+    // Pass 1 — same company + posting ID across DIFFERENT hosts (Teamtailor studio
+    // subdomain mirrored on parent-group domain), even with a differing location
+    // string → collapse to one.
+    { title: 'Level Designer', company: 'Sandbox Interactive', location: 'Berlin, DE', url: 'https://sandboxinteractive.teamtailor.com/jobs/7363029-level-designer' },
+    { title: 'Level Designer', company: 'Sandbox Interactive', location: 'Berlin, Germany', url: 'https://stillfrontgroup.teamtailor.com/jobs/7363029-level-designer' },
+    // Pass 2 — aggregator mirror of a direct posting → drop the aggregator row.
+    { title: 'Senior Software Engineer', company: 'Riot Games', location: 'Los Angeles, USA', url: 'https://www.riotgames.com/en/work-with-us/job/7838553?gh_jid=7838553' },
+    { title: 'Senior Software Engineer', company: 'Riot Games', location: 'Los Angeles, USA', url: 'https://hitmarker.net/jobs/riot-games-senior-software-engineer-123' },
+    // Two DISTINCT reqs: same title/company/location, different IDs, both direct,
+    // no aggregator → keep BOTH (the Epic false-positive guard).
+    { title: 'Gameplay Programmer', company: 'Epic Games', location: 'Cary, NC, USA', url: 'https://epicgames.com/careers/jobs/6001690004?gh_jid=6001690004' },
+    { title: 'Gameplay Programmer', company: 'Epic Games', location: 'Cary, NC, USA', url: 'https://epicgames.com/careers/jobs/6001706004?gh_jid=6001706004' },
+    // Singleton → untouched
+    { title: 'Tools Engineer', company: 'Naughty Dog', location: 'Santa Monica, CA', url: 'https://job-boards.greenhouse.io/naughtydog/jobs/12345' },
+  ];
+
+  const { jobs: out, collapsed, collapsedById, collapsedByHeuristic } = dedupeSnapshot(jobs);
+
+  if (collapsedById === 1) pass('pass 1 collapses one same-company+ID mirror (across hosts, differing location)');
+  else fail(`expected 1 collapsed by ID, got ${collapsedById}`);
+
+  if (collapsedByHeuristic === 1) pass('pass 2 drops one aggregator mirror that has a direct twin');
+  else fail(`expected 1 collapsed by heuristic, got ${collapsedByHeuristic}`);
+
+  if (collapsed === 2 && out.length === 5) pass('total: 7 → 5 (one ID dupe + one aggregator mirror removed)');
+  else fail(`expected 5 jobs out (collapsed 2), got ${out.length} (collapsed ${collapsed})`);
+
+  const riot = out.filter(j => j.company === 'Riot Games');
+  if (riot.length === 1 && riot[0].url.includes('riotgames.com')) pass('aggregator pass keeps the direct URL, drops Hitmarker');
+  else fail('aggregator pass should keep the direct riotgames.com URL');
+
+  const epic = out.filter(j => j.company === 'Epic Games');
+  if (epic.length === 2) pass('two distinct direct reqs are never merged (Epic false-positive guard)');
+  else fail(`distinct Epic reqs should both survive, got ${epic.length}`);
+
+  const sandbox = out.filter(j => j.company === 'Sandbox Interactive');
+  if (sandbox.length === 1) pass('Teamtailor cross-host mirror collapsed to one');
+  else fail(`Sandbox mirror should collapse to 1, got ${sandbox.length}`);
+
+  // Configurable aggregator list: flag Teamtailor's parent-group domain instead.
+  // With the ID pass already collapsing Sandbox, prove the aggregator list is read
+  // by making WorkWithIndies a no-op default still removes Hitmarker.
+  const { jobs: out2, collapsedByHeuristic: h2 } = dedupeSnapshot(jobs, { aggregators: [] });
+  if (h2 === 0 && out2.filter(j => j.url.includes('hitmarker.net')).length === 1) {
+    pass('empty aggregator list disables pass 2 (Hitmarker mirror retained)');
+  } else {
+    fail('empty aggregator list should leave aggregator mirrors in place');
+  }
+} catch (e) {
+  fail(`snapshot dedup tests crashed: ${e.message}`);
+}
+
+// ── WORK MODE: location split + multi-source fields ─────────────
+
+console.log('\n17. Work mode — location split + multi-source filter fields');
+try {
+  const { splitLocationMode, normalizeWorkMode } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
+  const { fieldText, isExcluded, matchGroup } = await import(pathToFileURL(join(ROOT, 'rank.mjs')).href);
+
+  // splitLocationMode: strip the mode token from common shapes, derive workMode.
+  const cases = [
+    ['United States, Remote', 'United States', 'remote'],
+    ['Remote (US)', 'US', 'remote'],
+    ['New York - Remote; New York, United States', 'New York; New York, United States', 'remote'],
+    ['London (Hybrid)', 'London', 'hybrid'],
+    ['Berlin, hybrid', 'Berlin', 'hybrid'],
+    ['Warsaw - On-site', 'Warsaw', 'onsite'],
+    ['Helsinki', 'Helsinki', ''],        // no token → untouched
+    ['Remote', '', 'remote'],
+    ['Anywhere', '', 'anywhere'],        // geography-free → 4th state
+    ['Distributed', '', 'anywhere'],
+    ['Remote, Anywhere', '', 'anywhere'],// most permissive wins
+  ];
+  let splitOk = true;
+  for (const [input, loc, mode] of cases) {
+    const r = splitLocationMode(input);
+    if (r.location !== loc || r.workMode !== mode) {
+      splitOk = false;
+      fail(`splitLocationMode(${JSON.stringify(input)}) = ${JSON.stringify(r)}, expected {location:${JSON.stringify(loc)}, workMode:${JSON.stringify(mode)}}`);
+    }
+  }
+  if (splitOk) pass(`splitLocationMode strips mode token across ${cases.length} location shapes`);
+
+  if (normalizeWorkMode('OnSite') === 'onsite' && normalizeWorkMode('Hybrid') === 'hybrid'
+      && normalizeWorkMode('Anywhere') === 'anywhere' && normalizeWorkMode('distributed') === 'anywhere'
+      && normalizeWorkMode('unspecified') === '') {
+    pass('normalizeWorkMode maps ATS values to the work-mode enum (unknown → "")');
+  } else {
+    fail('normalizeWorkMode enum mapping wrong');
+  }
+
+  // fieldText: array field joins multiple sources into one combined string.
+  const job = { title: 'Eng', company: 'X', location: 'US', workMode: 'remote', department: 'Audio' };
+  if (fieldText(job, ['location', 'workmode']) === 'US remote') {
+    pass('fieldText(array) joins multiple sources (location + workmode)');
+  } else {
+    fail(`fieldText(['location','workmode']) = ${JSON.stringify(fieldText(job, ['location', 'workmode']))}`);
+  }
+
+  // Cross-field exclude only works when the group reads BOTH sources.
+  const usOnlyRemote = { id: 'g', field: ['location', 'workmode'], combine: 'min',
+    filters: [{ id: 'x', keywords: ['/^(?=.*remote)(?=.*\\bus)/'], weight: 0 }] };
+  const single = { ...usOnlyRemote, field: 'location' };
+  if (isExcluded(job, [usOnlyRemote]) && !isExcluded(job, [single])) {
+    pass('cross-field "US-only remote" excludes via [location, workmode], not location alone');
+  } else {
+    fail(`cross-field exclude: combined=${isExcluded(job, [usOnlyRemote])} (want true), location-only=${isExcluded(job, [single])} (want false)`);
+  }
+
+  // workmode field matches the structured token; unknown falls through.
+  const g = { id: 'm', field: 'workmode', combine: 'min', filters: [{ id: 'h', keywords: ['hybrid'], weight: 1.5 }] };
+  if (matchGroup({ workMode: 'hybrid' }, g).length === 1 && matchGroup({}, g).length === 0) {
+    pass('workmode field matches hybrid token; unknown work mode does not match');
+  } else {
+    fail('workmode field matching wrong');
+  }
+} catch (e) {
+  fail(`work-mode tests crashed: ${e.message}`);
 }
 
 // ── SUMMARY ─────────────────────────────────────────────────────

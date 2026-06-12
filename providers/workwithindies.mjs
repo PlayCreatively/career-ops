@@ -52,7 +52,9 @@ export function parseWorkWithIndiesFeed(xml) {
         title: role.trim(),
         url,
         company: company.trim(),
-        location: remote ? 'Remote' : (fromLoc || '').trim(),
+        // Location stays place-only; remoteness goes to workMode, not the text.
+        location: (fromLoc || '').trim(),
+        ...(remote ? { workMode: 'remote' } : {}),
       });
     } else {
       // Fail-safe: keep the posting with the raw title so it can still match
