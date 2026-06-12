@@ -21,6 +21,9 @@
     "board:watch": "node project-targeting.mjs --watch",
     "board:dev": "node board-dev.mjs",
     "board:local": "node scan.mjs --no-filter --dry-run --json site/data/jobs.json",
+    "board:refresh": "node scan.mjs --no-filter --dry-run --json site/data/jobs.json && node project-targeting.mjs targeting.default.yml site/data/targeting.json",
+    "board:fresh": "npm run board:refresh && npm run board:dev",
+    "board:deploy": "gh workflow run board.yml",
     "track-check": "node track-check.mjs",
     "patterns": "node analyze-patterns.mjs",
     "gemini:eval": "node gemini-eval.mjs"

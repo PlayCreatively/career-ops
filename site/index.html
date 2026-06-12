@@ -294,6 +294,45 @@
   th[data-sort].sorted.asc::after { content: " ↑"; }
   tr:hover td { background: var(--panel2); }
   th:hover { background: var(--panel2); }
+  /* ── Per-row quick actions ───────────────────────────────────────────────
+     A bare cluster of big icons (star / check / ignore) that floats just OUTSIDE
+     the table's left edge — no box. It's a single-state enum per row: at most one
+     icon is active. Inactive icons are invisible until you hover the row OR the
+     gutter cluster itself; the active icon stays lit at all times. Positioned
+     against the row (tr.jobrow is the positioned ancestor). */
+  tr.jobrow { position: relative; }
+  /* The cluster spans the full row height so the whole gutter band is a hover
+     target, and right-aligns its icons toward the table edge. */
+  .rowacts {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    transform: translateX(-100%); width: 88px; padding-right: 8px;
+    display: flex; align-items: center; justify-content: flex-end;
+  }
+  .rowacts button {
+    border: none; background: transparent; cursor: pointer; padding: 0;
+    font-size: 21px; line-height: 1; color: var(--dim);
+    flex: none; width: 0; margin-left: 0; opacity: 0; overflow: hidden;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: opacity .12s, color .12s, transform .1s, width .14s, margin-left .14s;
+  }
+  /* When not hovered, only the active icon has width — so it floats to the right
+     (nearest the row); the collapsed siblings take no space. */
+  .rowacts .active { width: 24px; opacity: 1; }
+  /* Hovering the row or the gutter cluster expands every icon back into place. */
+  tr.jobrow:hover .rowacts button, .rowacts:hover button {
+    width: 24px; opacity: 1; margin-left: 8px;
+  }
+  .rowacts button:first-child,
+  tr.jobrow:hover .rowacts button:first-child, .rowacts:hover button:first-child { margin-left: 0; }
+  .rowacts button:hover { transform: scale(1.2); }
+  .rowacts .star:hover, .rowacts .star.active { color: var(--warm); }
+  .rowacts .check:hover, .rowacts .check.active { color: var(--accent2); }
+  .rowacts .ignore:hover, .rowacts .ignore.active { color: var(--danger); }
+  /* Status look on the row itself. Starred gets a gold edge; checked and ignored
+     grey the row out (everything but the action cluster, which must stay lit). */
+  tr.starred td.fit { box-shadow: inset 3px 0 0 var(--warm); }
+  tr.checked td:not(.fit), tr.checked .fitval { opacity: .5; }
+  tr.ignored td:not(.fit), tr.ignored .fitval { opacity: .38; }
   td.fit { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
   td.role a { color: var(--txt); text-decoration: none; font-weight: 500; }
   td.role a:hover { color: var(--accent); text-decoration: underline; }
@@ -500,6 +539,24 @@ var sortDir = NATURAL_DIR.fit;
 // momentary "show only this" view, not a saved targeting rule.
 var ISOLATE = null;
 var RENDER_CAP = 600;
+// Per-job user mark — a single-state enum, persisted separately from the filter
+// state and keyed by the job's URL (the one stable id we have). Shape:
+// { url: "s" | "c" | "i" }. At most one mark per job; clicking the active one
+// again clears it. Marks only restyle the row (star = gold edge, check/ignore =
+// greyed out) — they never hide it.
+var STATUS_KEY = "gamedevboard.jobstatus.v2";
+var STATUS = {};
+function loadStatus() {
+  try { STATUS = JSON.parse(localStorage.getItem(STATUS_KEY) || "{}") || {}; }
+  catch (e) { STATUS = {}; }
+}
+function saveStatus() { try { localStorage.setItem(STATUS_KEY, JSON.stringify(STATUS)); } catch (e) {} }
+function jobStatus(url) { return STATUS[url] || ""; }
+function setStatus(url, key) {
+  if (STATUS[url] === key) delete STATUS[url];   // re-clicking the active mark clears it
+  else STATUS[url] = key;
+  saveStatus();
+}
 // Local dev: when served from localhost (e.g. `npm run board:dev`), the YAML is
 // the source of truth — the board mirrors data/targeting.json live and ignores
 // saved localStorage groups. On the public site this is false, so visitors' own
@@ -780,6 +837,16 @@ function render() {
       });
     });
     var tr = document.createElement("tr");
+    var st = jobStatus(j.url);   // "" | "s" | "c" | "i"
+    tr.className = "jobrow" +
+      (st === "s" ? " starred" : st === "c" ? " checked" : st === "i" ? " ignored" : "");
+    tr.dataset.url = j.url;
+    var acts =
+      '<div class="rowacts">' +
+        '<button type="button" class="star' + (st === "s" ? " active" : "") + '" data-act="s" title="Star this role">★</button>' +
+        '<button type="button" class="check' + (st === "c" ? " active" : "") + '" data-act="c" title="Mark as done / applied">✓</button>' +
+        '<button type="button" class="ignore' + (st === "i" ? " active" : "") + '" data-act="i" title="Ignore — grey this role out">✕</button>' +
+      '</div>';
     var tags = names.map(function (t) {
       return '<span class="tag' + (/^remote$/i.test(t) ? " remote" : "") + '">' + esc(t) + '</span>';
     }).join("");
@@ -798,7 +865,7 @@ function render() {
     var modeLine = modeBadge ? '<span class="modeline">' + modeBadge + '</span>' : '';
     var locCell = (locText || (modeBadge ? '' : "—")) + modeLine;
     tr.innerHTML =
-      '<td class="fit" style="color:' + fitColor(j._final) + '">' + j._final.toFixed(2) + '</td>' +
+      '<td class="fit" style="color:' + fitColor(j._final) + '">' + acts + '<span class="fitval">' + j._final.toFixed(2) + '</span></td>' +
       '<td class="co">' + coCell + '</td>' +
       '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.title) + '</a>' + deptLine + '</td>' +
       '<td class="loc">' + locCell + '</td>' +
@@ -1197,6 +1264,7 @@ function init(data) {
       "· updated " + new Date(data.generated).toISOString().slice(0, 10);
   }
   load();
+  loadStatus();
   // On localhost the projected YAML wins: seed groups straight from the file
   // (ignore any saved board state) so the page always reflects portals.yml.
   if (LIVE) GROUPS = defaultGroups();
@@ -1205,6 +1273,20 @@ function init(data) {
   buildGroups();
   bindFilterModal(); bindGroupModal();
   document.getElementById("addGroup").onclick = addGroup;
+
+  // Per-row quick actions (star / check / ignore) — one delegated handler on the
+  // tbody. Each button carries data-act; the row carries data-url. The mark is a
+  // single-state enum (setStatus swaps or clears it); re-rendering restyles the
+  // row and updates which icon reads as active.
+  document.getElementById("rows").addEventListener("click", function (e) {
+    var btn = e.target.closest(".rowacts button");
+    if (!btn) return;
+    var tr = btn.closest("tr");
+    var url = tr && tr.dataset.url;
+    if (!url) return;
+    setStatus(url, btn.getAttribute("data-act"));   // "s" | "c" | "i"
+    schedule({});                                   // restyle the row
+  });
 
   // Rebuild groups too, so each pill's live "view" count tracks the search box.
   var qEl = document.getElementById("q");
