@@ -9,6 +9,35 @@
 # Provider routing: greenhouse/lever/ashby auto-detect from careers_url; the
 # `provider: hitmarker` entries are explicit (Hitmarker is an aggregated board,
 # not one company — see providers/hitmarker.mjs).
+#
+# ── Resolution ladder (how an entry gets scanned, cheapest first) ─────
+# This file is DUAL-PURPOSE: it holds both scannable studios AND the backlog of
+# studios not yet wired up. scan.mjs scans the wired ones and silently skips the
+# rest, so you can park 1000 names here and resolve them little by little
+# (`/career-ops resolve`). An entry is on ONE of these rungs:
+#
+#   1. Shared ATS     provider: greenhouse|lever|ashby|teamtailor|... (or just
+#                     careers_url for auto-detect). One provider, many studios.
+#   2. Custom recipe  recipe: {kind: json|html, ...}  — homemade careers page,
+#                     captured once during a browser pass, replayed zero-token.
+#                     See providers/custom.mjs for the full schema. Example:
+#                       - name: Some Studio
+#                         careers_url: https://somestudio.com/careers
+#                         recipe:
+#                           kind: json
+#                           endpoint: https://somestudio.com/api/openings
+#                           list_path: data.jobs
+#                           fields: { title: position.title, url: applyUrl, location: office.city }
+#   3. Local parser   parser: {command: node, script: parsers/foo.mjs} — for
+#                     sites too weird for a recipe (pagination, auth, odd markup).
+#                     Code lives in a file; see providers/local-parser.mjs.
+#   4. Backlog / tag  Not scannable yet — kept visible so it's walkable + dedup'd:
+#                       status: unresolved          # not researched yet
+#                       recipe: { kind: blocked, reason: "Cloudflare JS gate" }
+#                       recipe: { kind: browser, reason: "needs Playwright pass" }
+#                     last_probe: 2026-06-08         # optional, set by resolve
+#
+# Tokenless dedup before adding anything: `node track-check.mjs "Name" [--url domain]`.
 
 tracked_companies:
 
@@ -1128,3 +1157,2866 @@ tracked_companies:
     careers_url: https://apply.workable.com/ace-games
     notes: "Istanbul, Turkey. ~6 roles (ASGC mining pass #4)."
     enabled: true
+
+  # ── Studios on Personio ───────────────────────────────────────────
+  # Public XML feed at {slug}.jobs.personio.de/xml. See providers/personio.mjs.
+  - name: Yager
+    provider: personio
+    careers_url: https://yager.jobs.personio.de
+    notes: "Berlin (The Cycle). Personio feed valid; 0 open when wired (resolve pass #6)."
+    enabled: true
+
+  # ── BACKLOG — unresolved (await /career-ops resolve) ──────────────
+  # Migrated from data/ats-research.md. These have no scannable feed yet, so
+  # scan.mjs skips them; /career-ops resolve walks them and assigns a provider,
+  # recipe, parser, or a blocked tag. Run `node track-check.mjs "Name"` first.
+
+  # status: unresolved — small Swedish studios, not yet individually researched
+  # (mostly tiny/custom/email per ats-research.md; low yield, but worth one probe).
+  - name: Flamebait Games
+    careers_url: https://www.flamebaitgames.com/jobs/
+    recipe: { kind: blocked, reason: "email-only (jobs@flamebaitgames.com); no ATS, no feed" }
+    last_probe: 2026-06-08
+    notes: "Skövde, Sweden (Passpartout). Resolve pass #5."
+  - name: Haenir Studio
+    recipe: { kind: browser, reason: "actively hiring (Blight: Survival) but no own careers feed found; postings via 80.lv/startup.jobs — find real portal in browser" }
+    last_probe: 2026-06-08
+    notes: "Stockholm, Behaviour-backed. Resolve pass #5."
+  - name: Wishfully
+    careers_url: https://wishfullystudios.com
+    recipe: { kind: blocked, reason: "no ATS; site cert expired; no active jobs" }
+    last_probe: 2026-06-08
+    notes: "Gothenburg (Planet of Lana). Resolve pass #5."
+  - name: Pounce Light
+    careers_url: https://pouncelight.games
+    recipe: { kind: blocked, reason: "2-person studio (Tiny Glade); landing page only, no careers/feed" }
+    last_probe: 2026-06-08
+    notes: "Sweden. Resolve pass #5."
+  - name: Ringtail Interactive
+    provider: teamtailor
+    careers_url: https://jobs.ringtailinteractive.com
+    last_probe: 2026-06-09
+    notes: "Stockholm, 51-200. Teamtailor (search-confirmed: jobs.ringtailinteractive.com/jobs). Resolve pass #7."
+  - name: Midjiwan
+    careers_url: https://midjiwan.com/career/
+    recipe: { kind: blocked, reason: "custom contact-form application (portfolio+CV), no ATS/feed; 'currently not looking'" }
+    last_probe: 2026-06-08
+    notes: "The Battle of Polytopia. Resolve pass #6."
+  - name: RobTop Games
+    careers_url: https://robtopgames.com
+    recipe: { kind: blocked, reason: "landing page only (Geometry Dash, solo dev); no careers section or feed" }
+    last_probe: 2026-06-08
+    notes: "Resolve pass #6."
+  - name: Striped Panda Studios
+    recipe: { kind: browser, reason: "no careers page found via WebSearch; own site not located — find site + ATS in a real browser" }
+    last_probe: 2026-06-08
+    notes: "Sweden. Resolve pass #6."
+  - name: Woodhill Interactive
+    recipe: { kind: browser, reason: "no careers page found via WebSearch (Aniimo dev); verify in browser" }
+    last_probe: 2026-06-08
+    notes: "Sweden. Resolve pass #6."
+  - name: Faravid Interactive
+    recipe: { kind: browser, reason: "no studio site/careers found via WebSearch; verify in browser" }
+    last_probe: 2026-06-08
+    notes: "Sweden. Resolve pass #6."
+  - name: Turborilla
+    provider: teamtailor
+    careers_url: https://jobs.turborilla.com
+    last_probe: 2026-06-09
+    notes: "Umeå (Mad Skills). Teamtailor (job URLs jobs.turborilla.com/jobs/{id}-slug = TT fingerprint). Resolve pass #7."
+  - name: Hello There Games
+    careers_url: https://hellothere.se
+    recipe: { kind: browser, reason: "site unreachable from this env (timeout via fetch + WebFetch); verify careers/ATS in browser" }
+    last_probe: 2026-06-08
+    notes: "Gothenburg (redirects to hellotheregames.com). Resolve pass #6."
+
+  # kind: browser — feed likely exists but unreachable from the CLI; needs a
+  # Playwright pass (then capture a recipe or assign a provider).
+  - name: Might and Delight
+    careers_url: https://mightanddelight.com
+    recipe: { kind: browser, reason: "Teamtailor per refs but no custom domain found (404s); jobs@ email" }
+    notes: "Stockholm (Shelter, Book of Travels)."
+  - name: Fall Damage
+    provider: teamtailor
+    careers_url: https://www.falldamagestudio.com
+    last_probe: 2026-06-09
+    notes: "Stockholm (5 open roles). Teamtailor (job URLs www.falldamagestudio.com/jobs/{id}-slug = TT fingerprint). Resolve pass #7."
+  - name: nDreams
+    careers_url: https://ndreams.com/careers
+    recipe: { kind: browser, reason: "Gatsby+DatoCMS site; job list rendered client-side by a DatoCmsCareersArchive block — careers page-data.json carries NO inline vacancies and HTML references no ATS host. Open the browser Network tab on /careers#careers-archive to capture the jobs XHR, then make a recipe: json." }
+    last_probe: 2026-06-09
+    notes: "Farnborough, UK — VR."
+  - name: Cloud Imperium Games
+    careers_url: https://cloudimperiumgames.wd1.myworkdayjobs.com/CIG_Global_Careers
+    recipe: { kind: browser, reason: "Workday cxs endpoint gated (HTTP 422) — confirm real cxs call in browser" }
+    notes: "Manchester — Star Citizen. ⭐"
+
+  # ── GDI 2025 import (Dataspelsbranschen Game Developer Index) ──────
+  # Swedish-industry directory, bulk-imported tokenlessly (import-gdi.mjs).
+  # status: unresolved → scan.mjs skips; /career-ops resolve walks them.
+  - name: A bit ago
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: A Creative Endeavor
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: A Million Flies
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: A Small Game
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Abrahamsson Flamm
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Acegikmo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Acino
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: ActFirst Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: ActiveQuiz Europe
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Activout
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Adly
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Advenimus
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Adventure Party Games Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Aegik
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Aftnareld
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Agera Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: AL Spelutveckling
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Aldgard Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Allscope
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Almost Fantastic
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: aMASE
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: AmberWing
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ampd
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Amplifier Boot Camp
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Amplifier Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: An Otter Team
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: anananas studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ancient Well Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Angry Demon Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Another Game Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Antediluvian Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Antler Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Aonic
+    provider: teamtailor
+    careers_url: https://careers.aonic.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe HIGH — own domain, 24 jobs). Resolve pass #7."
+  - name: AppsAlliance
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Apskeppet
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Arcade Mixtape
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Archipelago Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Arcmill
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Arctic Bones
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Argent Realms
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ark Island Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Aroko Game Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: art by rens
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Art in Heart
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ashes
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ashkan Namousi
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Astelsie
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Atlantic Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Atlantika Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: AtomicElbow
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Atvis
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Aurora Arts
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Aurora Punks
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Avokodo Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Axolot Games
+    provider: teamtailor
+    careers_url: https://axolotgames.teamtailor.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe MEDIUM, 5 jobs). Scrap Mechanic devs. Resolve pass #7."
+  - name: Baldheads Creative
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ball Lightning
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ballistic Pork
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bambino Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bandit Island Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Barnacles Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Battlecamp
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: BBS Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Beadhead Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Beardybird
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Beartwigs
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Beck and Branch Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Begagnade Rymdskepp
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bergavinter
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bewildermill
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Big Hearth
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: BigMood
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Binary Peak
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: BitBear
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bitfix
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bitwave
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Björkman Consulting Group
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bjuret
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Black Tundra Productions
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Black Voyage Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Blackdoor
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Blackdrop Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bläckfisk Förlag
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Blackfox Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Blamorama Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Blast Bit Enterprises
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Blastronaut
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bloom
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Blue Scarab Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bluell
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bmetrix Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: bNosy
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Book of travel
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Borrowed Soul Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Box Dragon
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Brandywise
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Breaker Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: BridgeCo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bridgeside Productions
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bright Gambit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Brikk Animation
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Brillianton
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Brimstone Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Broadside Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: BTR Goose
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bulbsort
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: BulletHell Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Bumble Byte
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Burning Planet Digital
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Caeiro
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Caketown Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Campcreation
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Campground Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Carlcadium
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Carry Castle
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cassius Creative
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Catalope Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: CF Digital
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Challenge GG
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Chamateur
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Chessiverse
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: chillbro studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Chimera Garden Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Choofun Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Christian Nordgren
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Chromatic ink
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Chronocle
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ciscal Holding
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: ClayCastle
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Clear River Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Clifftop Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cloudberry Pine
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Code Club
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Codeborn
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cognisim
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Coherence Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Coilworks
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cold Pixel
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cold Sector
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Colin Lane Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Collecting Smiles
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Conchimpur
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Contentasoft
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Corncrow Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Correcture Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cortopia
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cosmico
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Coulianos Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Counterspell
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Crackshell
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Crafty Ducks
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Creation Zero Point Holding
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Creative AI Nordic
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Creative Crowd
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Creative Vault
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cresthelm studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: CroolBright
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cross Reality International
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cryptic Club
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cuddle Monster
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Curiosa
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Cutting Corner Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dagg AI
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Daltitten
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dark Riviera
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dashy Studios
+    provider: teamtailor
+    careers_url: https://careers.dashystudios.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe HIGH — own domain, 3 jobs). Resolve pass #7."
+  - name: Datacraft Holding
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: David Marquardt Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dazed Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dead Astronauts
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dead People Dreaming
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Deadghost Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Deadly Serious Media Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: DeadToast Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Decaying Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Decemberborn
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Define Reality
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dejan Dimic
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Delayed Again
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Designlayout EGU
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Devkittens
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Devm Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Diagram Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Diatomic
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Diax Game
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Diffident Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Digiai
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Digital Awakening
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Digital Exception Sthlm
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Digital kittens
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Divine Robot
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Diving Swan Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: DIVR Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Doctor Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: dofhouse
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Domoore
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: DorDor
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: doublecap
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: DoubleMoose Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dovora Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Draconic Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Draw Three Cards
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dreamon Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dreamwalker Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: DualNorth
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Duck Tape
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Duckpond Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dunderbit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Dunkan
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: DVapps
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: E Games Invest Nordic
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Eagle games Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Early Morning Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Easy Trigger
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Echo Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Edyoutec
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: eelDev
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ekvall Games Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: El Huervo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Elda Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Elden Pixels
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Elder Grounds
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Eldring Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Electric Succubi
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Elemental Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Elmseld Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Elscar Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Elsewhere Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Elva Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ember Paw Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Emberoath Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Embracer Group
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: EMW Media
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Endjui Productions
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Enember Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Erik Svedäng
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Eternal Minds
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Evergreen IT
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Everlight Studio
+    provider: teamtailor
+    careers_url: https://career.everlight.se
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe HIGH — own domain; 0 open now). Resolve pass #7."
+  - name: Evermore Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Everywhen Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Exertis Ztorm
+    provider: teamtailor
+    careers_url: https://exertisztorm.teamtailor.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Game distribution. Resolve pass #7."
+  - name: ExoCorp
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: ExtraLives
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fablebit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fancade
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: FanLad
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fargo Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fast Travel Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: FCV Sverige
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Feather Force
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Feeble Minds
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Feral Flame Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: FeWes
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Filimundus
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Filmic Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Final Key Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Flarie
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Flip For Fate
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Folded Fox
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fourth Floor Nordic
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fragbite Group
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fredaikis
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Freezelance
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Frictional Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Friendbase
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Friendly Foe Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Friendly Mountain
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Frogsong Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Frojo Apps
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Frojo Investment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Frostcore
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Frostglade
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Froströk
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Frostspektrum Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Frozen Dev
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Frozen North Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Full Rogue
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fullscreen Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fully Multiplayer
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: FunDoubler
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: FunGI
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: FunRock Development
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fury Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Fuyu Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gamatron
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gambit Technologies
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Game Advisor Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Game Boost Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Game in Game
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Game Thrill
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Game-Hosting GH
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gamersgate
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gamescan Stockholm Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gamesclub International
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gamethrill
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gellyberry Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: GeoGuessr
+    provider: teamtailor
+    careers_url: https://geoguessr.teamtailor.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe MEDIUM, 5 jobs). Resolve pass #7."
+  - name: Ghetto Blaster
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Giantsbane
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gigantic Duck
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Giron Software
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Glass Rock Gathering
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: GleeMill
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Glorious Games Group
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gnista Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Go Maddox Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Goals
+    provider: teamtailor
+    careers_url: https://goals.teamtailor.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Football game, Stockholm. Resolve pass #7."
+  - name: GOES International
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gold Town Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Golf Dreams
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Good Decision
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Good Night Brave Warrior
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Good Old Pixel
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gr IT
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Graewolv
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Grand Pike
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Grannkampen
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: GraphN
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Green Leap Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Greenblade Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Grenaa Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Grey Tower
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Greyling Invest
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gridly
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Grip Jaw
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gro Play Digital
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: GSP golf
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Gumlin Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Guppek Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: GURATRON Industries
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Haderajan
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hamlab
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hängagubbe studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hapki
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Happi Papi
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Haraflax
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hati Hati Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hatokuma Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hatrabbit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hazel Interval
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Head Coach Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Heirloom Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hex Foundry Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hexagrammaton
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Heyman Atelje
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hihat Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hindelid Development
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hitbox Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Höganäs Spel
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Holmcom
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Holmgång
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hology Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: House of How Games Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Housefire Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Humla Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: HVNT Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Hyperspeed Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Icehelm
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ichigoichie
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: IdaP Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Idun Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: IG Consulting
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ilbiz Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Illusion Labs
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Illwinter Game Design
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ilo Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Imaginative Ones
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: IMGNRY International
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Impact Unified
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Imperial Playgrounds
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Incredible Concepts of Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: inDirection Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Infinite Mana Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Infinite Monkey Theorem
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Inntq
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Inre Natur Sverige
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Insanto Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Insert Coin
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Inzanity
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Iron Gate
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Irrbloss
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Itatake
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Iterative Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: ius innovation
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jacklin Game Consultancy
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jämmerdal Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: JE Software
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jhony Ljungstedt
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jidindi
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jim Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jitesoft
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: JN Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: JN Programutveckling
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Johra
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jona Marklund
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jonas Levin
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jopter Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jordi Creations
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: JPR Ventures
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jumpgate
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Jumping Pixels
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Junno Labs
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: just some games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Kaguya Project
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Kakigori
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Kalla frestelser
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Karl Johannisson
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Keepsake Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: KEP Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Kernel Iron
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: KFH Graphics
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Khazi Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Kibix
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Kickflip Digital
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Killmonday Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Kinda Brave Entertainment Group
+    provider: teamtailor
+    careers_url: https://kindabrave.teamtailor.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Publisher. Resolve pass #7."
+  - name: Kiwick Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Knackelibang Productions
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Knowledgegrind Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Kolesterol Cät Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: KoniWorx Animation
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Kroonatus
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Krufs Productions
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: LandFall Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lantto Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lavapotion
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: LeadTurn Gaming
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Learning Loop Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lejongrejer
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lekis
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Let it roll
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Level Stars
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lialum
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lilla Bas
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lilla Fezen
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Linbasta
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lingon Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Liopep
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Liquid Media
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Llama Lane
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Localize Direct
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Longhand Electric
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: LootLocker
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lost Hive Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lost Sock Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Low Peak Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: LOYD Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: LS Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ludohobo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ludosity
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lunar Madness
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lundqvist
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lurkit
+    provider: teamtailor
+    careers_url: https://lurkit.teamtailor.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Games marketing platform. Resolve pass #7."
+  - name: Lutra Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Lxip Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Maadwalk Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mabozo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: MachineGames Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Madcake Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Magnetic Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Magoo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Majewski Holding
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Malformation
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mambo Jambo Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mana Brigade
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Manaii World
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Manavind
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Martin Magni
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Massive Shapes
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mattias Wiking Development
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Maximum Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Med Svärd
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Megadib
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Merrybrain
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Metropolis Digital
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mibi Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Microcuts Holding
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mighty Magpie
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: MIKIM Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Millionth Line
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Miltonic Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mind Detonator
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: MindArk PE
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mindforce Game Lab
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ming Media
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Minoan Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Miracle Bread
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Miso Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: MistByte
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mistwave Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Modern Times Group MTG
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Modoyo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mojang
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Molndust Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Molntuss Spel
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Monsoon Bit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Monsuta
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Moon Mode
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Moon Rover
+    provider: teamtailor
+    careers_url: https://moonrover.teamtailor.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Resolve pass #7."
+  - name: Moonhood
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Moose on the Loose
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Moreish Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Morningdew Media
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Motorica
+    provider: teamtailor
+    careers_url: https://motorica.teamtailor.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe MEDIUM, 5 jobs). AI animation/mocap. Resolve pass #7."
+  - name: Motvind Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mount West Music
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Moxville
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: MU Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: MuddyPixel
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mudpike
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Multiscription
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: MVRX games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: My Left Head Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mystik
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Mystwood Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: MythoLogic Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nampa Design
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nattland Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: NBrigade Music
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nebryx
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Neckbolt
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Neighbourly Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nena Innovation
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Neogon Holding
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Neon Artery
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Neon Haze Game Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Neon Noroshi
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: NetherMoon Game Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Neuston
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: nevsram
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: New Galaxy Games Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nexile
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: NFG Nordic Forest Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nibiru Software
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: nication
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nifly Apps
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ninmark Soundworks
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nisshagen Advisory
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: NL Productions
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: NMBRS Production
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nodbrim Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Noodleloop
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nordic Game Resources
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nordic Game Ventures i Malmö
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nordic Stone Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nørdlight Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nordsken Handlingskraft
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: nornware
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: North Concept ArtStudio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: North Modding Company
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Northerner Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Northify
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: nostop horses
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Not My Jeans
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Noumenon Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Novamitech
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nuggets Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Nuttery Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Odd Raven Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Oddiko
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Odens Mind Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Odensity Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Off-Leash Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Offworld Corporation
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Oganon interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Oh My Godmode
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Okatima
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Oldways Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Omino Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Omniscapes Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: On Pixel Graphics
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: On the Outskirts
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: One Potato Kingdom
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Onsite Sport
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Oort Cloud
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Orion Eunix
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Orsak Verkan
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Oscar Makes Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Oskar Stålberg
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Outbreak Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Outlean
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Oxeye Game Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: P Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Palabit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Palebits
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Palomar Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Paperplay Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Parabel Game Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Parrexion Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pathos Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: PD company
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Perfect Random
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Perpetuum Media Sverige
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Petter Bergmar
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pfanne
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Photon Forge
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pica Nest
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pietro Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pigs Will Fly Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Piktiv
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pixel Ferrets
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pixel Pointer Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pixel tales
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pixelbite
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pixeldiet Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pixilated Production
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pixleon
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Planeshift Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Playcentric Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: PlayCom Game Design
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Playstack
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Playtrigger Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pley
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Plink&Plonk Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Plotagon Production
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: PMAbit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pointless Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Polarbit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Polarcade
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Polygongruvan
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Polyregular Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Power Challenge
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Powersnake
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pregame
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pretty Broken Code
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pretty Fly Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pretty Ugly
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: PrettyByte
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Previous
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Primary Hive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: ProCloud Media Invest
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Proga Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pronoia
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Psychic Sidekick
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pugstorm
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Pusselbit Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Puzzle Mill
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Puzzlebox Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: QA Design
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Qanyou
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: QDE Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Qiiwi Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: QuadArk
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Quel Solaar
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Quiz Anytime
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Radgivery
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Radical Sunset
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rain of Reflections
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rainbow Road
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Raketspel
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: RankOne Global
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rapix Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rashidi Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rau Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Räven
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Razzleberries
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Re-koup
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Reality Park
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Really Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Recycled Humans
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Red Cabin Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Red Cup games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Red Nerv
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Red Rose Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Red Vault Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Redbeet Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Redgrim
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Refold
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Remedy Entertainment Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rennert Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: RENNSPORT Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Reset Media
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rift Consulting
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rightsized Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: RimeLime
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: River End Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Robertson Nordic Partners
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rock A Role Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: RocketMoose Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rockheart Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Roden Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Romeo Invest
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: RoRo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rovio Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rowil
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rubycone
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rusty Pug Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Rymdfall
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Safe Lane Gaming
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sagoverse
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sam
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sannin Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Scion Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Screenput
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Scuttled Tech
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Semiwork Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sequel Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: SetShape Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Shaggy Dog Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Shanyar Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Shapefarm
+    provider: teamtailor
+    careers_url: https://shapefarm.teamtailor.com
+    last_probe: 2026-06-09
+    notes: "GDI 2025. Teamtailor (probe MEDIUM, 2 jobs). Resolve pass #7."
+  - name: Shaping Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sharcoal Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Shellander Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Shelter Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Shemshem Design
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Shima Services
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Short Circuit Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Short Infinity
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: SideQuest Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sidres
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Silent Factory
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Simogo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Simple Magic Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Simway
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sista Potatis
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sjöberg Game Consulting
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Skydiver Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Skyfox Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: SkyGoblin
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sleeper Cell
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sleipner Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: SLS Global
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Slugware
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Smojo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Snapbreak Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Snojken
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Solid Block of Power
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Solid Studios Creative Lab
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Solutions Skövde
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Solvarg
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Somatoform
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Some Giants North
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Something We Made
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sonigon
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Soundkids
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Soupmasters
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Source Empire
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: South North Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sozap
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Space Plunge
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spagank
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sparrowland
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sparsit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spelagon
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spelcell
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Speldosa Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spelkollektivet Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spelkraft Sthlm
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spelkultur i Sverige
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spelmakare Jens Nilsson
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spherical Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spiddekauga Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Spinoff Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Square Dreams
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Star Vault
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Steamice studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sticky Games STHLM
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Stockholm VR Center
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: STOFF Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: StoneLeap
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Strategy Mill
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Straw hat games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Strawberry Hill
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Stringent Ljud
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Stroboskop
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Stromb Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Strunke Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Stuck Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Studio Far Out Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Studio Knick-Knack
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Studio Malosi
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Studio Norberg Design
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Studio Northshade
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Studio Three Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Subfrost Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Surtrflame
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sutur
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Svantech Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Svartskägg
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Svavelstickan
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Swarm Creations
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Swedish Game Development
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Swiss Peak Ventures
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sydow Production
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Synical Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Synthetic Mind
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Sysiac games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tableflip Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Talawa Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tale Maker Productions STHLM
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tales
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tappily
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tealbit
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Team Jape
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Team Velocita
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tell No Lies
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tension technology
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ternios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: The Fine Arc Nordic
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: The Froghouse
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: The Fully Arcade
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: The Gang Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: The New Branch
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: The Notlanders
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: The Sleeping Machine
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Therese Kristoffer Publishing
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Thespian
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Think First
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Three Friends
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Thriving Ventures
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: ThunderAy
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tiger
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tinto Consulting
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tiny Nomads
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: TinyHill
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: To the Sky
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Toadman Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Toasty Leaf
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Toca Boca
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: ToeDev
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tomorroworld
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Toppluva
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Trancenders Media
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Transmuted Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: TRB Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: TreasureQuesting
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tretton Adam
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tricky Wispers
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Triple Hex
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Troisdim
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Trollheim Tveir
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: True Ending
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: TTK Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tuxedo Labs
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Two Foot Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Typosaurus
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Tyrant Films
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ullbors Illustrations
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Uncloudy Labs
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Undone Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Unity Technologies Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Unleash the Giraffe
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Unordinal
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Urban Binary
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Usurpator
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vanilla Sky Productions
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: VaragtP Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Varia Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vavel Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Velodrom
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vendel Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: vibynary
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vidunder Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Viktorart
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Villa Gorilla
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vinternatt Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Virtual Beasts
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Virtual Tree Design
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Virtuverse
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vishindo
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: VISIARC Inclusive Design
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: VisionPunk
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Visiontrick Media
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vobling
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vorto Gaming
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vovoid Media Technologies
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Vreski
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: VZ Holding
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wadonk
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: WalldoffStudios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Walrus Game Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wanderword i Sverige
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Warcry Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Warm Kitten
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Warpzone Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wayfare Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wayfinder Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wereviz
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Westre Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Whacky Mole Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Whale Peak Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: WhatAreBirds
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Whirlybird Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: White Imp Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: White Warlock
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: WhyKev
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wild Labs
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wildcore
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wildlife Studios Sweden
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wilnyl Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Windup Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Winteractive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wishful Whale
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wogglawooh Entertainment
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Woopaz
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Work with Kuba
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: wrlds technologies
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wrong Organ
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: WuzzyWizard Studio
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Wynne Technology
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Xpert Eleven
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: YanDesign
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Yangmei Studios
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: YCJY Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: YemSoft
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Yoger Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Yotsuba Interactive
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Zapray Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Zcooly
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Zero Inches
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Zoikum Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."
+  - name: Ztar Games
+    status: unresolved
+    notes: "GDI 2025 (Dataspelsbranschen)."

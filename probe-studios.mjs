@@ -8,9 +8,18 @@
 //
 // Usage:
 //   node probe-studios.mjs --names file.txt      # one "Name" or "Name|domain.com" per line
+//   node probe-studios.mjs --backlog             # probe studios.yml's own backlog
+//                                                #   (status: unresolved + recipe kind browser/unresolved)
+//   node probe-studios.mjs --backlog --include-blocked  # also re-probe kind: blocked
 //   node probe-studios.mjs --wikipedia-sweden     # pull the Wikipedia SE list
 //   node probe-studios.mjs --names f.txt --json   # machine-readable
 //   ... --quick                                   # slug-only ATS (skip custom-domain sweep)
+//
+// Tag-aware dedup: only studios that are actually SCANNABLE (real provider /
+// recipe json|html / parser / api / careers_url ATS) count as "already tracked"
+// and are skipped. Backlog entries (status: unresolved, recipe kind
+// blocked|browser|unresolved) are NOT skipped — they're the whole point of
+// re-probing, and live IN studios.yml. Mirrors track-check.mjs's classification.
 
 import { readFileSync, existsSync } from 'node:fs';
 import yaml from 'js-yaml';
@@ -22,6 +31,33 @@ const JSON_OUT = process.argv.includes('--json');
 const PREFIXES = ['jobs', 'career', 'careers', 'join', 'work', 'jobb'];
 const TLDS = ['com', 'se', 'io', 'games'];
 
+const SCANNABLE_RECIPE_KINDS = new Set(['json', 'html']);
+const TAG_RECIPE_KINDS = new Set(['blocked', 'browser', 'unresolved']);
+
+// Is this studios.yml entry already pullable by scan.mjs? Backlog tags are NOT
+// (so the probe should look at them). Recipe tag-kind wins over a careers_url —
+// a blocked/browser entry may still carry a careers_url hint.
+function isScannable(c) {
+  if (c.recipe && typeof c.recipe === 'object') {
+    if (SCANNABLE_RECIPE_KINDS.has(c.recipe.kind)) return true;
+    if (TAG_RECIPE_KINDS.has(c.recipe.kind)) return false;
+  }
+  if (c.parser?.command) return true;
+  if (c.provider) return true;
+  if (c.status === 'unresolved') return false;
+  if (c.api || c.careers_url) return true;
+  if (c.status) return false;
+  return false;
+}
+
+// Registrable-ish domain (last two labels) from a URL — for pCustomDomain hints.
+function registrableDomain(url) {
+  try {
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    return host.split('.').slice(-2).join('.');
+  } catch { return ''; }
+}
+
 // ── studios.yml dedup ───────────────────────────────────────────────
 function norm(s) { return (s || '').toLowerCase().replace(/\b(ab|inc|ltd|llc|studios?|games?|interactive|entertainment|group|the)\b/g, '').replace(/[^a-z0-9]+/g, ''); }
 function loadTracked() {
@@ -29,12 +65,31 @@ function loadTracked() {
   if (!existsSync('studios.yml')) return { names, hosts };
   const doc = yaml.load(readFileSync('studios.yml', 'utf8'));
   for (const c of doc.tracked_companies || []) {
+    if (!isScannable(c)) continue; // backlog entries stay probeable
     if (c.name) names.add(norm(c.name));
     if (typeof c.careers_url === 'string') {
       try { hosts.add(new URL(c.careers_url).hostname.toLowerCase().replace(/^www\./, '')); } catch {}
     }
   }
   return { names, hosts };
+}
+
+// ── backlog input (--backlog) ───────────────────────────────────────
+// Feed studios.yml's own un-scannable entries back in as probe targets, using
+// any careers_url as a domain hint. blocked entries are excluded unless
+// --include-blocked (they were judged dead; only re-probe on request).
+function loadBacklog() {
+  if (!existsSync('studios.yml')) return [];
+  const includeBlocked = process.argv.includes('--include-blocked');
+  const doc = yaml.load(readFileSync('studios.yml', 'utf8'));
+  const out = [];
+  for (const c of doc.tracked_companies || []) {
+    if (!c.name || isScannable(c)) continue;
+    if (c.recipe?.kind === 'blocked' && !includeBlocked) continue;
+    const domain = typeof c.careers_url === 'string' ? registrableDomain(c.careers_url) : '';
+    out.push({ name: c.name, domains: domain ? [domain] : [] });
+  }
+  return out;
 }
 
 // ── slug + domain generation ────────────────────────────────────────
@@ -178,6 +233,7 @@ async function loadNames() {
       out.push({ name: name.trim(), domains: d.map(x => x.trim()).filter(Boolean) });
     }
   }
+  if (process.argv.includes('--backlog')) out.push(...loadBacklog());
   // dedupe by name
   return [...new Map(out.map(e => [e.name.toLowerCase(), e])).values()];
 }
@@ -191,7 +247,7 @@ async function runPool(items, worker, limit) {
 
 const tracked = loadTracked();
 const names = await loadNames();
-process.stderr.write(`Probing ${names.length} studios (${QUICK ? 'quick' : 'full'}); ${tracked.names.size} already tracked...\n`);
+process.stderr.write(`Probing ${names.length} studios (${QUICK ? 'quick' : 'full'}); ${tracked.names.size} scannable, skipped...\n`);
 const results = await runPool(names, e => probe(e, tracked), CONCURRENCY);
 const hits = results.filter(r => r.ats);
 const skipped = results.filter(r => r.skipped);

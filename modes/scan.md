@@ -115,6 +115,50 @@ Durante el scan del agente, mantener en memoria el conjunto **`local_parser_ok`*
 
 **Cada empresa DEBE tener `careers_url` en portals.yml.** Si no la tiene, buscarla una vez, guardarla, y usar en futuros scans.
 
+### Nivel 1.5 — Capturar recipe (memoizar el scrape, GRATIS la próxima vez)
+
+**Cuando hagas un scrape con Playwright (Nivel 1) de una empresa SIN provider ATS
+(página de careers casera), captura su estructura y escríbela en `studios.yml`
+como un `recipe:`.** El scrape con AI ya está pasando — anotar la estructura es
+casi gratis y convierte ese coste único en un feed zero-token para siempre. La
+próxima vez `scan.mjs` la lee con `providers/custom.mjs`, sin tokens.
+
+Mientras la página está abierta, en la pestaña Network / código fuente busca, en
+este orden:
+1. **Un XHR que devuelve JSON** → `recipe: {kind: json}`. Apunta `endpoint`, el
+   path al array de jobs (`list_path`) y los nombres de campo (title/url/location).
+   Es el mejor caso: robusto y no se rompe con un rediseño de CSS.
+2. **Lista en HTML server-rendered** → `recipe: {kind: html}`. Apunta el selector
+   del contenedor repetido (`list_selector`) y los sub-selectores por campo
+   (`a@href` para el enlace).
+3. **Demasiado complejo** (paginación, token, markup anidado) → Tier 3 `parser:`
+   (script en `parsers/{slug}.mjs`, ver `providers/local-parser.mjs`).
+4. **Bloqueado / sin feed** (Cloudflare, JS-gate, solo email) → etiqueta
+   `recipe: {kind: blocked, reason: "<evidencia concreta>"}`. El `reason:` es
+   **obligatorio y específico** (p. ej. `email-only (jobs@studio.com); sin ATS` o
+   `Cloudflare JS-gate, sin endpoint JSON`) — es el registro que justifica no
+   volver a gastar tokens. Un fallo de red del CLI NO es motivo para `blocked`:
+   primero reintenta con WebSearch/WebFetch; si aun así no se confirma feed, usa
+   `kind: browser` (no `blocked`).
+
+Esquema completo en `providers/custom.mjs`. Ejemplo mínimo (JSON):
+
+```yaml
+- name: Some Studio
+  careers_url: https://somestudio.com/careers
+  recipe:
+    kind: json
+    endpoint: https://somestudio.com/api/openings
+    list_path: data.jobs
+    fields: { title: position.title, url: applyUrl, location: office.city }
+  last_probe: 2026-06-08
+```
+
+**Antes de añadir cualquier empresa, dedup tokenless:** `node track-check.mjs
+"Nombre" --url dominio.com`. Si responde `tracked`, no la investigues; si
+`backlog`, actualiza la entrada existente (no dupliques). Para procesar el
+backlog en lote: `/career-ops resolve` (modo `resolve`).
+
 ### Nivel 2 — ATS APIs / Feeds (COMPLEMENTARIO)
 
 Para empresas con API pública o feed estructurado **que no estén en `local_parser_ok`**, usar la respuesta JSON/XML como complemento rápido de Nivel 1. Es más rápido que Playwright y reduce errores de scraping visual.

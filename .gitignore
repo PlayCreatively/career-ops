@@ -23,6 +23,13 @@ jds/*
 writing-samples/*
 !writing-samples/README.md
 
+# Interview prep — everything here is User Layer (private per DATA_CONTRACT):
+# company research/intel reports AND your filled story-bank with real STAR
+# stories. Only the empty story-bank.template.md is tracked, as shared
+# scaffolding the system copies to story-bank.md on first use.
+interview-prep/*
+!interview-prep/story-bank.template.md
+
 # User config and customization (never auto-updated)
 config/profile.yml
 # portals.yml holds your PERSONAL targeting/filters only — kept private (ignored).

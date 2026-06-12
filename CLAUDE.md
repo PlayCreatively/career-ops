@@ -129,6 +129,8 @@ When using the [Gemini CLI](https://github.com/google-gemini/gemini-cli), the fo
 
 If `modes/_profile.md` is missing, copy from `modes/_profile.template.md` silently. This is the user's customization file — it will never be overwritten by updates.
 
+Likewise, if `interview-prep/story-bank.md` is missing, copy from `interview-prep/story-bank.template.md` silently. The story bank holds the user's real STAR stories and is gitignored (private); only the template is tracked.
+
 **If ANY of these is missing, enter onboarding mode.** Do NOT proceed with evaluations, scans, or any other mode until the basics are in place. Guide the user step by step:
 
 #### Step 1: CV (required)
@@ -255,6 +257,7 @@ Default modes are in `modes/` (English). Additional language-specific modes are 
 | Asks about application status | `tracker` |
 | Fills out application form | `apply` |
 | Searches for new offers | `scan` |
+| Wants to wire up unresolved studios (backlog → zero-token feed) | `resolve` |
 | Processes pending URLs | `pipeline` |
 | Batch processes offers | `batch` |
 | Asks about rejection patterns or wants to improve targeting | `patterns` |
