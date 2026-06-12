@@ -1,24 +1,28 @@
 name: Refresh job board
 
-# Lives on main because GitHub only fires `schedule:` triggers from the default
-# branch — but everything this workflow DOES targets the gh-pages branch. It
-# pulls the latest studio list from main, re-runs the zero-token scan, and only
-# updates the public board if that scan succeeds. main itself never receives a
-# commit from this job: all churn (the merge + the jobs.json snapshot) lands on
-# gh-pages.
+# The public board lives entirely on main now. GitHub Pages is configured as
+# build_type: workflow, so it serves THIS workflow's uploaded artifact — there
+# is no gh-pages branch and no data committed to the repo. Every run scans
+# fresh, builds site/ with that snapshot, and deploys. main therefore carries
+# the board CODE but never the daily DATA (jobs.json / targeting.json are
+# gitignored and exist only on the runner and in the deployed artifact).
 
 on:
   schedule:
     - cron: '17 6 * * *'   # daily, ~06:17 UTC
   workflow_dispatch: {}      # manual "Run workflow" button
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'            # site edits redeploy fast (still scans for data)
 
-# Don't pile up runs; let an in-flight refresh finish before the next starts.
+# Don't pile up runs; let an in-flight refresh/deploy finish before the next.
 concurrency:
-  group: job-board-refresh
+  group: job-board
   cancel-in-progress: false
 
 permissions:
-  contents: write   # push the snapshot to gh-pages
+  contents: read    # nothing is pushed back; the artifact is the only output
   pages: write      # deploy to GitHub Pages
   id-token: write   # required by deploy-pages
 
@@ -33,25 +37,7 @@ jobs:
       # browser download triggered by `npm install`.
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
     steps:
-      - name: Checkout gh-pages (full history, so the merge works)
-        uses: actions/checkout@v6
-        with:
-          ref: gh-pages
-          fetch-depth: 0
-
-      - name: Configure git identity
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Merge latest main into gh-pages
-        # Brings in new studios + scanner changes. The conflict-free invariant
-        # (site/ exists only on gh-pages; studios/scanner edited only on main)
-        # means this never conflicts. If it ever does, the job fails here and
-        # nothing is pushed — main's change does NOT reach the live board.
-        run: |
-          git fetch origin main
-          git merge --no-edit origin/main
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
@@ -60,16 +46,15 @@ jobs:
       - name: Install scanner deps
         run: npm install --no-audit --no-fund
 
-      - name: Scan test + regenerate snapshot
-        # THE GATE. Runs the whole scan against the just-merged main. A crash,
-        # a broken provider, or a bad studios.yml exits non-zero and the job
-        # stops here — so the push + deploy below never run and the merge is
-        # discarded with the runner. The live board keeps its last good state.
+      - name: Scan + regenerate snapshot (THE GATE)
+        # Runs the whole zero-token scan. A crash, a broken provider, or a bad
+        # studios.yml exits non-zero and the job stops here — so the deploy below
+        # never runs and the live board keeps its last good state.
         #
         # --dry-run keeps the scan from writing the personal data/pipeline.md +
-        # scan-history.tsv (which don't exist in this clean checkout — they're
-        # gitignored). The full scan still runs and --json still writes the
-        # snapshot, so this remains a real end-to-end test of the scanner.
+        # scan-history.tsv (gitignored, absent in this clean checkout). The full
+        # scan still runs and --json still writes the snapshot, so this stays a
+        # real end-to-end test of the scanner.
         run: node scan.mjs --no-filter --json site/data/jobs.json --dry-run
 
       - name: Validate snapshot is sane
@@ -80,19 +65,8 @@ jobs:
 
       - name: Project board default filters
         # Regenerate the board's default filter buckets from their editable YAML
-        # source so the live site always matches targeting.default.yml — no manual
-        # `npm run board:default` needed, and a stray/personal targeting.json can't
-        # persist (this overwrites it with the neutral default every refresh).
+        # source so the live site always matches targeting.default.yml.
         run: node project-targeting.mjs targeting.default.yml site/data/targeting.json
-
-      - name: Commit & push to gh-pages
-        # Only reached when the scan passed. Pushes the merge commit (fresh
-        # studios) plus the new snapshot + projected default filters. [skip ci]
-        # is belt-and-suspenders; GITHUB_TOKEN pushes don't retrigger workflows.
-        run: |
-          git add site/data/jobs.json site/data/targeting.json
-          git commit -m "chore: refresh job board snapshot [skip ci]" || echo "No snapshot change to commit"
-          git push origin HEAD:gh-pages
 
       - name: Upload Pages artifact (only the board, not the repo)
         uses: actions/upload-pages-artifact@v3

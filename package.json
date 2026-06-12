@@ -20,7 +20,7 @@
     "board:default": "node project-targeting.mjs targeting.default.yml site/data/targeting.json",
     "board:watch": "node project-targeting.mjs --watch",
     "board:dev": "node board-dev.mjs",
-    "board:local": "node scan.mjs --no-filter --dry-run --json site/data/jobs.local.json",
+    "board:local": "node scan.mjs --no-filter --dry-run --json site/data/jobs.json",
     "patterns": "node analyze-patterns.mjs",
     "gemini:eval": "node gemini-eval.mjs"
   },

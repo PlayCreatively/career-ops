@@ -1285,18 +1285,13 @@ function fetchSeed() {
     })
     .catch(function () { return null; });
 }
-// The snapshot is resolved in the SAME two tiers as the filter seed:
-// data/jobs.local.json (a gitignored personal snapshot written by
-// `npm run board:local`) wins; otherwise the committed public data/jobs.json.
-// In production no .local file is deployed, so the fetch 404s and falls back —
-// the public board always shows the committed snapshot.
+// The snapshot (data/jobs.json) is never committed — it's gitignored and
+// rebuilt fresh: by CI into the deployed Pages artifact, and by
+// `npm run scan` / `npm run board:local` for local dev. Same filename in both
+// contexts; they never collide because they live on different machines.
 function fetchJobs() {
-  return fetch("data/jobs.local.json", { cache: "no-store" })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (local) {
-      if (local) return local;
-      return fetch("data/jobs.json").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
-    });
+  return fetch("data/jobs.json", { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
 }
 Promise.all([fetchJobs(), fetchSeed()])
   .then(function (res) { DEFAULT_GROUPS_SEED = res[1]; init(res[0]); })

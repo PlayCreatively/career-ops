@@ -53,8 +53,10 @@ package-lock.json
 /data
 asgc-jobs.json
 
+# Board: generated public data — never committed. main carries no daily job
+# data; CI rebuilds these fresh into the Pages artifact on every deploy, and
+# `npm run scan` / `board:local` regenerate them for local dev.
+site/data/jobs.json
+site/data/targeting.json
 # Board: personal filter override projected by board:dev (keep private)
 site/data/targeting.local.json
-# Board: personal job snapshot written by board:local (keep private — the
-# committed site/data/jobs.json is the public one, refreshed only by CI)
-site/data/jobs.local.json

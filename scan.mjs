@@ -864,18 +864,12 @@ async function main() {
     // seeds its default filters from the SAME definition the scanner uses — no
     // second, hand-maintained copy. Only the new `groups:` schema is projected
     // (the board speaks groups); a legacy flat config emits nothing and the
-    // board keeps its built-in fallback.
-    //
-    // The sibling's locality MIRRORS the jobs file: a personal jobs.local.json
-    // (gitignored) projects targeting.local.json (also gitignored — the board's
-    // preferred seed), while the committed jobs.json projects the neutral
-    // targeting.json. This is what lets `npm run board:local` refresh a personal
-    // web view WITHOUT clobbering the committed public default.
+    // board keeps its built-in fallback. Both jobs.json and targeting.json are
+    // gitignored generated data, so this never clobbers anything committed; the
+    // board's preferred personal seed (targeting.local.json) comes from
+    // `npm run board:dev` and is left untouched here.
     if (Array.isArray(config.targeting?.groups)) {
-      const targetingBase = /\.local\.json$/.test(path.basename(jsonPath))
-        ? 'targeting.local.json'
-        : 'targeting.json';
-      const targetingPath = path.join(path.dirname(jsonPath) || '.', targetingBase);
+      const targetingPath = path.join(path.dirname(jsonPath) || '.', 'targeting.json');
       writeFileSync(targetingPath, JSON.stringify({ groups: config.targeting.groups }));
       console.log(`Targeting: ${config.targeting.groups.length} groups → ${targetingPath}`);
     }
