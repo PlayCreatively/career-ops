@@ -112,12 +112,21 @@
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .row .label { color: var(--dim); font-size: 12px; text-transform: uppercase;
     letter-spacing: 0.5px; width: 112px; flex: none; }
+  .searchbox { position: relative; flex: 1; min-width: 220px; display: flex; }
   input[type=search] {
-    flex: 1; min-width: 220px; background: var(--panel); border: 1px solid var(--line);
-    color: var(--txt); padding: 10px 12px; border-radius: 10px; font-size: 14px;
+    flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--line);
+    color: var(--txt); padding: 10px 34px 10px 12px; border-radius: 10px; font-size: 14px;
     box-shadow: var(--shadow); outline: none; transition: border-color .15s;
   }
   input[type=search]:focus { border-color: var(--accent); }
+  input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+  .searchbox .clearq {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    border: none; background: transparent; color: var(--dim); cursor: pointer;
+    font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 6px; display: none;
+  }
+  .searchbox .clearq:hover { color: var(--txt); }
+  .searchbox.has-value .clearq { display: block; }
   select {
     background: var(--panel); border: 1px solid var(--line); color: var(--txt);
     padding: 9px 10px; border-radius: 10px; font-size: 13px; box-shadow: var(--shadow);
@@ -137,6 +146,14 @@
   }
   .btn:hover { border-color: var(--accent); }
   .btn.clear { color: var(--dim); }
+  .split { display: inline-flex; }
+  .split .btn { box-shadow: none; }
+  .split .clear { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .split .restore {
+    border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: none;
+    color: var(--dim); padding-left: 10px; padding-right: 10px; font-size: 15px;
+  }
+  .split .restore:hover { color: var(--txt); }
   /* Boost keywords */
   #boostBox { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 280px; }
   .chips { flex: 1; display: flex; flex-wrap: wrap; gap: 16px 12px; align-items: center; padding-top: 8px; }
@@ -163,6 +180,25 @@
   .bpill .rate { font-variant-numeric: tabular-nums; font-size: 12px; opacity: .75; }
   .bpill .kw { color: inherit; font-weight: 600; }
   .bpill .n { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 11px; opacity: .7; }
+  /* Dual count rendered as a small diagonal fraction — view (raised) / total
+     (lowered). Each number is a click target that isolates the list to that set. */
+  .bpill .cnt { display: inline-flex; align-items: center; margin-left: 3px;
+    font-variant-numeric: tabular-nums; font-size: 9px; line-height: 1; }
+  .bpill .cnt a { cursor: pointer; color: currentColor; opacity: .55; padding: 0 1px; }
+  .bpill .cnt a:hover, .bpill .cnt a:focus-visible { opacity: 1; text-decoration: underline; outline: none; }
+  .bpill .cnt a.iso { color: var(--warm); opacity: 1; font-weight: 700; text-decoration: underline; }
+  .bpill .cnt .cv { transform: translateY(-3px); }
+  .bpill .cnt .ct { transform: translateY(3px); }
+  .bpill .cnt .cslash { opacity: .4; transform: rotate(10deg); }
+  /* A lone total (catch-all / hard-exclude) isn't part of a fraction, so it drops
+     the ±offset AND the squashed line-height:1 the split needs — giving it the
+     pill's normal line-height centres its digits on the same midline as the label
+     text (line-height:1 alone reads a hair low). */
+  .bpill .cnt.one { font-size: 11px; line-height: 1.6; }
+  .bpill .cnt.one .ct { transform: none; }
+  /* Isolate lens active: the chosen pill is ringed, every other pill is greyed. */
+  .bpill.dimmed { opacity: .3; }
+  .bpill.isolating { box-shadow: 0 0 0 2px var(--warm); }
   /* Per-axis combine-mode toggle, sits to the left of the axis label. */
   .axmode { background: var(--panel2); border: 1px solid var(--line); color: var(--dim);
     font-size: 10px; line-height: 1; text-transform: uppercase; letter-spacing: .5px;
@@ -179,6 +215,24 @@
   .bpill:hover .edit, .bpill .edit:focus-visible { opacity: 1; }
   .bpill .edit:hover { color: var(--warm); border-color: var(--warm); }
   @media (hover: none) { .bpill .edit { opacity: 1; } }
+  /* Eye toggle: mirror of the edit pencil on the top-LEFT edge. Momentarily
+     mutes a filter (it stops counting toward the fit) without losing its weight.
+     Hidden until hover, but always shown while muted so it can be un-muted. */
+  .bpill .eye { position: absolute; top: -9px; left: -9px; width: 20px; height: 20px;
+    padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; cursor: pointer; background: var(--panel); color: var(--dim);
+    border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 10px; line-height: 1;
+    opacity: 0; transition: opacity .12s, color .12s, border-color .12s; }
+  .bpill:hover .eye, .bpill .eye:focus-visible { opacity: 1; }
+  .bpill .eye:hover { color: var(--accent2); border-color: var(--accent2); }
+  @media (hover: none) { .bpill .eye { opacity: 1; } }
+  /* A muted pill reads as dimmed, with its eye kept visible and "off" — a
+     diagonal slash drawn across the glyph (an eye-off icon), not a colour change. */
+  .bpill.muted { opacity: .5; }
+  .bpill.muted .eye { opacity: 1; }
+  .bpill.muted .eye::after { content: ""; position: absolute; left: 2px; right: 2px; top: 50%;
+    height: 2px; border-radius: 2px; background: currentColor;
+    transform: translateY(-50%) rotate(-45deg); }
   /* Editable group name (sits after the combine toggle in a row label). */
   .gname { background: none; border: none; padding: 0; font: inherit; cursor: pointer;
     color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
@@ -228,8 +282,12 @@
   th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
     cursor: pointer; white-space: nowrap; }
+  th[data-sort].sorted { color: var(--accent); }
+  th[data-sort].sorted::after { content: " ↓"; font-size: 10px; }
+  th[data-sort].sorted.asc::after { content: " ↑"; }
   tr:hover td { background: var(--panel2); }
   th:hover { background: var(--panel2); }
+  td.fit { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
   td.role a { color: var(--txt); text-decoration: none; font-weight: 500; }
   td.role a:hover { color: var(--accent); text-decoration: underline; }
   td.co { color: var(--accent2); white-space: nowrap; }
@@ -239,9 +297,6 @@
   .tag.remote { color: var(--accent2);
     border-color: color-mix(in srgb, var(--accent2) 40%, var(--line));
     background: color-mix(in srgb, var(--accent2) 12%, transparent); }
-  .tag.boost { color: var(--warm);
-    border-color: color-mix(in srgb, var(--warm) 40%, var(--line));
-    background: color-mix(in srgb, var(--warm) 13%, transparent); }
   .empty { padding: 40px; text-align: center; color: var(--dim); }
   .more { padding: 16px; text-align: center; color: var(--dim); font-size: 13px; }
   footer { color: var(--dim); font-size: 12px; padding: 24px; text-align: center; border-top: 1px solid var(--line); }
@@ -281,18 +336,25 @@ window.__themeKey = "gamedevboard.theme";
   <div class="controls">
     <div class="row">
       <span class="label">Search</span>
-      <input id="q" type="search" placeholder="Search role or studio…" autocomplete="off">
+      <span class="searchbox">
+        <input id="q" type="search" placeholder="Search role or studio…" autocomplete="off">
+        <button type="button" class="clearq" id="clearQ" aria-label="Clear search" title="Clear search">×</button>
+      </span>
       <select id="sort">
-        <option value="fit">Sort: Best match</option>
+        <option value="fit">Sort: Rating</option>
         <option value="company">Sort: Studio A–Z</option>
         <option value="role">Sort: Role A–Z</option>
+        <option value="location">Sort: Location A–Z</option>
       </select>
-      <button class="btn clear" id="reset">Clear all</button>
+      <span class="split">
+        <button class="btn clear" id="reset">Clear all labels</button>
+        <button class="btn restore" id="restore" title="Restore the default labels from targeting.yml" aria-label="Restore default labels">↻</button>
+      </span>
     </div>
     <div id="groups"></div>
     <div class="row"><button class="btn addgroup" id="addGroup">+ new group</button></div>
     <div class="row"><span class="label"></span>
-      <div class="hint">Each row is a <b>group</b> — a named bucket of filters matched against one field (role, studio, location…). Click the group name to rename it, change its field, or delete it; the button by it combines its matched ratings — <b>max</b> (best wins) · <b>min</b> (worst wins) · <b>avg</b>. Every filter is a <b>rating</b> that orders “Best match” — it widens, it doesn't restrict. Click a filter to cycle <b>inactive ▸ on (+) ▸ filter-out</b>; tap the ✎ to edit its name, keyword list, and a fine-grained 0–2 weight (<b>−</b> at 0 hides matches, <b>~</b> below 1 lowers, <b>+</b> 1 is on / above boosts). A <b>catch-all</b> filter matches when nothing else in its group does.</div>
+      <div class="hint">Each row is a <b>group</b> — a named bucket of filters matched against one field (role, studio, location…). Click the group name to rename it, change its field, or delete it; the button by it combines its matched ratings — <b>max</b> (best wins) · <b>min</b> (worst wins) · <b>avg</b>. Every filter is a <b>rating</b> that feeds the <b>Rating</b> column — sort by it (or any header) to order the table. Click a filter to cycle <b>inactive ▸ on (+) ▸ filter-out</b>. Each pill shows a <b>view⁄total</b> count — how many of its matches are in the current list vs. in total; click either number to <b>isolate</b> the list to just that set (left = within your other filters, right = all of them). Tap 👁 to <b>mute</b> a filter momentarily (ignore it without losing its weight); tap the ✎ to edit its name, keyword list, and a fine-grained 0–2 weight (<b>−</b> at 0 hides matches, <b>~</b> below 1 lowers, <b>+</b> 1 is on / above boosts). A <b>catch-all</b> filter matches when nothing else in its group does.</div>
     </div>
   </div>
 
@@ -300,6 +362,7 @@ window.__themeKey = "gamedevboard.theme";
 
   <table id="tbl">
     <thead><tr>
+      <th data-sort="fit" title="Rank by fit rating (best first)">Rating</th>
       <th data-sort="company">Studio</th>
       <th data-sort="role">Role</th>
       <th data-sort="location">Location</th>
@@ -403,6 +466,11 @@ var FBYID = {};           // filterId -> {f: filter, g: group}
 var MODES = ["max", "min", "avg"];
 var FIELDS = ["title", "company", "location", "any"];
 var sortMode = "fit";
+// Isolate lens — null, or { fid, total }. Set by clicking a pill's view/total
+// number; restricts the visible list to that one filter's matches (see passes()).
+// Transient (not persisted): filter ids are regenerated each load, and it's a
+// momentary "show only this" view, not a saved targeting rule.
+var ISOLATE = null;
 var RENDER_CAP = 600;
 // Local dev: when served from localhost (e.g. `npm run board:dev`), the YAML is
 // the source of truth — the board mirrors data/targeting.json live and ignores
@@ -415,9 +483,9 @@ var DEFAULT_W = 0.5;
 
 var _idc = 0;
 function nid() { return "f" + (++_idc); }
-function mkFilter(name, keywords, weight, isElse) {
+function mkFilter(name, keywords, weight, isElse, muted) {
   return { id: nid(), name: name || "", keywords: keywords || [],
-           weight: (weight == null ? null : weight), else: !!isElse };
+           weight: (weight == null ? null : weight), else: !!isElse, muted: !!muted };
 }
 function mkGroup(name, field, weight, filters) {
   return { id: nid(), name: name, field: field, combine: "min",
@@ -433,7 +501,7 @@ function groupsFromSeed(seed) {
   return ((seed && seed.groups) || []).map(function (g) {
     var grp = mkGroup(g.name, g.field, g.weight, (g.filters || []).map(function (f) {
       return mkFilter(f.name, (f.keywords || []).slice(),
-        f.weight == null ? null : f.weight, !!f.else);
+        f.weight == null ? null : f.weight, !!f.else, !!f.muted);
     }));
     grp.combine = MODES.indexOf(g.combine) !== -1 ? g.combine : "min";
     return grp;
@@ -446,6 +514,7 @@ function defaultGroups() { return groupsFromSeed(DEFAULT_GROUPS_SEED); }
 function reindex() {
   FBYID = {};
   GROUPS.forEach(function (g) { g.filters.forEach(function (f) { compileFilter(f); FBYID[f.id] = { f: f, g: g }; }); });
+  if (ISOLATE && !FBYID[ISOLATE.fid]) ISOLATE = null;   // drop a lens whose filter is gone
 }
 // Compile a filter's keywords into reusable RegExps once (same semantics as the
 // scanner, via Rank.keyToRegExp). Without this, recompute() rebuilt every regex
@@ -479,7 +548,7 @@ function sanitizeGroups(arr) {
         typeof f.name === "string" ? f.name : "",
         Array.isArray(f.keywords) ? f.keywords.filter(function (k) { return typeof k === "string" && k; }) : [],
         (typeof f.weight === "number") ? Math.max(0, Math.min(2, f.weight)) : null,
-        isElse);
+        isElse, !!f.muted);
     });
     var ng = mkGroup(typeof g.name === "string" ? g.name : "Group", field, weight, filters);
     ng.combine = combine;
@@ -504,7 +573,8 @@ function prep(jobs) {
       // fieldText); _search backs the free-text box; _mem caches matches.
       title: j.title, url: j.url, company: j.company, location: loc,
       _search: (title + " " + co + " " + loc).toLowerCase(),
-      _mem: {},   // groupId -> [filterId,...] (filled by recompute)
+      _mem: {},      // groupId -> [filterId,...] of VISIBLE (non-muted) matches
+      _memFull: {},  // groupId -> [filterId,...] ignoring mute — for pill counts
     };
   });
 }
@@ -514,13 +584,27 @@ function prep(jobs) {
 // delegated to Rank.matchGroup — the SAME membership + catch-all logic the Node
 // scanner uses (rank.mjs) — so the board and scanner can never drift. Call
 // whenever groups/keywords/fields change.
+// A muted filter is momentarily disabled: we drop it from the group BEFORE
+// matching, so the scorer behaves exactly as if it weren't defined (a job that
+// only matched a muted filter falls through to the catch-all, etc.). `_mem` is
+// built from this visible view; `_memFull` keeps the unmuted membership so pill
+// counts still report how many jobs each muted filter *would* catch.
+function visibleGroups() {
+  return GROUPS.map(function (g) {
+    var c = {}; for (var k in g) c[k] = g[k];
+    c.filters = g.filters.filter(function (f) { return !f.muted; });
+    return c;
+  });
+}
 function recompute() {
+  var vis = visibleGroups();
   ALL.forEach(function (j) {
-    var mem = {};
-    GROUPS.forEach(function (g) {
-      mem[g.id] = Rank.matchGroup(j, g).map(function (f) { return f.id; });
+    var mem = {}, memFull = {};
+    GROUPS.forEach(function (g, gi) {
+      mem[g.id] = Rank.matchGroup(j, vis[gi]).map(function (f) { return f.id; });
+      memFull[g.id] = Rank.matchGroup(j, g).map(function (f) { return f.id; });
     });
-    j._mem = mem;
+    j._mem = mem; j._memFull = memFull;
   });
 }
 
@@ -550,32 +634,56 @@ function excluded(j) {
     });
   });
 }
-// True if the job rode any above-neutral boost (for the ★ tag).
-function isBoosted(j) {
-  return GROUPS.some(function (g) {
-    return (j._mem[g.id] || []).some(function (fid) {
-      var rec = FBYID[fid]; return rec && rec.f.weight != null && rec.f.weight > 1;
-    });
-  });
+// Colour the Rating number the way the pills are coloured: red (--danger) at 0
+// → green (--accent2) at the neutral 1, then gold (--warm) for anything boosted
+// above 1. This carries the old "★ boosted" signal inline in the number itself.
+function fitColor(w) {
+  if (w > 1) return "var(--warm)";
+  var t = w <= 0 ? 0 : (w >= 1 ? 1 : w);
+  return "color-mix(in srgb, var(--accent2) " + Math.round(t * 100) + "%, var(--danger))";
 }
 
+// True if a job is a (membership) match of a given filter — uses _memFull so it
+// ignores mute (a muted filter's pill still tallies and isolates its real set).
+function jobMatchesFilter(j, fid) {
+  var rec = FBYID[fid]; if (!rec) return false;
+  return (j._memFull[rec.g.id] || []).indexOf(fid) !== -1;
+}
+// The list WITHOUT the isolate lens: search box + hard-excludes only. Pill
+// `view` counts use this, so they reflect your actual filters and DON'T collapse
+// onto the isolated set when you click a number.
+function passesBase(j) {
+  var q = document.getElementById("q").value.trim().toLowerCase();
+  if (q && j._search.indexOf(q) === -1) return false;
+  if (excluded(j)) return false;
+  return true;
+}
 function passes(j) {
   var q = document.getElementById("q").value.trim().toLowerCase();
   if (q && j._search.indexOf(q) === -1) return false;
+  // Isolate lens (set by clicking a pill's view/total number): restrict the list
+  // to one filter's matches. `total` mode shows EVERY match (even ones your hard-
+  // excludes would normally hide); plain mode keeps the other excludes applied.
+  if (ISOLATE) {
+    if (!jobMatchesFilter(j, ISOLATE.fid)) return false;
+    if (ISOLATE.total) return true;
+  }
   if (excluded(j)) return false;
   return true;
 }
 
 function render() {
   var filtered = ALL.filter(passes);
-  var boosted = {};
-  if (sortMode === "fit") {
-    filtered.forEach(function (j) { j._final = fitOf(j); if (isBoosted(j)) boosted[j.url] = true; });
-    filtered.sort(function (a, b) { return b._final - a._final || a.company.localeCompare(b.company); });
-  } else if (sortMode === "company") {
+  // The rating is always shown, so always compute it (not just when sorting by fit).
+  filtered.forEach(function (j) { j._final = fitOf(j); });
+  if (sortMode === "company") {
     filtered.sort(function (a, b) { return a.company.localeCompare(b.company) || a.title.localeCompare(b.title); });
-  } else {
+  } else if (sortMode === "role") {
     filtered.sort(function (a, b) { return a.title.localeCompare(b.title); });
+  } else if (sortMode === "location") {
+    filtered.sort(function (a, b) { return a.location.localeCompare(b.location) || b._final - a._final; });
+  } else {
+    filtered.sort(function (a, b) { return b._final - a._final || a.company.localeCompare(b.company); });
   }
 
   var rows = document.getElementById("rows");
@@ -587,16 +695,16 @@ function render() {
     var names = [];
     GROUPS.forEach(function (g) {
       (j._mem[g.id] || []).forEach(function (fid) {
-        var rec = FBYID[fid]; if (rec && !rec.f.else && rec.f.name) names.push(rec.f.name);
+        var rec = FBYID[fid]; if (!rec || rec.f.else) return;
+        var label = Rank.filterLabel(rec.f); if (label) names.push(label);
       });
     });
     var tr = document.createElement("tr");
-    var tags = "";
-    if (boosted[j.url]) tags += '<span class="tag boost">★ boosted</span>';
-    tags += names.map(function (t) {
+    var tags = names.map(function (t) {
       return '<span class="tag' + (/^remote$/i.test(t) ? " remote" : "") + '">' + esc(t) + '</span>';
     }).join("");
     tr.innerHTML =
+      '<td class="fit" style="color:' + fitColor(j._final) + '">' + j._final.toFixed(2) + '</td>' +
       '<td class="co">' + esc(j.company) + '</td>' +
       '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.title) + '</a></td>' +
       '<td class="loc">' + (esc(j.location) || "—") + '</td>' +
@@ -606,10 +714,20 @@ function render() {
   rows.appendChild(frag);
 
   if (filtered.length === 0) {
-    rows.innerHTML = '<tr><td colspan="4" class="empty">No openings match these filters.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="5" class="empty">No openings match these filters.</td></tr>';
+  }
+  updateSortIndicator();
+  var isoNote = "";
+  if (ISOLATE) {
+    var rec = FBYID[ISOLATE.fid];
+    var nm = rec ? (Rank.filterLabel(rec.f) || "filter") : "filter";
+    isoNote = ' · <b>isolated</b> to “' + esc(nm) + '”' + (ISOLATE.total ? " (all matches)" : "") +
+      ' <a href="#" id="clearIso">clear</a>';
   }
   document.getElementById("meta").innerHTML =
-    "Showing <b>" + shown.length + "</b> of <b>" + filtered.length + "</b> matching · " + ALL.length + " total openings";
+    "Showing <b>" + shown.length + "</b> of <b>" + filtered.length + "</b> matching · " + ALL.length + " total openings" + isoNote;
+  var ci = document.getElementById("clearIso");
+  if (ci) ci.onclick = function (e) { e.preventDefault(); ISOLATE = null; schedule({ groups: true }); };
   document.getElementById("more").textContent =
     filtered.length > RENDER_CAP ? "…" + (filtered.length - RENDER_CAP) + " more — narrow your filters to see them." : "";
 }
@@ -617,6 +735,16 @@ function render() {
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+// Mark the active sort column header (▼ for the descending Rating, ▲ for the
+// A–Z alpha columns) so the table's order is always legible at a glance.
+function updateSortIndicator() {
+  document.querySelectorAll("th[data-sort]").forEach(function (th) {
+    var on = th.getAttribute("data-sort") === sortMode;
+    th.classList.toggle("sorted", on);
+    th.classList.toggle("asc", on && sortMode !== "fit");
   });
 }
 
@@ -642,7 +770,7 @@ function cycleWeight(f) {
   schedule({ groups: true });
 }
 
-function makePill(g, f, count) {
+function makePill(g, f, nView, nTotal) {
   var active = f.weight != null;
   var w = active ? f.weight : 1;
   var pill = document.createElement("span");
@@ -657,23 +785,73 @@ function makePill(g, f, count) {
     pill.className = "bpill neutral";    // greyed, no icon, CSS-default colours
   }
   if (f.else) pill.className += " elsepill";
+  if (f.muted) pill.className += " muted";
+  // While a lens is active, the isolated pill is highlighted and every OTHER pill
+  // is greyed, so it's obvious the list is showing just one filter's matches.
+  if (ISOLATE) pill.className += (ISOLATE.fid === f.id) ? " isolating" : " dimmed";
+  // Count. Keyword filters get a small diagonal fraction view⁄total (view = how
+  // many of its matches are in the current list, total = how many match overall);
+  // each number is a button that isolates the list to that set. Filters whose
+  // matches never reach the list — catch-alls and hard-excludes (weight 0) —
+  // show a single centred total, since their `view` is always 0.
+  var isoV = ISOLATE && ISOLATE.fid === f.id && !ISOLATE.total;
+  var isoT = ISOLATE && ISOLATE.fid === f.id && ISOLATE.total;
+  var single = f.else || f.weight === 0;
+  var cntHtml;
+  if (single) {
+    cntHtml = '<span class="cnt one"><a class="ct' + (isoT ? ' iso' : '') + '" role="button" tabindex="0" ' +
+      'title="' + nTotal + (f.else ? ' fall through here' : ' filtered out') + ' — click to show only these">' +
+      nTotal + '</a></span>';
+  } else {
+    cntHtml =
+      '<span class="cnt">' +
+        '<a class="cv' + (isoV ? ' iso' : '') + '" role="button" tabindex="0" ' +
+          'title="' + nView + ' in your list — click to show only these">' + nView + '</a>' +
+        '<span class="cslash">/</span>' +
+        '<a class="ct' + (isoT ? ' iso' : '') + '" role="button" tabindex="0" ' +
+          'title="' + nTotal + ' match in total — click to show all of these (ignoring other filters)">' + nTotal + '</a>' +
+      '</span>';
+  }
   pill.innerHTML =
+    '<button class="eye" title="Mute filter" aria-label="Mute filter">👁</button>' +
     signHtml +
     (showNum ? '<span class="rate">' + w.toFixed(2) + '</span>' : '') +
-    '<span class="kw">' + esc(f.name || "unnamed") +
+    '<span class="kw">' + esc(Rank.filterLabel(f) || "unnamed") +
       (f.else ? ' <span class="elsetag">else</span>' : '') + '</span>' +
-    '<span class="n">' + count + '</span>' +
+    cntHtml +
     '<button class="edit" title="Edit filter" aria-label="Edit filter">✎</button>';
   pill.title = f.else
     ? "Catch-all: matches when nothing else in “" + g.name + "” does"
     : "Click to cycle inactive ▸ on ▸ filter-out";
   pill.onclick = function () { cycleWeight(f); };
+  var eye = pill.querySelector(".eye");
+  eye.title = f.muted ? "Un-mute — let this filter count again"
+                      : "Mute — momentarily ignore this filter (keeps its weight)";
+  eye.onclick = function (e) {
+    e.stopPropagation();
+    f.muted = !f.muted; schedule({ recompute: true, groups: true });
+  };
+  var cvEl = pill.querySelector(".cv");
+  if (cvEl) cvEl.onclick = function (e) { e.stopPropagation(); toggleIsolate(f, false); };
+  pill.querySelector(".ct").onclick = function (e) { e.stopPropagation(); toggleIsolate(f, true); };
   pill.querySelector(".edit").onclick = function (e) { e.stopPropagation(); openFilterModal(g, f); };
   return pill;
 }
 
+// Isolate the list to one filter's matches. `total` = every match (ignoring your
+// other hard-excludes); otherwise the matches that also survive your other
+// filters. Clicking the same number again clears the lens. This is the real
+// "solo": membership-based, so catch-alls never leak in (unlike muting).
+function toggleIsolate(f, total) {
+  if (ISOLATE && ISOLATE.fid === f.id && ISOLATE.total === total) ISOLATE = null;
+  else ISOLATE = { fid: f.id, total: total };
+  schedule({ groups: true });
+}
+
 // One row per group: combine toggle + editable name, then its filter pills.
-function groupRow(g) {
+// `passing` is the pre-computed current list (ALL.filter(passes)) so each pill's
+// `view` count is tallied against it without re-running passes() per filter.
+function groupRow(g, passing) {
   var row = document.createElement("div");
   row.className = "row";
   var label = document.createElement("span");
@@ -696,12 +874,17 @@ function groupRow(g) {
 
   var chips = document.createElement("span");
   chips.className = "chips";
-  var counts = {};
-  g.filters.forEach(function (f) { counts[f.id] = 0; });
+  // total = matches across ALL jobs (the denominator); view = matches among the
+  // jobs currently in the list. total − view is what this filter is missing out on.
+  var cTotal = {}, cView = {};
+  g.filters.forEach(function (f) { cTotal[f.id] = 0; cView[f.id] = 0; });
   ALL.forEach(function (j) {
-    (j._mem[g.id] || []).forEach(function (fid) { if (counts[fid] != null) counts[fid]++; });
+    (j._memFull[g.id] || []).forEach(function (fid) { if (cTotal[fid] != null) cTotal[fid]++; });
   });
-  g.filters.forEach(function (f) { chips.appendChild(makePill(g, f, counts[f.id] || 0)); });
+  passing.forEach(function (j) {
+    (j._memFull[g.id] || []).forEach(function (fid) { if (cView[fid] != null) cView[fid]++; });
+  });
+  g.filters.forEach(function (f) { chips.appendChild(makePill(g, f, cView[f.id] || 0, cTotal[f.id] || 0)); });
   var add = document.createElement("button");
   add.className = "btn addkw addfilter";
   add.textContent = "+";
@@ -716,9 +899,11 @@ function groupRow(g) {
 
 function buildGroups() {
   reindex();
+  // Use passesBase (NOT passes): view counts reflect your filters, not the lens.
+  var passing = ALL.filter(passesBase);   // computed once, shared by every group's view count
   var host = document.getElementById("groups");
   host.innerHTML = "";
-  GROUPS.forEach(function (g) { host.appendChild(groupRow(g)); });
+  GROUPS.forEach(function (g) { host.appendChild(groupRow(g, passing)); });
 }
 
 // Coalesce updates into one frame: rapid input (typing, slider drag) schedules
@@ -904,18 +1089,26 @@ function init(data) {
   bindFilterModal(); bindGroupModal();
   document.getElementById("addGroup").onclick = addGroup;
 
-  document.getElementById("q").addEventListener("input", function () { schedule({}); });
+  // Rebuild groups too, so each pill's live "view" count tracks the search box.
+  var qEl = document.getElementById("q");
+  function syncClearQ() { qEl.parentNode.classList.toggle("has-value", qEl.value.length > 0); }
+  qEl.addEventListener("input", function () { syncClearQ(); schedule({ groups: true }); });
+  document.getElementById("clearQ").onclick = function () {
+    qEl.value = ""; syncClearQ(); qEl.focus(); schedule({ groups: true });
+  };
+  syncClearQ();
   document.getElementById("sort").addEventListener("change", function (e) { sortMode = e.target.value; schedule({}); });
   document.getElementById("reset").onclick = function () {
-    GROUPS = defaultGroups(); sortMode = "fit";
-    document.getElementById("q").value = "";
-    document.getElementById("sort").value = "fit";
+    GROUPS = []; ISOLATE = null;                 // wipe every label + its rating
+    reindex(); recompute(); save(); buildGroups(); render();
+  };
+  document.getElementById("restore").onclick = function () {
+    GROUPS = defaultGroups(); ISOLATE = null;    // re-seed the labels from targeting.yml
     reindex(); recompute(); save(); buildGroups(); render();
   };
   document.querySelectorAll("th[data-sort]").forEach(function (th) {
     th.onclick = function () {
-      var col = th.getAttribute("data-sort") === "company" ? "company" : "role";
-      sortMode = (sortMode === col) ? "fit" : col;   // click the active column again → back to ranking order
+      sortMode = th.getAttribute("data-sort");   // fit | company | role | location
       document.getElementById("sort").value = sortMode; save(); render();
     };
   });

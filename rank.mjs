@@ -195,6 +195,17 @@ export function combineGroup(weights, mode = 'min') {
   return Math.min(...weights); // 'min' default — worst match wins, so 0/exclude wins
 }
 
+// A filter's display label. The `name` is OPTIONAL: when absent, the first
+// non-empty keyword stands in (so portals.yml can omit `name:` wherever the
+// first keyword already reads well). Catch-alls keep needing an explicit name.
+export function filterLabel(f) {
+  if (f && f.name && String(f.name).trim()) return String(f.name).trim();
+  for (const k of (f && f.keywords) || []) {
+    if (k && String(k).trim()) return String(k).trim();
+  }
+  return '';
+}
+
 // Which job text a group matches against.
 export function fieldText(job, field) {
   if (field === 'company') return job.company || '';
@@ -273,7 +284,7 @@ export function scoreJobGroups(job, groups) {
       name: g.name,
       field: g.field,
       score: scoreGroup(job, g),
-      matched: matched.filter((f) => !f.else && f.name).map((f) => f.name),
+      matched: matched.filter((f) => !f.else).map(filterLabel).filter(Boolean),
     };
   });
   return { ...job, group_scores: breakdown, fit: fitGroups(job, groups), excluded: isExcluded(job, groups) };

@@ -105,6 +105,17 @@
     return Math.min.apply(null, weights); // 'min' — worst match wins (0/exclude wins)
   }
 
+  // A filter's display label. `name` is OPTIONAL — when absent, the first
+  // non-empty keyword stands in (so portals.yml / board filters can omit it).
+  function filterLabel(f) {
+    if (f && f.name && String(f.name).trim()) return String(f.name).trim();
+    var kws = (f && f.keywords) || [];
+    for (var i = 0; i < kws.length; i++) {
+      if (kws[i] && String(kws[i]).trim()) return String(kws[i]).trim();
+    }
+    return '';
+  }
+
   function fieldText(job, field) {
     if (field === 'company') return job.company || '';
     if (field === 'location') return job.location || '';
@@ -161,7 +172,7 @@
       var matched = matchGroup(job, g);
       return {
         name: g.name, field: g.field, score: scoreGroup(job, g),
-        matched: matched.filter(function (f) { return !f.else && f.name; }).map(function (f) { return f.name; }),
+        matched: matched.filter(function (f) { return !f.else; }).map(filterLabel).filter(Boolean),
       };
     });
     return Object.assign({}, job, { group_scores: breakdown, fit: fitGroups(job, groups), excluded: isExcluded(job, groups) });
@@ -222,6 +233,7 @@
     // Group-model core (shared with rank.mjs)
     DEFAULT_GROUP_WEIGHT: DEFAULT_GROUP_WEIGHT,
     combineGroup: combineGroup,
+    filterLabel: filterLabel,
     fieldText: fieldText,
     filterMatches: filterMatches,
     matchGroup: matchGroup,

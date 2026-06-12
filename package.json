@@ -18,6 +18,7 @@
     "rescan": "node scan.mjs --reset && node rank.mjs --all",
     "board:targeting": "node project-targeting.mjs",
     "board:default": "node project-targeting.mjs targeting.default.yml site/data/targeting.json",
+    "board:watch": "node project-targeting.mjs --watch",
     "board:dev": "node board-dev.mjs",
     "patterns": "node analyze-patterns.mjs",
     "gemini:eval": "node gemini-eval.mjs"
