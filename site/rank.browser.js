@@ -41,7 +41,13 @@
       }
     }
     var escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp('(?<![A-Za-z0-9])' + escaped, 'i');
+    // The (?<![A-Za-z0-9]) guard is a left word-boundary so a bare keyword
+    // ("SE") can't match mid-word ("USERS"). It only makes sense when the
+    // keyword STARTS with an alphanumeric; for one opening with punctuation
+    // (", SE") it would demand a non-alphanumeric BEFORE that punctuation and so
+    // never match real text like "Stockholm, SE". Skip the guard in that case.
+    var guard = /^[A-Za-z0-9]/.test(trimmed) ? '(?<![A-Za-z0-9])' : '';
+    return new RegExp(guard + escaped, 'i');
   }
 
   function matchSpan(text, key) {

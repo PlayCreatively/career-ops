@@ -370,6 +370,66 @@
   .more { padding: 16px; text-align: center; color: var(--dim); font-size: 13px; }
   footer { color: var(--dim); font-size: 12px; padding: 24px; text-align: center; border-top: 1px solid var(--line); }
   footer a { color: var(--accent); text-decoration: none; }
+  /* ── Selection → filter popover ──────────────────────────────────────────
+     Floats under a text selection inside a table cell and lists the filters
+     whose group matches that cell's field (the column routes the value), plus a
+     "new filter" escape hatch. Pure add-to-existing-system: no new weights. */
+  .selpop { position: absolute; z-index: 60; min-width: 210px; max-width: 290px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(60,48,36,.18); padding: 6px; display: none; font-size: 13px;
+    overflow-y: auto; overscroll-behavior: contain; }
+  .selpop.open { display: block; }
+  /* Sticky header so the "Add X to…" context stays visible while the list scrolls.
+     Negative margins span it full-width and cover the container's top padding so
+     rows scroll cleanly behind it. */
+  .selpop .sphead { position: sticky; top: 0; z-index: 1; background: var(--panel);
+    color: var(--dim); font-size: 12px; margin: -6px -6px 4px; padding: 11px 13px 8px;
+    border-bottom: 1px solid var(--line); }
+  .selpop .sphead b { color: var(--txt); font-weight: 700; }
+  .selpop .spgrp { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+    padding: 7px 9px 2px; }
+  .selpop .spitem { display: flex; width: 100%; align-items: center; gap: 9px; text-align: left;
+    background: none; border: none; color: var(--txt); font: inherit; padding: 7px 9px;
+    border-radius: 8px; cursor: pointer; }
+  .selpop .spitem:hover { background: var(--panel2); }
+  .selpop .spitem .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); }
+  .selpop .spitem .ic { flex: none; width: 8px; text-align: center; color: var(--accent);
+    font-weight: 700; font-size: 15px; line-height: 1; }
+  .selpop .spitem .spcheck { flex: none; width: 8px; text-align: center; color: var(--accent2);
+    font-weight: 800; font-size: 13px; line-height: 1; }
+  .selpop .spitem.spnew { color: var(--accent); }
+  /* Already-in rows read as "done": green check, the matched value in green, a
+     muted "added" tag. Still hoverable (a no-op re-add is harmless). */
+  .selpop .spitem.have { color: var(--accent2); }
+  .selpop .sphave { color: var(--dim); font-size: 11px; font-weight: 400; }
+  /* Matched runs read as plain text by default — no always-on paint. Hovering
+     one just tints the text gold (gold = "this affected the rank") and floats
+     the .hlpop menu of the filter(s) that captured it. Holding Alt reveals every
+     match at once (body.althl) with the underline-fill, for a quick scan of what
+     pulled each row in. `cursor: help` hints a match is inspectable. */
+  .hlmatch { border-radius: 3px; cursor: help; }
+  .hlmatch:hover,
+  body.althl .hlmatch:hover { color: var(--warm); }
+  body.althl .hlmatch {
+    background: color-mix(in srgb, var(--warm) 18%, transparent);
+    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--warm) 52%, transparent); }
+  body.althl .hlmatch:hover { background: color-mix(in srgb, var(--warm) 32%, transparent); }
+  /* Cross-highlight: hovering a tag lights its matched spans (and vice versa) so
+     it's obvious which words a tag captured. Same gold as a live match. */
+  .hlmatch.xhl { color: var(--warm); }
+  .tag.xhl { background: color-mix(in srgb, var(--warm) 30%, transparent);
+    border-color: color-mix(in srgb, var(--warm) 55%, var(--line)); color: var(--warm); }
+  .tag[data-fid] { cursor: pointer; }
+  /* Pencil on a hover-popover row — opens that filter's editor; the row body
+     scrolls to (and flashes) the pill instead. */
+  .selpop .spedit { margin-left: auto; flex: none; background: none; border: none;
+    color: var(--dim); font: inherit; font-size: 13px; cursor: pointer; padding: 2px 5px; border-radius: 6px; }
+  .selpop .spedit:hover { color: var(--accent); background: var(--panel2); }
+  /* Momentary ring when you jump to a pill from a tag / hover-popover. */
+  .bpill.flashpill { animation: pillflash 2.6s ease-out; }
+  @keyframes pillflash {
+    0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 75%, transparent); }
+    100% { box-shadow: 0 0 0 9px transparent; } }
 </style>
 <script>
 // ── Theme registry ─────────────────────────────────────────────────────────
@@ -647,6 +707,17 @@ function reindex() {
 function compileFilter(f) {
   f._res = (f.keywords || []).map(function (k) { return Rank.keyToRegExp(k); })
                              .filter(Boolean);
+  f._resG = null;   // lazy global clones (for highlighting) — rebuilt on next use
+}
+// Global-flag clones of a filter's regexes, used to find EVERY match position in
+// a cell (the scorer only needs the first hit, so its regexes aren't global).
+function globalRes(f) {
+  if (!f._resG) {
+    f._resG = (f._res || []).map(function (re) {
+      return new RegExp(re.source, re.flags.indexOf("g") >= 0 ? re.flags : re.flags + "g");
+    });
+  }
+  return f._resG;
 }
 
 function save() {
@@ -845,6 +916,62 @@ function passes(j) {
   return true;
 }
 
+// ── Match highlighting ───────────────────────────────────────────────────────
+// The non-else filters a job matched whose group draws on a given cell's field —
+// i.e. the same filters that become the row's tags, but only those relevant to
+// THIS column. Re-matching their regexes against the cell's own text (below)
+// gives us the exact spans to highlight, so the user can see which keyword pulled
+// the row in and hover it to reach that filter.
+function matchersForCell(job, field) {
+  var out = [];
+  GROUPS.forEach(function (g) {
+    if (fieldToList(g.field).indexOf(field) === -1) return;
+    (job._mem[g.id] || []).forEach(function (fid) {
+      var rec = FBYID[fid]; if (rec && !rec.f.else) out.push(rec.f);
+    });
+  });
+  return out;
+}
+function uniqKey(arr) {
+  var seen = {}, out = [];
+  for (var i = 0; i < arr.length; i++) { if (!seen[arr[i]]) { seen[arr[i]] = 1; out.push(arr[i]); } }
+  return out.sort().join(",");
+}
+// Render a cell's text with matched substrings wrapped in <span class="hlmatch"
+// data-fids="…">. Overlapping matches from different filters share a span (the
+// data-fids list carries all of them). Returns escaped HTML; safe to drop into a
+// cell (or inside its <a>).
+function highlightCell(text, field, job) {
+  text = String(text == null ? "" : text);
+  if (!text) return "";
+  var fils = matchersForCell(job, field);
+  if (!fils.length) return esc(text);
+  var owners = new Array(text.length);   // char index -> [fid,…] covering it
+  fils.forEach(function (f) {
+    globalRes(f).forEach(function (re) {
+      re.lastIndex = 0;
+      var m;
+      while ((m = re.exec(text)) !== null) {
+        var s = m.index, e = m.index + m[0].length;
+        if (e <= s) { re.lastIndex++; continue; }   // guard zero-length matches
+        for (var i = s; i < e; i++) (owners[i] || (owners[i] = [])).push(f.id);
+      }
+    });
+  });
+  var html = "", i = 0, n = text.length;
+  while (i < n) {
+    if (!owners[i]) {
+      var a = i; while (i < n && !owners[i]) i++;
+      html += esc(text.slice(a, i));
+    } else {
+      var key = uniqKey(owners[i]), b = i;
+      i++; while (i < n && owners[i] && uniqKey(owners[i]) === key) i++;
+      html += '<span class="hlmatch" data-fids="' + key + '">' + esc(text.slice(b, i)) + '</span>';
+    }
+  }
+  return html;
+}
+
 function render() {
   var filtered = ALL.filter(passes);
   // The rating is always shown, so always compute it (not just when sorting by fit).
@@ -873,11 +1000,15 @@ function render() {
   var frag = document.createDocumentFragment();
   shown.forEach(function (j) {
     // Tag the buckets the job falls in (skip catch-alls — they're just noise).
-    var names = [];
+    // Each tag carries its filter id so it can scroll to that pill and
+    // cross-highlight the matched words on hover.
+    var tags = "";
     GROUPS.forEach(function (g) {
       (j._mem[g.id] || []).forEach(function (fid) {
         var rec = FBYID[fid]; if (!rec || rec.f.else) return;
-        var label = Rank.filterLabel(rec.f); if (label) names.push(label);
+        var label = Rank.filterLabel(rec.f); if (!label) return;
+        tags += '<span class="tag' + (/^remote$/i.test(label) ? " remote" : "") +
+          '" data-fid="' + fid + '">' + esc(label) + '</span>';
       });
     });
     var tr = document.createElement("tr");
@@ -891,27 +1022,25 @@ function render() {
         '<button type="button" class="check' + (st === "c" ? " active" : "") + '" data-act="c" title="Mark as done / applied">✓</button>' +
         '<button type="button" class="ignore' + (st === "i" ? " active" : "") + '" data-act="i" title="Ignore — grey this role out">✕</button>' +
       '</div>';
-    var tags = names.map(function (t) {
-      return '<span class="tag' + (/^remote$/i.test(t) ? " remote" : "") + '">' + esc(t) + '</span>';
-    }).join("");
+    var coHl = highlightCell(j.company, "company", j);
     var coCell = j.companyUrl
-      ? '<a href="' + esc(j.companyUrl) + '" target="_blank" rel="noopener">' + esc(j.company) + '</a>'
-      : esc(j.company);
+      ? '<a href="' + esc(j.companyUrl) + '" target="_blank" rel="noopener">' + coHl + '</a>'
+      : coHl;
     // Department as a dim subtitle under the role title (only when known).
-    var deptLine = j.department ? '<span class="dept">' + esc(j.department) + '</span>' : '';
+    var deptLine = j.department ? '<span class="dept">' + highlightCell(j.department, "department", j) + '</span>' : '';
     // Work mode as a badge on its OWN line below the location text: 🌐 Anywhere /
     // 🏠 Remote / ⇄ Hybrid; onsite and unknown show no badge. The location string
     // is now place-only (work-mode tokens stripped during the scan), so no dup.
     var modeBadge = j.workMode === "anywhere" ? '<span class="mode anywhere">🌐 Anywhere</span>'
       : j.workMode === "remote" ? '<span class="mode remote">🏠 Remote</span>'
       : j.workMode === "hybrid" ? '<span class="mode hybrid">⇄ Hybrid</span>' : '';
-    var locText = esc(j.location);
+    var locText = highlightCell(j.location, "location", j);
     var modeLine = modeBadge ? '<span class="modeline">' + modeBadge + '</span>' : '';
     var locCell = (locText || (modeBadge ? '' : "—")) + modeLine;
     tr.innerHTML =
       '<td class="fit" style="color:' + fitColor(j._final) + '">' + acts + '<span class="fitval">' + j._final.toFixed(2) + '</span></td>' +
       '<td class="co">' + coCell + '</td>' +
-      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.title) + '</a>' + deptLine + '</td>' +
+      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + highlightCell(j.title, "title", j) + '</a>' + deptLine + '</td>' +
       '<td class="loc">' + locCell + '</td>' +
       '<td>' + tags + '</td>' +
       '<td class="posted">' + postedCell(j.postedDate) + '</td>';
@@ -985,6 +1114,7 @@ function makePill(g, f, nView, nTotal) {
   var active = f.weight != null;
   var w = active ? f.weight : 1;
   var pill = document.createElement("span");
+  pill.dataset.fid = f.id;   // lets tags / the hover-popover scroll to this pill
   var signHtml = "", showNum = false;
   if (active) {
     var band = weightBand(w);
@@ -1306,6 +1436,228 @@ function bindGroupModal() {
   });
 }
 
+// ── Selection → filter popover ───────────────────────────────────────────────
+// Select text in a table cell (Studio / Role / Location / Department) and a small
+// menu floats under it listing every filter whose group matches that cell's
+// field — click one to drop the selected value in as a keyword, or spin up a
+// fresh filter for it. The cell's column does the routing, so there's never any
+// "which pill?" guesswork. No new weighting concepts: a new filter starts "on"
+// and opens the normal editor; adding to an existing pill leaves its weight as-is.
+var FIELD_LABEL = { title: "Role", company: "Studio", location: "Location", department: "Department" };
+function fieldLabel(f) { return FIELD_LABEL[f] || f; }
+
+// Groups whose (possibly multi-source / "any") field includes this atomic field.
+function groupsMatchingField(field) {
+  return GROUPS.filter(function (g) { return fieldToList(g.field).indexOf(field) !== -1; });
+}
+function filterHasKeyword(f, kw) {
+  var t = kw.trim().toLowerCase();
+  return (f.keywords || []).some(function (k) { return k.trim().toLowerCase() === t; });
+}
+// Add / remove a keyword and re-rank. Heavy work (recompute over every job +
+// rebuild) is deferred to the next frame via schedule(), so the click that
+// triggered it feels instant — the menu updates its own row in-place meanwhile.
+function addKeywordToFilter(f, kw) {
+  kw = kw.trim(); if (!kw) return;
+  if (!filterHasKeyword(f, kw)) f.keywords.push(kw);
+  compileFilter(f); schedule({ recompute: true, groups: true });
+}
+function removeKeywordFromFilter(f, kw) {
+  var t = kw.trim().toLowerCase(); if (!t) return;
+  f.keywords = (f.keywords || []).filter(function (k) { return k.trim().toLowerCase() !== t; });
+  compileFilter(f); schedule({ recompute: true, groups: true });
+}
+// Jump to a filter's pill in the panel above and flash it briefly.
+function scrollToFilter(fid) {
+  var pill = document.querySelector('#groups [data-fid="' + fid + '"]');
+  if (!pill) return;
+  pill.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  pill.classList.remove("flashpill"); void pill.offsetWidth;   // restart the animation
+  pill.classList.add("flashpill");
+  setTimeout(function () { pill.classList.remove("flashpill"); }, 2800);
+}
+// Cross-highlight: from a hovered tag or match-span, light up the matching tags
+// AND spans in the SAME row (those sharing a filter id). `el` carries data-fid
+// (a tag, single id) or data-fids (a span, comma list).
+function clearXhl() {
+  document.querySelectorAll(".xhl").forEach(function (n) { n.classList.remove("xhl"); });
+}
+function crossHighlight(el) {
+  var tr = el.closest("tr"); if (!tr) return;
+  var ids = (el.getAttribute("data-fid") || el.getAttribute("data-fids") || "").split(",").filter(Boolean);
+  if (!ids.length) return;
+  var set = {}; ids.forEach(function (id) { set[id] = 1; });
+  tr.querySelectorAll(".tag[data-fid], .hlmatch[data-fids]").forEach(function (n) {
+    var nids = (n.getAttribute("data-fid") || n.getAttribute("data-fids") || "").split(",");
+    if (nids.some(function (id) { return set[id]; })) n.classList.add("xhl");
+  });
+}
+function newFilterFromSelection(g, kw) {
+  var f = mkFilter("", [kw.trim()], 1, false);   // start "on" — same as the + button
+  g.filters.push(f);
+  reindex(); recompute(); buildGroups(); save(); render();
+  openFilterModal(g, f);
+}
+function newGroupFromSelection(field, kw) {
+  var g = mkGroup(fieldLabel(field), field, 0.5, []);
+  GROUPS.push(g);
+  newFilterFromSelection(g, kw);   // reindex/render + opens the editor
+}
+
+// Which atomic field a selection sits in — derived purely from the cell it's in
+// (null for cells with nothing to filter on: rating, tags, posted, or a selection
+// straddling two cells).
+function fieldFromSelection(sel) {
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  var range = sel.getRangeAt(0);
+  var startEl = range.startContainer.nodeType === 3 ? range.startContainer.parentElement : range.startContainer;
+  var endEl = range.endContainer.nodeType === 3 ? range.endContainer.parentElement : range.endContainer;
+  if (!startEl || !endEl || !startEl.closest) return null;
+  var td = startEl.closest("td");
+  if (!td || endEl.closest("td") !== td) return null;   // must stay in one cell
+  if (td.classList.contains("co")) return "company";
+  if (td.classList.contains("loc")) return "location";
+  if (td.classList.contains("role")) return startEl.closest(".dept") ? "department" : "title";
+  return null;
+}
+
+var selPop = null;
+function ensureSelPop() {
+  if (selPop) return selPop;
+  selPop = document.createElement("div");
+  selPop.className = "selpop";
+  // Keep the text selection visible/alive while the menu is open.
+  selPop.addEventListener("mousedown", function (e) { e.preventDefault(); });
+  selPop.addEventListener("click", function (e) {
+    var btn = e.target.closest(".spitem"); if (!btn) return;
+    var act = btn.getAttribute("data-act"), kw = selPop._kw || "", field = selPop.dataset.field;
+    // Adding toggles: click to add the keyword, click again to remove it. The
+    // menu stays open so you can hit several filters in a row; only the clicked
+    // row's state flips in-place (the rerank happens off-frame via schedule()).
+    if (act === "add") {
+      var rec = FBYID[btn.getAttribute("data-fid")]; if (!rec) return;
+      var have = filterHasKeyword(rec.f, kw);
+      if (have) removeKeywordFromFilter(rec.f, kw); else addKeywordToFilter(rec.f, kw);
+      btn.outerHTML = spAddItemHtml(rec.f, !have);
+      return;
+    }
+    if (act === "new") {
+      var gid = btn.getAttribute("data-gid"), g = null;
+      GROUPS.forEach(function (x) { if (x.id === gid) g = x; });
+      if (g) newFilterFromSelection(g, kw);
+    } else if (act === "newgroup") { newGroupFromSelection(field, kw); }
+    hideSelPop();
+  });
+  document.body.appendChild(selPop);
+  return selPop;
+}
+function hideSelPop() { if (selPop) selPop.classList.remove("open"); }
+function maybeShowSelPop() {
+  var sel = window.getSelection();
+  var field = fieldFromSelection(sel);
+  if (!field) return hideSelPop();
+  var text = sel.toString().trim().replace(/\s+/g, " ");
+  if (!text) return hideSelPop();
+  showSelPop(sel.getRangeAt(0).getBoundingClientRect(), field, text);
+}
+// One "add to this filter" row. When the keyword is already on the filter it
+// reads as done (green ✓) and a click will remove it; otherwise a dot + add.
+function spAddItemHtml(f, have) {
+  return '<button class="spitem' + (have ? ' have' : '') + '" data-act="add" data-fid="' + f.id + '">' +
+    (have ? '<span class="spcheck">✓</span>' : '<span class="dot"></span>') +
+    '<span>' + esc(Rank.filterLabel(f) || "unnamed") +
+    '<span class="sphave">' + (have ? ' · added — click to remove' : '') + '</span></span></button>';
+}
+function showSelPop(rect, field, text) {
+  var pop = ensureSelPop();
+  var matching = groupsMatchingField(field);
+  var html = '<div class="sphead">Add “<b>' + esc(text) + '</b>” to a ' + esc(fieldLabel(field)) + ' filter</div>';
+  if (matching.length) {
+    matching.forEach(function (g) {
+      if (matching.length > 1) html += '<div class="spgrp">' + esc(g.name) + '</div>';
+      g.filters.forEach(function (f) {
+        if (f.else) return;   // catch-alls carry no keywords
+        html += spAddItemHtml(f, filterHasKeyword(f, text));
+      });
+      html += '<button class="spitem spnew" data-act="new" data-gid="' + g.id + '">' +
+        '<span class="ic">+</span><span>New filter in ' + esc(g.name) + '</span></button>';
+    });
+  } else {
+    html += '<button class="spitem spnew" data-act="newgroup">' +
+      '<span class="ic">+</span><span>New ' + esc(fieldLabel(field)) + ' filter</span></button>';
+  }
+  pop.innerHTML = html;
+  pop.dataset.field = field; pop._kw = text;
+  placePop(pop, rect);
+}
+
+// Position a popover against an anchor rect (viewport coords): below by default,
+// flipped above when there's more room there, height-capped to the available
+// space so a long list scrolls inside instead of running off-screen, and clamped
+// horizontally to the viewport.
+function placePop(pop, rect) {
+  pop.style.maxHeight = "none";
+  pop.classList.add("open");
+  var vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  var gap = 6, margin = 8;
+  var spaceBelow = vh - rect.bottom - gap - margin;
+  var spaceAbove = rect.top - gap - margin;
+  var placeBelow = spaceBelow >= spaceAbove;
+  pop.style.maxHeight = Math.max(140, placeBelow ? spaceBelow : spaceAbove) + "px";
+  var ph = pop.offsetHeight, pw = pop.offsetWidth || 220;
+  var left = rect.left;
+  if (left + pw > vw - margin) left = vw - margin - pw;
+  if (left < margin) left = margin;
+  var top = placeBelow ? (rect.bottom + gap) : (rect.top - ph - gap);
+  pop.style.top = (window.scrollY + top) + "px";
+  pop.style.left = (window.scrollX + left) + "px";
+}
+
+// ── Hover-a-match popover ─────────────────────────────────────────────────────
+// Hovering a highlighted match span shows which filter(s) captured that text.
+// Each row is the capturing filter (dot tinted by its weight) and clicking it
+// opens that filter's editor. Kept alive while the pointer is over the span OR
+// the popover (a short close delay bridges the gap between them).
+var hlPop = null, hlHideT = null;
+function ensureHlPop() {
+  if (hlPop) return hlPop;
+  hlPop = document.createElement("div");
+  hlPop.className = "selpop hlpop";
+  hlPop.addEventListener("mouseenter", function () { if (hlHideT) { clearTimeout(hlHideT); hlHideT = null; } });
+  hlPop.addEventListener("mouseleave", scheduleHideHl);
+  hlPop.addEventListener("click", function (e) {
+    var ed = e.target.closest(".spedit");
+    if (ed) { var r = FBYID[ed.getAttribute("data-fid")]; if (r) { hideHlPop(); openFilterModal(r.g, r.f); } return; }
+    var btn = e.target.closest(".spitem"); if (!btn) return;
+    var rec = FBYID[btn.getAttribute("data-fid")];
+    if (rec) { hideHlPop(); scrollToFilter(rec.f.id); }
+  });
+  document.body.appendChild(hlPop);
+  return hlPop;
+}
+function hideHlPop() { if (hlPop) hlPop.classList.remove("open"); }
+function scheduleHideHl() { if (hlHideT) clearTimeout(hlHideT); hlHideT = setTimeout(hideHlPop, 180); }
+function showHlPop(spanEl) {
+  var ids = (spanEl.getAttribute("data-fids") || "").split(",").filter(Boolean);
+  var seen = {}, recs = [];
+  ids.forEach(function (id) { if (seen[id]) return; seen[id] = 1; var rec = FBYID[id]; if (rec) recs.push(rec); });
+  if (!recs.length) return;
+  var pop = ensureHlPop();
+  var html = '<div class="sphead">Matched by <span class="sphave">· click to find, ✎ to edit</span></div>';
+  recs.forEach(function (rec) {
+    var f = rec.f, active = f.weight != null, w = active ? f.weight : 1;
+    var col = active ? weightColor(w) : "var(--line)";
+    html += '<div class="spitem" data-fid="' + f.id + '" role="button" tabindex="0" title="Jump to this filter">' +
+      '<span class="dot" style="background:' + col + '"></span>' +
+      '<span>' + esc(Rank.filterLabel(f) || "unnamed") +
+      ' <span class="sphave">· ' + esc(rec.g.name) + '</span></span>' +
+      '<button class="spedit" data-fid="' + f.id + '" title="Edit filter" aria-label="Edit filter">✎</button>' +
+      '</div>';
+  });
+  pop.innerHTML = html;
+  placePop(pop, spanEl.getBoundingClientRect());
+}
+
 function init(data) {
   ALL = prep(data.jobs || []);
   if (data.generated) {
@@ -1329,6 +1681,8 @@ function init(data) {
   // single-state enum (setStatus swaps or clears it); re-rendering restyles the
   // row and updates which icon reads as active.
   document.getElementById("rows").addEventListener("click", function (e) {
+    var tag = e.target.closest(".tag[data-fid]");
+    if (tag) { scrollToFilter(tag.getAttribute("data-fid")); return; }
     var btn = e.target.closest(".rowacts button");
     if (!btn) return;
     var tr = btn.closest("tr");
@@ -1387,7 +1741,58 @@ function init(data) {
     if (e.key !== "Escape") return;
     if (document.getElementById("boostModalBg").classList.contains("open")) closeFilterModal();
     else if (document.getElementById("groupModalBg").classList.contains("open")) closeGroupModal();
+    else { hideSelPop(); hideHlPop(); }
   });
+
+  // Selection → filter: a drag-select inside a cell pops the add-to-filter menu;
+  // starting a new selection (or scrolling) dismisses it. Clicks inside the menu
+  // are handled by the menu's own delegate, so they're ignored here.
+  ensureSelPop();
+  document.addEventListener("mouseup", function (e) {
+    if (selPop && selPop.contains(e.target)) return;
+    setTimeout(maybeShowSelPop, 0);   // let the browser finalize the selection first
+  });
+  document.addEventListener("mousedown", function (e) {
+    // A mousedown inside either popover must NOT dismiss it — otherwise the
+    // "matched by" rows lose their own click (the popover is gone before mouseup).
+    if ((selPop && selPop.contains(e.target)) || (hlPop && hlPop.contains(e.target))) return;
+    hideSelPop(); hideHlPop();
+  });
+  // Page scroll dismisses the popovers, but scrolling *inside* one (its own list
+  // overflows) must NOT — that's the event whose target is the popover itself.
+  window.addEventListener("scroll", function (e) {
+    if ((selPop && selPop.contains(e.target)) || (hlPop && hlPop.contains(e.target))) return;
+    hideSelPop(); hideHlPop();
+  }, true);
+
+  // Hold Alt to reveal every match at once (body.althl paints all .hlmatch runs).
+  // Release — or lose focus, so Alt-Tab can't leave it stuck on — to hide again.
+  function setAlt(on) { document.body.classList.toggle("althl", on); }
+  document.addEventListener("keydown", function (e) { if (e.key === "Alt") setAlt(true); });
+  document.addEventListener("keyup", function (e) { if (e.key === "Alt") setAlt(false); });
+  window.addEventListener("blur", function () { setAlt(false); });
+
+  // Hover a highlighted match → show the filter(s) that captured it. Suppressed
+  // while a text selection is in progress (so it doesn't fight the select menu).
+  var rowsEl = document.getElementById("rows");
+  rowsEl.addEventListener("mouseover", function (e) {
+    // A tag lights its matched words (and any sibling tags for the same filter).
+    var tag = e.target.closest(".tag[data-fid]");
+    if (tag) { clearXhl(); crossHighlight(tag); return; }
+    var sp = e.target.closest(".hlmatch"); if (!sp) return;
+    clearXhl(); crossHighlight(sp);   // a span lights its tag(s) too (vice versa)
+    if (selPop && selPop.classList.contains("open")) return;
+    var sel = window.getSelection(); if (sel && !sel.isCollapsed) return;
+    if (hlHideT) { clearTimeout(hlHideT); hlHideT = null; }
+    showHlPop(sp);
+  });
+  rowsEl.addEventListener("mouseout", function (e) {
+    if (e.target.closest(".hlmatch")) scheduleHideHl();
+    // Drop the cross-highlight once the pointer leaves all tags/spans.
+    var to = e.relatedTarget;
+    if (!to || !(to.closest && (to.closest(".tag[data-fid]") || to.closest(".hlmatch")))) clearXhl();
+  });
+
   render();
   if (LIVE) startLivePolling();
 }
