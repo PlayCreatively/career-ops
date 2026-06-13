@@ -4020,3 +4020,128 @@ tracked_companies:
   - name: Ztar Games
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
+
+  # ── Iceland 🇮🇸 — full game-industry roster ────────────────────────
+  # Source: Game Makers Iceland (gamemakersiceland.org/studios) + IGI
+  # (igi.is) + Wikipedia "Video game companies of Iceland". Added 2026-06-13.
+  # Small scene (~24 active studios, ~500 people) — most expose NO standard
+  # ATS slug (probed greenhouse/lever/ashby/teamtailor/recruitee/workable, all
+  # misses except a Parity *namesake* = Parity Technologies/Polkadot, NOT the
+  # IS studio, so skipped). Flagship CCP→Fenris IS wired (Pinpoint json feed);
+  # the rest are backlog for `/career-ops resolve` (careers_url provided).
+
+  - name: Fenris Creations
+    careers_url: https://careers.fenriscreations.com
+    notes: "Formerly CCP Games (EVE Online). Reykjavík (+ London, Shanghai). Pinpoint ATS — keyless JSON feed."
+    recipe:
+      kind: json
+      endpoint: https://careers.fenriscreations.com/jobs.json
+      list_path: data
+      fields:
+        title: title
+        url: url
+        location: location.name
+
+  - name: Mainframe Industries
+    careers_url: https://themainframe.com
+    status: unresolved
+    notes: "Pax Dei MMO. Reykjavík + Helsinki. No standard ATS slug — needs resolve pass."
+  - name: Solid Clouds
+    careers_url: https://www.solidclouds.com/jobs
+    status: unresolved
+    notes: "Starborne. Reykjavík (publicly listed, Nasdaq First North IS). No standard ATS slug."
+  - name: Myrkur Games
+    careers_url: https://myrkur.is/careers
+    status: unresolved
+    notes: "Echoes of the End. Reykjavík. No standard ATS slug."
+  - name: 1939 Games
+    careers_url: https://www.1939games.com
+    status: unresolved
+    notes: "KARDS (WWII CCG). Reykjavík; founded by ex-CCP. No standard ATS slug."
+  - name: Parity
+    careers_url: https://parity.is
+    status: unresolved
+    notes: "Reykjavík game studio. NOTE: distinct from Parity Technologies (Polkadot) which owns the ashby[parity] board — do NOT wire that slug."
+  - name: Porcelain Fortress
+    careers_url: https://www.porcelainfortress.com
+    status: unresolved
+    notes: "Aurora. Reykjavík. No standard ATS slug."
+  - name: Aldin Dynamics
+    careers_url: https://aldin.io
+    status: unresolved
+    notes: "VR (Waltz of the Wizard, Asunder). Reykjavík. No standard ATS slug."
+  - name: Aska Studios
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Bunkhouse Games
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Rocky Road Games
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Vitar Games
+    status: unresolved
+    notes: "Iceland game studio, founded by Baldvin Albertsson (Game Makers Iceland). Careers page TBD."
+  - name: Evolytes
+    careers_url: https://www.evolytes.com
+    status: unresolved
+    notes: "Educational adventure game. Iceland. No standard ATS slug."
+  - name: Directive Games
+    careers_url: https://directivegames.com/careers
+    notes: "Reykjavík + Singapore. Applications by email (jobs@directivegames.com) — no ATS feed."
+    recipe:
+      kind: blocked
+      reason: "Careers page is email-only (jobs@directivegames.com); no job board / ATS feed to poll."
+  - name: Rauðás Games
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Polykite Games
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Skjoldr Games
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Ghosts
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Tasty Rook
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Huldufugl
+    careers_url: https://www.huldufugl.com
+    status: unresolved
+    notes: "Interactive theatre / narrative games. Reykjavík. Careers page TBD."
+  - name: Jooncorp
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Licorice
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: pgWave
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: That Other Fish
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Miðeind
+    careers_url: https://mideind.is
+    status: unresolved
+    notes: "NLP/AI + games (Game Makers Iceland). Reykjavík. Borderline games. Careers page TBD."
+  - name: Locatify
+    careers_url: https://locatify.com
+    status: unresolved
+    notes: "Location-based AR games & tours (Game Makers Iceland). Careers page TBD."
+  - name: Polar Region Games
+    status: unresolved
+    notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
+  - name: Sólfar Studios
+    careers_url: https://www.solfar.com
+    status: unresolved
+    notes: "VR (In Death, Everest VR). Reykjavík. Careers page TBD."
+  - name: Quest Portal
+    careers_url: https://www.questportal.com
+    status: unresolved
+    notes: "Virtual tabletop (TTRPG) platform. Reykjavík. Careers page TBD."
+  - name: Radiant Games
+    status: unresolved
+    notes: "Box Island. Reykjavík (Game Makers Iceland / IGI). Careers page TBD."
