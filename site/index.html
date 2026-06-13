@@ -285,6 +285,16 @@
   .hint { color: var(--dim); font-size: 12px; }
   .meta { color: var(--dim); font-size: 13px; margin: 6px 0 12px; }
   .meta b { color: var(--txt); }
+  /* Inline mark-view toggles in the meta line — plain text links; the active one
+     lifts to full contrast. A zero count dims to read as "none yet". inline-block
+     + tight line-height keeps the hitbox the height of the text (the meta line's
+     1.6 line-height would otherwise make it ~21px tall); margin sets the gap. */
+  .meta .vlink { display: inline-block; line-height: 1; color: var(--dim);
+    text-decoration: none; cursor: pointer; }
+  .meta .vlink + .vlink { margin-left: 7px; }
+  .meta .vlink:hover { color: var(--txt); text-decoration: underline; }
+  .meta .vlink.on { color: var(--accent); font-weight: 700; text-decoration: underline; }
+  .meta .vlink.zero { opacity: .5; }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
@@ -413,9 +423,6 @@ window.__themeKey = "gamedevboard.theme";
     </div>
     <div id="groups"></div>
     <div class="row"><button class="btn addgroup" id="addGroup">+ new group</button></div>
-    <div class="row"><span class="label"></span>
-      <div class="hint">Each row is a <b>group</b> — a named bucket of filters matched against one field (role, studio, location…). Click the group name to rename it, change its field, or delete it; the button by it combines its matched ratings — <b>max</b> (best wins) · <b>min</b> (worst wins) · <b>avg</b>. Every filter is a <b>rating</b> that feeds the <b>Rating</b> column — sort by it (or any header) to order the table. Click a filter to cycle <b>inactive ▸ on (+) ▸ filter-out</b>. Each pill shows a <b>view⁄total</b> count — how many of its matches are in the current list vs. in total; click either number to <b>isolate</b> the list to just that set (left = within your other filters, right = all of them). Tap 👁 to <b>mute</b> a filter momentarily (ignore it without losing its weight); tap the ✎ to edit its name, keyword list, and a fine-grained 0–2 weight (<b>−</b> at 0 hides matches, <b>~</b> below 1 lowers, <b>+</b> 1 is on / above boosts). A <b>catch-all</b> filter matches when nothing else in its group does.</div>
-    </div>
   </div>
 
   <div class="meta" id="meta">Loading…</div>
@@ -556,6 +563,39 @@ function setStatus(url, key) {
   if (STATUS[url] === key) delete STATUS[url];   // re-clicking the active mark clears it
   else STATUS[url] = key;
   saveStatus();
+}
+// Mark-view filter — narrows the visible list to a single mark (★/✓/✕) or "all".
+// Layered ON TOP of search + discipline filters: it's a clause in passes() (NOT
+// passesBase), so the pill "view" counts stay stable while the displayed list
+// collapses to the chosen mark. Persisted like the marks so the view survives a
+// reload.
+var VIEW_KEY = "gamedevboard.markview.v1";
+var VIEW = "all";   // "all" | "s" | "c" | "i"
+function loadView() {
+  try { var v = localStorage.getItem(VIEW_KEY); if (v === "s" || v === "c" || v === "i") VIEW = v; }
+  catch (e) {}
+}
+function saveView() { try { localStorage.setItem(VIEW_KEY, VIEW); } catch (e) {} }
+// Build the inline mark-view toggles appended to the meta line. Each is a plain
+// text link with a live count tallied among jobs passing the base filters
+// (search + excludes), so the numbers match what selecting that view would show.
+// Clicking the active one again clears back to "All" (handled in the meta click
+// delegate). Returns "" when no marks exist at all, so the line stays clean.
+function viewControlsHtml() {
+  var cs = 0, cc = 0, ci = 0;
+  ALL.forEach(function (j) {
+    if (!passesBase(j)) return;
+    var st = jobStatus(j.url);
+    if (st === "s") cs++; else if (st === "c") cc++; else if (st === "i") ci++;
+  });
+  if (!cs && !cc && !ci && VIEW === "all") return "";
+  function lk(v, label, n) {
+    return '<a href="#" class="vlink' + (VIEW === v ? " on" : "") + (n ? "" : " zero") +
+      '" data-view="' + v + '">' + label + " " + n + "</a>";
+  }
+  // ︎ = text-presentation selector: forces ✓/✕ to render as plain text
+  // glyphs instead of oversized color emoji (which inflated the hitbox + gap).
+  return ' · ' + lk("s", "★︎", cs) + lk("c", "✓︎", cc) + lk("i", "✕︎", ci);
 }
 // Local dev: when served from localhost (e.g. `npm run board:dev`), the YAML is
 // the source of truth — the board mirrors data/targeting.json live and ignores
@@ -790,6 +830,10 @@ function passesBase(j) {
 function passes(j) {
   var q = document.getElementById("q").value.trim().toLowerCase();
   if (q && j._search.indexOf(q) === -1) return false;
+  // Mark-view: when a chip other than "All" is active, keep only jobs carrying
+  // that mark. Layered on top of search/filters; pill counts use passesBase so
+  // they stay unaffected.
+  if (VIEW !== "all" && jobStatus(j.url) !== VIEW) return false;
   // Isolate lens (set by clicking a pill's view/total number): restrict the list
   // to one filter's matches. `total` mode shows EVERY match (even ones your hard-
   // excludes would normally hide); plain mode keeps the other excludes applied.
@@ -876,7 +920,11 @@ function render() {
   rows.appendChild(frag);
 
   if (filtered.length === 0) {
-    rows.innerHTML = '<tr><td colspan="6" class="empty">No openings match these filters.</td></tr>';
+    var emptyMsg = VIEW === "s" ? "No starred roles yet — hit ★ on a row to add one."
+      : VIEW === "c" ? "Nothing marked done yet — hit ✓ on a row as you apply."
+      : VIEW === "i" ? "No ignored roles — hit ✕ on a row to tuck one away here."
+      : "No openings match these filters.";
+    rows.innerHTML = '<tr><td colspan="6" class="empty">' + emptyMsg + '</td></tr>';
   }
   updateSortIndicator();
   var isoNote = "";
@@ -887,7 +935,8 @@ function render() {
       ' <a href="#" id="clearIso">clear</a>';
   }
   document.getElementById("meta").innerHTML =
-    "Showing <b>" + shown.length + "</b> of <b>" + filtered.length + "</b> matching · " + ALL.length + " total openings" + isoNote;
+    "Showing <b>" + shown.length + "</b> of <b>" + filtered.length + "</b> matching · " +
+    ALL.length + " total openings" + isoNote + viewControlsHtml();
   var ci = document.getElementById("clearIso");
   if (ci) ci.onclick = function (e) { e.preventDefault(); ISOLATE = null; schedule({ groups: true }); };
   document.getElementById("more").textContent =
@@ -1265,6 +1314,7 @@ function init(data) {
   }
   load();
   loadStatus();
+  loadView();
   // On localhost the projected YAML wins: seed groups straight from the file
   // (ignore any saved board state) so the page always reflects portals.yml.
   if (LIVE) GROUPS = defaultGroups();
@@ -1286,6 +1336,19 @@ function init(data) {
     if (!url) return;
     setStatus(url, btn.getAttribute("data-act"));   // "s" | "c" | "i"
     schedule({});                                   // restyle the row
+  });
+
+  // Mark-view toggles in the meta line (★ Starred / ✓ Done / ✕ Ignored) — one
+  // delegated handler. Clicking narrows the list to that mark; clicking the
+  // active one again clears back to All. The selection persists.
+  document.getElementById("meta").addEventListener("click", function (e) {
+    var link = e.target.closest(".vlink");
+    if (!link) return;
+    e.preventDefault();
+    var v = link.getAttribute("data-view");
+    VIEW = (VIEW === v) ? "all" : v;
+    saveView();
+    render();
   });
 
   // Rebuild groups too, so each pill's live "view" count tracks the search box.
