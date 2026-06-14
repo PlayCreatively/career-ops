@@ -28,6 +28,27 @@ function assertSmartRecruitersUrl(url) {
   return url;
 }
 
+/** @type {import('./_types.js').Probe} */
+export const probe = {
+  // SR slugs are case-sensitive; try the verbatim and upper-cased forms.
+  slugs: (name) => {
+    const a = name.replace(/[^A-Za-z0-9]+/g, '');
+    return [...new Set([a, a.toUpperCase()].filter((s) => s.length >= 2))];
+  },
+  endpoints: [{
+    kind: 'slug',
+    url: (s) => `https://api.smartrecruiters.com/v1/companies/${s}/postings?limit=10`,
+    where: (s) => s,
+    // SR returns 200 {totalFound:0, content:[]} for ANY slug (no 404), so only a
+    // count>0 result proves the company exists — a 0 result is indistinguishable
+    // from a fake and is treated as a miss.
+    parse: (d) => {
+      const n = typeof d?.totalFound === 'number' ? d.totalFound : (Array.isArray(d?.content) ? d.content.length : 0);
+      return n > 0 ? { count: n, loc: d.content[0]?.location?.city || '' } : null;
+    },
+  }],
+};
+
 function resolveSlug(entry) {
   const raw = typeof entry.careers_url === 'string' ? entry.careers_url : '';
   if (!raw) return null;

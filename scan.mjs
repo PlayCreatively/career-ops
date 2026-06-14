@@ -34,7 +34,8 @@ import { pathToFileURL, fileURLToPath } from 'url';
 import path from 'path';
 import yaml from 'js-yaml';
 
-import { makeHttpCtx } from './providers/_http.mjs';
+import { makeHttpCtx, classifyFetchError } from './providers/_http.mjs';
+import { mergeHealth } from './merge-health.mjs';
 import { splitLocationMode } from './providers/_util.mjs';
 import { scoreCategory, matchGroup, isExcluded } from './rank.mjs';
 
@@ -276,7 +277,7 @@ export function postingId(url) {
 //      Epic-style pair of distinct same-title reqs is always preserved.
 //
 // The aggregator host list is configurable (portals.yml → snapshot_dedup).
-export function dedupeSnapshot(jobs, { aggregators = ['hitmarker.net', 'workwithindies.com'] } = {}) {
+export function dedupeSnapshot(jobs, { aggregators = ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com'] } = {}) {
   const aggs = aggregators.map(a => String(a).toLowerCase());
   const hostOf = (u) => {
     try { return new URL(u).hostname.replace(/^www\./, '').toLowerCase(); }
@@ -575,6 +576,23 @@ async function main() {
   const jsonPath = jsonIdx !== -1 ? args[jsonIdx + 1] : null;
   const companyFlag = args.indexOf('--company');
   const filterCompany = companyFlag !== -1 ? args[companyFlag + 1]?.toLowerCase() : null;
+  // By default the scan exits non-zero when a whole provider goes dark to
+  // throttling/blocking, so a CI gate refuses to publish a snapshot that's
+  // silently missing a source. --no-fail-on-degraded keeps the warning but
+  // forces a clean exit (e.g. local runs where you don't care).
+  const failOnDegraded = !args.includes('--no-fail-on-degraded');
+  // Per-company failure tally (departed-ATS detection). --health-in seeds the
+  // previous state (the last published health.json, fetched from the live site
+  // by CI); --health-out writes the updated state into the snapshot dir so it
+  // redeploys with the board. A company is flagged after N consecutive failed
+  // scans (default 10) and the board shows an alert. Local runs omit these flags
+  // so residential throttling never pollutes the tally — see merge-health.mjs.
+  const healthInIdx = args.indexOf('--health-in');
+  const healthIn = healthInIdx !== -1 ? args[healthInIdx + 1] : null;
+  const healthOutIdx = args.indexOf('--health-out');
+  const healthOut = healthOutIdx !== -1 ? args[healthOutIdx + 1] : null;
+  const healthThreshIdx = args.indexOf('--health-threshold');
+  const healthThreshold = healthThreshIdx !== -1 ? Number(args[healthThreshIdx + 1]) || 10 : 10;
 
   // Fresh rescan: wipe pending pool + dedup memory before discovering. Skipped
   // on --dry-run so a preview never mutates state.
@@ -613,7 +631,7 @@ async function main() {
   // so it also resolves jobs surfaced via aggregators (whose `company` is the
   // real studio). Aggregator entries are skipped — their careers_url points at
   // the aggregator, not a studio.
-  const AGG_HOSTS = ['hitmarker.net', 'workwithindies.com'];
+  const AGG_HOSTS = ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com'];
   const studioUrlByName = new Map();
   // Also register a parenthetical-stripped alias ("PlayStation (Sony Interactive)"
   // → "playstation") so a job whose company drops the suffix still resolves. Only
@@ -708,6 +726,24 @@ async function main() {
   const snapshot = [];
   const snapSeen = new Set();
   const errors = [...resolveErrors];
+  // Per-provider health: how many companies we attempted vs how many returned
+  // (a successful fetch, even with 0 jobs) vs how many we never saw because we
+  // were throttled/blocked. A provider that goes fully dark to throttling is a
+  // silent miss — the snapshot still looks "fine" on total count — so we track
+  // it explicitly and shout about it in the summary (and exit non-zero so a CI
+  // gate catches a whole source disappearing).
+  const providerHealth = new Map();
+  const health = (id) => {
+    let h = providerHealth.get(id);
+    if (!h) { h = { attempted: 0, ok: 0, throttled: 0, blocked: 0, other: 0 }; providerHealth.set(id, h); }
+    return h;
+  };
+
+  // Per-company outcome for the failure tally: name -> { ok } | { ok:false, error, kind }.
+  // ANY non-success counts as a failure (404 isn't guaranteed when a company
+  // leaves an ATS); a reachable fetch (even 0 jobs) is a success that resets the
+  // streak. Companies not attempted this run aren't recorded and carry forward.
+  const companyOutcomes = new Map();
 
   const tasks = targets.map(company => async () => {
     let provider = company._provider;
@@ -783,8 +819,19 @@ async function main() {
         seenCompanyRoles.add(key);
         newOffers.push({ ...job, source: sourceName });
       }
+      // A fetch that returned (even with 0 jobs) is a real signal, not a miss.
+      const h = health(provider.id);
+      h.attempted++; h.ok++;
+      companyOutcomes.set(company.name, { ok: true });
     } catch (err) {
-      errors.push({ company: company.name, error: err.message });
+      const kind = classifyFetchError(err);
+      const h = health(provider.id);
+      h.attempted++;
+      if (kind === 'throttled') h.throttled++;
+      else if (kind === 'blocked') h.blocked++;
+      else h.other++;
+      errors.push({ company: company.name, error: err.message, kind, status: err.status });
+      companyOutcomes.set(company.name, { ok: false, error: err.message, kind });
     }
   });
 
@@ -894,10 +941,82 @@ async function main() {
   }
   console.log(`New offers added:      ${verifiedOffers.length}`);
 
-  if (errors.length > 0) {
-    console.log(`\nErrors (${errors.length}):`);
-    for (const e of errors) {
+  // Partition failures: throttles/blocks are "misses" (we never saw the jobs);
+  // everything else is a plain error. Surface them separately so a rate-limit
+  // wave can't hide inside a generic error list.
+  const throttledErrors = errors.filter(e => e.kind === 'throttled' || e.kind === 'blocked');
+  const otherErrors = errors.filter(e => e.kind !== 'throttled' && e.kind !== 'blocked');
+
+  if (throttledErrors.length > 0) {
+    console.log(`\n⚠ Throttled / blocked (${throttledErrors.length}) — these companies were NOT scanned:`);
+    for (const e of throttledErrors) {
+      const tag = e.kind === 'blocked' ? 'blocked' : 'throttled';
+      console.log(`  ⚠ ${e.company} [${tag}${e.status ? ' ' + e.status : ''}]: ${e.error}`);
+    }
+  }
+
+  if (otherErrors.length > 0) {
+    console.log(`\nErrors (${otherErrors.length}):`);
+    for (const e of otherErrors) {
       console.log(`  ✗ ${e.company}: ${e.error}`);
+    }
+  }
+
+  // Publish gate: halt ONLY on a provider blackout — a whole source where every
+  // attempt failed to throttling/blocking and ZERO jobs came back. That's the
+  // broad, transient signature of an IP-level ban; we'd rather skip the publish
+  // and keep the last-good board than ship one silently missing a whole source.
+  //
+  // A SINGLE company failing (404/403/network/…) does NOT halt — it can't be
+  // told apart from "this company left its ATS" in one run, and halting on it
+  // would freeze the board forever. Those failures feed the per-company tally
+  // below instead, which flags a departure after N straight misses without ever
+  // stopping the publish.
+  const blackouts = [];
+  for (const [id, h] of providerHealth) {
+    const dark = h.throttled + h.blocked;
+    if (h.ok === 0 && h.attempted >= 2 && dark === h.attempted) {
+      blackouts.push({ id, ...h });
+    }
+  }
+  if (blackouts.length > 0) {
+    console.log(`\n${'═'.repeat(45)}`);
+    console.log(`🚨 PROVIDER BLACKOUT — a whole source returned nothing:`);
+    for (const b of blackouts) {
+      console.log(`   ${b.id}: 0/${b.attempted} companies returned (${b.throttled} throttled, ${b.blocked} blocked)`);
+    }
+    console.log(`   Likely an IP-level rate-limit/ban. The snapshot is INCOMPLETE.`);
+    console.log(`${'═'.repeat(45)}`);
+    if (failOnDegraded) {
+      process.exitCode = 1;
+      console.log(`   Exiting non-zero so the publish is skipped (use --no-fail-on-degraded to override).`);
+    }
+  }
+
+  // Per-company failure tally — fold this run's outcomes into the prior state
+  // and write it back so the board can flag companies that have likely left
+  // their ATS. Only runs when --health-out is given (i.e. the CI board scan).
+  if (healthOut) {
+    let prevHealth = null;
+    if (healthIn && existsSync(healthIn)) {
+      try { prevHealth = JSON.parse(readFileSync(healthIn, 'utf-8')); }
+      catch { console.log(`\n⚠ Could not parse --health-in ${healthIn}; starting tally fresh.`); }
+    }
+    const outcomes = [...companyOutcomes].map(([name, o]) => ({ name, ...o }));
+    const newHealth = mergeHealth(prevHealth, outcomes, { threshold: healthThreshold });
+    mkdirSync(path.dirname(healthOut) || '.', { recursive: true });
+    writeFileSync(healthOut, JSON.stringify(newHealth));
+    const flagged = Object.entries(newHealth.companies)
+      .filter(([, r]) => r.fails > 0)
+      .sort((a, b) => b[1].fails - a[1].fails);
+    console.log(`\nHealth tally → ${healthOut} (${flagged.length} compan${flagged.length === 1 ? 'y' : 'ies'} on a failure streak, alert at ${healthThreshold})`);
+    for (const [name, r] of flagged.slice(0, 10)) {
+      const mark = r.fails >= healthThreshold ? '🔴' : '  ';
+      console.log(`  ${mark} ${name}: ${r.fails} straight (since ${r.since})${r.lastError ? ` — ${r.lastError.slice(0, 80)}` : ''}`);
+    }
+    if (newHealth.alerts.length > 0) {
+      console.log(`\n🔴 DEPARTED-ATS ALERT (${newHealth.alerts.length}) — ${healthThreshold}+ straight failures, check studios.yml:`);
+      console.log(`   ${newHealth.alerts.join(', ')}`);
     }
   }
 

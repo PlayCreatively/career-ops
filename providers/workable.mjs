@@ -41,6 +41,18 @@ function resolveFeedUrl(entry) {
   return `https://apply.workable.com/${slug}/jobs.md`;
 }
 
+/** @type {import('./_types.js').Probe} */
+export const probe = {
+  endpoints: [{
+    kind: 'slug',
+    // The widget account API is the keyless discovery surface (the provider
+    // itself reads the markdown feed; the widget API is better for slug probing).
+    url: (s) => `https://apply.workable.com/api/v1/widget/accounts/${s}?details=true`,
+    where: (s) => `apply.workable.com/${s}`,
+    parse: (d) => (d && Array.isArray(d.jobs)) ? { count: d.jobs.length, loc: d.jobs[0]?.location?.location_str || '' } : null,
+  }],
+};
+
 /** @type {Provider} */
 export default {
   id: 'workable',

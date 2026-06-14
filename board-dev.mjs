@@ -24,6 +24,7 @@ import { watch } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { projectTargeting } from './project-targeting.mjs';
+import { writeTargetingBlock } from './board-targeting-write.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SITE = path.join(ROOT, 'site');
@@ -37,10 +38,48 @@ const TYPES = {
   '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
 };
 
+// ── Read a request body, capped so a stray client can't OOM us ──────
+function readBody(req, limit = 2 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    let data = '', over = false;
+    req.on('data', (c) => {
+      if (over) return;
+      data += c;
+      if (data.length > limit) { over = true; reject(new Error('payload too large')); }
+    });
+    req.on('end', () => { if (!over) resolve(data); });
+    req.on('error', reject);
+  });
+}
+
+// ── Save handler: board POSTs its live filter state here, we write it back into
+// the watched YAML's `targeting:` block. The watcher below then reprojects it
+// and the board reseeds from the file — closing the edit→disk→board loop. Only
+// reachable from localhost (this server only ever binds there), matching the
+// board's own LIVE gate for the button. ────────────────────────────
+async function handleSaveTargeting(req, res) {
+  try {
+    const body = await readBody(req);
+    const payload = JSON.parse(body || '{}');
+    const groups = payload && payload.groups;
+    if (!Array.isArray(groups)) throw new Error('expected { groups: [...] }');
+    const schema = writeTargetingBlock(SRC, groups);
+    const pills = schema.reduce((n, g) => n + (g.filters?.length || 0), 0);
+    console.log(`  💾 saved ${schema.length} groups, ${pills} filters → ${SRC}`);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, file: path.basename(SRC), groups: schema.length, pills }));
+  } catch (err) {
+    console.error(`  ✗ save failed: ${err.message}`);
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: err.message }));
+  }
+}
+
 // ── Static server (site/ only; no directory traversal) ──────────────
 const server = http.createServer(async (req, res) => {
   try {
     const url = decodeURIComponent((req.url || '/').split('?')[0]);
+    if (req.method === 'POST' && url === '/save-targeting') { await handleSaveTargeting(req, res); return; }
     const rel = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
     const full = path.join(SITE, rel);
     if (!full.startsWith(SITE)) { res.writeHead(403).end('forbidden'); return; }

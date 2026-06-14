@@ -25,6 +25,7 @@ permissions:
   contents: read    # nothing is pushed back; the artifact is the only output
   pages: write      # deploy to GitHub Pages
   id-token: write   # required by deploy-pages
+  issues: write     # open/update the departed-ATS health alert issue
 
 jobs:
   refresh:
@@ -46,16 +47,29 @@ jobs:
       - name: Install scanner deps
         run: npm install --no-audit --no-fund
 
+      - name: Fetch previous health tally from the live board
+        # The per-company failure tally persists by riding inside the deployed
+        # artifact — there's no committed state. Pull the last published
+        # health.json from the live site so this run can increment/reset it. On
+        # the very first run (or any blip) the file is absent and the scan starts
+        # the tally fresh. Best-effort: never fail the build on a fetch miss.
+        run: |
+          URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data/health.json"
+          curl -sf "$URL" -o prev-health.json && echo "Loaded prior tally." || echo "No prior tally (first run / unreachable) — starting fresh."
+
       - name: Scan + regenerate snapshot (THE GATE)
-        # Runs the whole zero-token scan. A crash, a broken provider, or a bad
-        # studios.yml exits non-zero and the job stops here — so the deploy below
-        # never runs and the live board keeps its last good state.
+        # Runs the whole zero-token scan. A crash, a broken provider, a bad
+        # studios.yml, or a PROVIDER BLACKOUT (a whole ATS source going dark to
+        # IP-level throttling) exits non-zero and the job stops here — so the
+        # deploy below never runs and the live board keeps its last good state.
+        # A SINGLE company failing does NOT halt; it feeds the failure tally
+        # (--health-out) and is alerted after N straight misses (departed-ATS).
         #
         # --dry-run keeps the scan from writing the personal data/pipeline.md +
         # scan-history.tsv (gitignored, absent in this clean checkout). The full
         # scan still runs and --json still writes the snapshot, so this stays a
         # real end-to-end test of the scanner.
-        run: node scan.mjs --no-filter --json site/data/jobs.json --dry-run
+        run: node scan.mjs --no-filter --json site/data/jobs.json --dry-run --health-in prev-health.json --health-out site/data/health.json
 
       - name: Validate snapshot is sane
         # A scan that "succeeds" but returns almost nothing is also a failure
@@ -76,3 +90,14 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deploy
         uses: actions/deploy-pages@v4
+
+      - name: Sync departed-ATS alert issue
+        # Reflects the freshly-published health.json into a single GitHub issue:
+        # opens/updates it while companies are over the failure threshold, closes
+        # it when they recover. Runs only after a successful deploy (the tally is
+        # only meaningful when the run actually published). Never fails the board.
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node health-alert.mjs site/data/health.json || echo "health-alert ran into a non-fatal error; board already deployed."

@@ -80,6 +80,20 @@ tracked_companies:
     notes: "Indie / remote-heavy aggregator. Junior-friendly. RSS-backed."
     enabled: true
 
+  - name: Remote Game Jobs
+    provider: remote-game-jobs
+    notes: "Remote-only games board. All postings remote. RSS-backed. See providers/remotegamejobs.mjs."
+    enabled: true
+
+  # ── Studios on Breezy HR ──────────────────────────────────────────
+  # Per-company ATS (like greenhouse/lever): one entry per studio. Tenants live
+  # at {slug}.breezy.hr and auto-detect from careers_url; the public feed is
+  # {origin}/json. See providers/breezy.mjs.
+  - name: Pine Creek Games
+    careers_url: https://pine-creek-games.breezy.hr
+    notes: "Winter Burrow devs. Fully remote (CEST). Breezy ATS."
+    enabled: true
+
   # ── Studios on Greenhouse ─────────────────────────────────────────
 
   - name: Riot Games
@@ -1247,9 +1261,10 @@ tracked_companies:
     last_probe: 2026-06-09
     notes: "Farnborough, UK — VR."
   - name: Cloud Imperium Games
-    careers_url: https://cloudimperiumgames.wd1.myworkdayjobs.com/CIG_Global_Careers
-    recipe: { kind: browser, reason: "Workday cxs endpoint gated (HTTP 422) — confirm real cxs call in browser" }
-    notes: "Manchester — Star Citizen. ⭐"
+    provider: breezy
+    careers_url: https://cloud-imperium-games.breezy.hr
+    last_probe: 2026-06-14
+    notes: "Manchester/LA — Star Citizen. ⭐ Breezy tenant (exact-name slug; feed empty at wire time — CONFIRM identity from first posting). Reachable path around the Workday cxs-422 block (cloudimperiumgames.wd1.myworkdayjobs.com/CIG_Global_Careers)."
 
   # ── GDI 2025 import (Dataspelsbranschen Game Developer Index) ──────
   # Swedish-industry directory, bulk-imported tokenlessly (import-gdi.mjs).

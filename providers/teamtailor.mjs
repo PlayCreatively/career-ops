@@ -72,6 +72,21 @@ export function parseTeamtailorFeed(json, fallbackCompany) {
     });
 }
 
+// jsonfeed-shaped /jobs.json is the Teamtailor fingerprint (guards against a
+// random site that happens to serve a /jobs.json).
+const ttParse = (d) =>
+  (Array.isArray(d?.items) && typeof d.version === 'string' && d.version.includes('jsonfeed'))
+    ? { count: d.items.length, loc: '' } : null;
+
+/** @type {import('./_types.js').Probe} */
+export const probe = {
+  endpoints: [
+    { kind: 'slug', url: (s) => `https://${s}.teamtailor.com/jobs.json`, where: (s) => `${s}.teamtailor.com`, parse: ttParse },
+    // Many TT studios run on a custom domain — sweep the studio's own host too.
+    { kind: 'domain', confidence: 'high', url: (host) => `https://${host}/jobs.json`, where: (host) => host, parse: ttParse },
+  ],
+};
+
 /** @type {Provider} */
 export default {
   id: 'teamtailor',

@@ -25,6 +25,17 @@ function resolveApiUrl(entry) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** @type {import('./_types.js').Probe} */
+export const probe = {
+  namesakeProne: true,
+  endpoints: [{
+    kind: 'slug',
+    url: (s) => `https://api.ashbyhq.com/posting-api/job-board/${s}`,
+    where: (s) => s,
+    parse: (d) => (d && Array.isArray(d.jobs)) ? { count: d.jobs.length, loc: d.jobs[0]?.location || '' } : null,
+  }],
+};
+
 /** @type {Provider} */
 export default {
   id: 'ashby',

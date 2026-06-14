@@ -27,6 +27,18 @@ function resolveApiUrl(entry) {
   return `https://${apiHost}/v0/postings/${slug}`;
 }
 
+/** @type {import('./_types.js').Probe} */
+export const probe = {
+  namesakeProne: true,
+  endpoints: [
+    { kind: 'slug', url: (s) => `https://api.lever.co/v0/postings/${s}?mode=json`, where: (s) => s,
+      parse: (d) => Array.isArray(d) ? { count: d.length, loc: d[0]?.categories?.location || '' } : null },
+    // EU data-residency boards live on a separate host; probe both regions.
+    { kind: 'slug', label: 'lever-eu', url: (s) => `https://api.eu.lever.co/v0/postings/${s}?mode=json`, where: (s) => `${s} (eu)`,
+      parse: (d) => Array.isArray(d) ? { count: d.length, loc: d[0]?.categories?.location || '' } : null },
+  ],
+};
+
 /** @type {Provider} */
 export default {
   id: 'lever',

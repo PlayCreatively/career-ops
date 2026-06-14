@@ -37,6 +37,17 @@ function resolveApiUrl(entry) {
   return null;
 }
 
+/** @type {import('./_types.js').Probe} */
+export const probe = {
+  namesakeProne: true, // single-word board slugs collide with non-game namesakes
+  endpoints: [{
+    kind: 'slug',
+    url: (s) => `https://boards-api.greenhouse.io/v1/boards/${s}/jobs`,
+    where: (s) => s,
+    parse: (d) => (d && Array.isArray(d.jobs)) ? { count: d.jobs.length, loc: d.jobs[0]?.location?.name || '' } : null,
+  }],
+};
+
 /** @type {Provider} */
 export default {
   id: 'greenhouse',

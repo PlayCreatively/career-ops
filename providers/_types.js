@@ -88,4 +88,50 @@
  * @property {(entry: PortalEntry, ctx: Context) => Promise<Job[]>} fetch      Required.
  */
 
+/**
+ * Result of probing one candidate URL — a hit (count + sample location) or null
+ * for a miss. `count` may be 0 (a real-but-empty board still proves the ATS).
+ *
+ * @typedef {object} ProbeHit
+ * @property {number} count
+ * @property {string} loc     A sample location string (shown in probe output).
+ */
+
+/**
+ * One candidate endpoint to probe. `kind:'slug'` builds the URL from a slug
+ * guessed off the company name; `kind:'domain'` builds it from the studio's own
+ * domain host (the custom-domain sweep). `parse` receives the fetched JSON and
+ * returns a ProbeHit or null. Pure data + pure functions — no I/O; the probe
+ * runner (probe-studios.mjs) does the fetching.
+ *
+ * @typedef {object} ProbeEndpoint
+ * @property {('slug'|'domain')} kind
+ * @property {(key: string) => string} url            key = slug (kind:slug) or host (kind:domain)
+ * @property {(key: string) => string} where          human-readable "where" label for the hit
+ * @property {(data: unknown) => (ProbeHit | null)} parse
+ * @property {string} [label]                         override the displayed ATS name (e.g. 'lever-eu')
+ * @property {('high'|'medium'|'verify')} [confidence] override the provider's base tier for this endpoint
+ */
+
+/**
+ * Optional discovery descriptor. Providers that can be FOUND by guessing a
+ * slug/domain export this as a named `probe` export; probe-studios.mjs auto-loads
+ * every provider that has one. Aggregators (hitmarker/work-with-indies/...) and
+ * recipe/parser/complex providers simply omit it and are skipped by the probe —
+ * so adding a discoverable ATS is one self-contained provider file, no probe edit.
+ *
+ * @typedef {object} Probe
+ * @property {ProbeEndpoint[]} endpoints
+ * @property {('high'|'medium'|'verify')} [confidence]  base tier for a hit (default 'medium')
+ * @property {boolean} [namesakeProne]                  downgrade short/generic slug hits to 'verify'
+ * @property {(name: string) => string[]} [slugs]       override slug generation (default: name-derived)
+ * @property {string} [canary]                          a KNOWN-LIVE slug for this ATS. The probe hits it
+ *                                                      on the slug endpoint before each wave; if it stops
+ *                                                      returning parseable data the ATS is deemed unhealthy
+ *                                                      and ALL its misses are distrusted (treated uncertain,
+ *                                                      not clean) — both 404/410s and parse-rejected 2xx
+ *                                                      bodies, the disguised-throttle defense. Omit when no
+ *                                                      stable live tenant is known (misses stay trusted).
+ */
+
 export {};

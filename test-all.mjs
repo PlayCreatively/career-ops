@@ -1324,6 +1324,395 @@ try {
   fail(`work-mode tests crashed: ${e.message}`);
 }
 
+// ── Provider — breezy ───────────────────────────────────────────
+
+console.log('\n16. Provider — breezy');
+
+try {
+  const breezy = (await import(pathToFileURL(join(ROOT, 'providers/breezy.mjs')).href)).default;
+  const { parseBreezyFeed } = await import(pathToFileURL(join(ROOT, 'providers/breezy.mjs')).href);
+
+  if (breezy.id === 'breezy') pass('breezy.id is "breezy"');
+  else fail(`breezy.id is ${JSON.stringify(breezy.id)}`);
+
+  const hit = breezy.detect({ name: 'Pine Creek Games', careers_url: 'https://pine-creek-games.breezy.hr/' });
+  if (hit && hit.url === 'https://pine-creek-games.breezy.hr/json') {
+    pass('breezy.detect() derives {tenant}/json from a *.breezy.hr careers URL');
+  } else {
+    fail(`breezy.detect() returned ${JSON.stringify(hit)}`);
+  }
+
+  if (
+    breezy.detect({ careers_url: 'https://marketing.breezy.hr/json' }) === null &&
+    breezy.detect({ careers_url: 'https://app.breezy.hr' }) === null &&
+    breezy.detect({ careers_url: 'https://breezy.hr' }) === null
+  ) {
+    pass('breezy.detect() skips bare breezy.hr and reserved (marketing/app) subdomains');
+  } else {
+    fail('breezy.detect() must skip bare host and reserved subdomains');
+  }
+
+  if (
+    breezy.detect({ careers_url: 'https://evil-breezy.hr' }) === null &&
+    breezy.detect({ careers_url: 'https://evil.example/breezy.hr/json' }) === null &&
+    breezy.detect({ careers_url: null }) === null
+  ) {
+    pass('breezy.detect() rejects lookalike hosts, path-spoofs, and non-string URLs');
+  } else {
+    fail('breezy.detect() must reject spoofed/invalid careers URLs');
+  }
+
+  // parseBreezyFeed against the real /json array shape.
+  const sample = [
+    {
+      name: '2D Animator',
+      url: 'https://pine-creek-games.breezy.hr/p/00b4-2d-animator',
+      published_date: '2026-06-11T13:00:03.186Z',
+      department: 'Art and Animation',
+      location: { country: { name: 'Denmark', id: 'DK' }, is_remote: true, remote_details: { value: 'remote-location' }, name: 'Copenhagen' },
+      company: { name: 'Pine Creek Games' },
+    },
+    // is_remote anywhere → workMode 'anywhere'; no company → fallback name.
+    { name: 'Designer', url: 'https://x.breezy.hr/p/2', location: { is_remote: true, remote_details: { value: 'remote-anywhere' }, name: 'Anywhere' } },
+    // Malformed: dropped (no name / no url).
+    { url: 'https://x.breezy.hr/p/3' },
+    { name: 'No URL' },
+  ];
+  const jobs = parseBreezyFeed(sample, 'Fallback Studio');
+  if (jobs.length === 2) pass('parseBreezyFeed keeps only items with name + url');
+  else fail(`parseBreezyFeed returned ${jobs.length} jobs (expected 2)`);
+
+  if (jobs[0]?.company === 'Pine Creek Games' && jobs[0]?.location === 'Copenhagen, Denmark' && jobs[0]?.workMode === 'remote' && jobs[0]?.department === 'Art and Animation') {
+    pass('parseBreezyFeed maps company/location/workMode/department');
+  } else {
+    fail(`row 0 = ${JSON.stringify(jobs[0])}`);
+  }
+
+  if (jobs[1]?.company === 'Fallback Studio' && jobs[1]?.workMode === 'anywhere') {
+    pass('parseBreezyFeed falls back to entry name and maps remote-anywhere → anywhere');
+  } else {
+    fail(`row 1 = ${JSON.stringify(jobs[1])}`);
+  }
+
+  if (parseBreezyFeed(null, 'X').length === 0 && parseBreezyFeed({}, 'X').length === 0) {
+    pass('parseBreezyFeed handles null/non-array shapes without crashing');
+  } else {
+    fail('parseBreezyFeed should yield empty result for null/non-array shapes');
+  }
+} catch (e) {
+  fail(`breezy provider tests crashed: ${e.message}`);
+}
+
+// ── Provider — remote-game-jobs ─────────────────────────────────
+
+console.log('\n17. Provider — remote-game-jobs');
+
+try {
+  const rgj = (await import(pathToFileURL(join(ROOT, 'providers/remotegamejobs.mjs')).href)).default;
+  const { parseRemoteGameJobsFeed } = await import(pathToFileURL(join(ROOT, 'providers/remotegamejobs.mjs')).href);
+
+  if (rgj.id === 'remote-game-jobs') pass('remote-game-jobs.id is "remote-game-jobs"');
+  else fail(`remote-game-jobs.id is ${JSON.stringify(rgj.id)}`);
+
+  const hit = rgj.detect({ careers_url: 'https://remotegamejobs.com/' });
+  if (hit && hit.url === 'https://remotegamejobs.com/feed.rss') {
+    pass('remote-game-jobs.detect() claims remotegamejobs.com careers URLs');
+  } else {
+    fail(`remote-game-jobs.detect() returned ${JSON.stringify(hit)}`);
+  }
+
+  if (
+    rgj.detect({ careers_url: 'https://boards.greenhouse.io/x' }) === null &&
+    rgj.detect({ careers_url: 'https://evil-remotegamejobs.com' }) === null &&
+    rgj.detect({ careers_url: null }) === null
+  ) {
+    pass('remote-game-jobs.detect() rejects non-RGJ, lookalike, and non-string URLs');
+  } else {
+    fail('remote-game-jobs.detect() must reject spoofed/invalid careers URLs');
+  }
+
+  const sampleXml = `<rss><channel>
+    <item>
+      <title>Pine Creek Games is hiring 2D Animator (Remote Job)</title>
+      <link>https://remotegamejobs.com/jobs/pine-creek-games-2d-animator-remote-job</link>
+      <pubDate>Sat, 13 Jun 2026 15:04:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Acme &amp; Co is hiring a Senior Tools Engineer (Remote Job)</title>
+      <link>https://remotegamejobs.com/jobs/acme-co-senior-tools-engineer-remote-job</link>
+    </item>
+    <item>
+      <title>A free-form headline that does not match</title>
+      <link>https://remotegamejobs.com/jobs/weird-one</link>
+    </item>
+    <item>
+      <title>No link here</title>
+    </item>
+  </channel></rss>`;
+  const jobs = parseRemoteGameJobsFeed(sampleXml);
+  if (jobs.length === 3) pass('parseRemoteGameJobsFeed keeps items with title + link');
+  else fail(`parseRemoteGameJobsFeed returned ${jobs.length} jobs (expected 3)`);
+
+  if (jobs[0]?.company === 'Pine Creek Games' && jobs[0]?.title === '2D Animator' && jobs[0]?.workMode === 'remote' && jobs[0]?.postedDate === '2026-06-13T15:04:00.000Z') {
+    pass('parseRemoteGameJobsFeed splits "{Company} is hiring {Role} (Remote Job)" + parses pubDate');
+  } else {
+    fail(`row 0 = ${JSON.stringify(jobs[0])}`);
+  }
+
+  if (jobs[1]?.company === 'Acme & Co' && jobs[1]?.title === 'Senior Tools Engineer') {
+    pass('parseRemoteGameJobsFeed strips a/an and decodes entities in title');
+  } else {
+    fail(`row 1 = ${JSON.stringify(jobs[1])}`);
+  }
+
+  if (jobs[2]?.company === '' && jobs[2]?.title === 'A free-form headline that does not match') {
+    pass('parseRemoteGameJobsFeed keeps non-matching titles raw (fail-safe)');
+  } else {
+    fail(`row 2 = ${JSON.stringify(jobs[2])}`);
+  }
+
+  if (parseRemoteGameJobsFeed(null).length === 0 && parseRemoteGameJobsFeed('').length === 0) {
+    pass('parseRemoteGameJobsFeed handles null/empty input without crashing');
+  } else {
+    fail('parseRemoteGameJobsFeed should yield empty result for null/empty input');
+  }
+} catch (e) {
+  fail(`remote-game-jobs provider tests crashed: ${e.message}`);
+}
+
+// ── Provider `probe` descriptor contract (probe-studios auto-discovery) ──
+
+console.log('\n18. Provider probe descriptors');
+
+try {
+  const { readdirSync } = await import('node:fs');
+  const dir = join(ROOT, 'providers');
+  const files = readdirSync(dir).filter(f => f.endsWith('.mjs') && !f.startsWith('_'));
+  let withProbe = 0;
+  let contractOk = true;
+  for (const f of files) {
+    const mod = await import(pathToFileURL(join(dir, f)).href);
+    if (!mod.probe) continue;
+    withProbe++;
+    const p = mod.probe;
+    const eps = p.endpoints;
+    const epsOk = Array.isArray(eps) && eps.length > 0 && eps.every(e =>
+      (e.kind === 'slug' || e.kind === 'domain') &&
+      typeof e.url === 'function' && typeof e.where === 'function' && typeof e.parse === 'function');
+    const slugsOk = p.slugs === undefined || typeof p.slugs === 'function';
+    if (!epsOk || !slugsOk) { contractOk = false; fail(`${f}: malformed probe descriptor`); }
+  }
+  if (contractOk) pass(`all ${withProbe} probe descriptors are well-formed (endpoints + url/where/parse fns)`);
+  // The discoverable ATS set should at least include the keyless slug providers.
+  if (withProbe >= 8) pass(`${withProbe} providers are slug-discoverable (auto-loaded by probe-studios.mjs)`);
+  else fail(`expected >= 8 discoverable providers, found ${withProbe}`);
+
+  // A 'domain'-kind endpoint must declare HIGH confidence (own-domain = trusted).
+  const tt = (await import(pathToFileURL(join(dir, 'teamtailor.mjs')).href)).probe;
+  const dom = tt.endpoints.find(e => e.kind === 'domain');
+  if (dom && dom.confidence === 'high') pass('teamtailor domain endpoint is HIGH confidence');
+  else fail('teamtailor domain endpoint should be HIGH confidence');
+
+  // parse() returns a hit for a real shape and null for a miss.
+  const gh = (await import(pathToFileURL(join(dir, 'greenhouse.mjs')).href)).probe.endpoints[0];
+  if (gh.parse({ jobs: [{ location: { name: 'Berlin' } }] })?.count === 1 && gh.parse({}) === null) {
+    pass('greenhouse probe parse() reads jobs[] and rejects empty shapes');
+  } else {
+    fail('greenhouse probe parse() contract wrong');
+  }
+} catch (e) {
+  fail(`probe descriptor tests crashed: ${e.message}`);
+}
+
+// ── Adaptive probe runner: canary + restrict + side-effect-free import ──
+
+console.log('\n19. Adaptive probe runner (waves / canary / restrict)');
+
+try {
+  const dir = join(ROOT, 'providers');
+  // Importing probe-studios.mjs must NOT run the probe (guarded by run-as-main).
+  const ps = await import(pathToFileURL(join(ROOT, 'probe-studios.mjs')).href);
+  if (typeof ps.probe === 'function' && typeof ps.runEndpoint === 'function' && typeof ps.checkCanaries === 'function') {
+    pass('probe-studios.mjs imports side-effect-free and exports probe/runEndpoint/checkCanaries');
+  } else {
+    fail('probe-studios.mjs missing expected test exports');
+  }
+
+  // classifyStatus: the inverted certainty model (404 = certain, throttle = uncertain).
+  const cs = ps._classifyStatus;
+  if (cs(404).kind === 'notfound' && cs(200).kind === 'data' &&
+      cs(403).kind === 'uncertain' && cs(429).kind === 'uncertain' && cs(503).kind === 'uncertain') {
+    pass('classifyStatus: 404→notfound, 2xx→data, 403/429/5xx→uncertain');
+  } else {
+    fail('classifyStatus contract wrong');
+  }
+
+  // The breezy provider declares a canary (known-live tenant) for 404 distrust.
+  const breezy = (await import(pathToFileURL(join(dir, 'breezy.mjs')).href)).probe;
+  if (breezy.canary === 'pine-creek-games') pass('breezy probe declares a canary (pine-creek-games) for 404-as-throttle defense');
+  else fail('breezy probe should declare canary pine-creek-games');
+
+  // restrict: probe() with an empty restrict set hits NO providers → clean miss,
+  // no network, no throw (proves later waves can scope to specific ATSes).
+  const tracked = { names: new Set(), hosts: new Set() };
+  const fakeProviders = [{ id: 'greenhouse', endpoints: [{ kind: 'slug', url: () => 'http://127.0.0.1:9/x', where: (s) => s, parse: () => null }] }];
+  const r = await ps.probe({ name: 'Nonexistent Studio XYZ' }, tracked, fakeProviders, { restrict: new Set() });
+  if (r && r.ats === null && !r.uncertain) pass('probe(restrict:∅) probes nothing → clean miss (waves can scope to one ATS)');
+  else fail(`probe restrict-empty should be a clean miss, got ${JSON.stringify(r)}`);
+
+  // dedup: a studio already tracked short-circuits to skipped (no network).
+  const tracked2 = { names: new Set([ps.norm('Tracked Studio')]), hosts: new Set() };
+  const r2 = await ps.probe({ name: 'Tracked Studio' }, tracked2, fakeProviders, {});
+  if (r2 && r2.skipped) pass('probe() skips a studio already in studios.yml (no probing)');
+  else fail(`probe dedup should skip, got ${JSON.stringify(r2)}`);
+
+  // ── probe-state ledger (progressive draining) ──
+  const ids = ['greenhouse', 'breezy', 'workable'];
+  const led = new Map();
+  // no entry → null (probe everything)
+  const open0 = ps.ledgerOpen(led, 'studio-a', ids);
+  // partial: greenhouse cleared → only breezy+workable open
+  led.set('studio-b', { name: 'B', version: ps.SCAN_VERSION, hit: '', missed: new Set(['greenhouse']), last: '2026-06-14' });
+  const openB = ps.ledgerOpen(led, 'studio-b', ids);
+  // fully cleared → empty Set (caller skips)
+  led.set('studio-c', { name: 'C', version: ps.SCAN_VERSION, hit: '', missed: new Set(ids), last: 'x' });
+  const openC = ps.ledgerOpen(led, 'studio-c', ids);
+  // stale version → null (misses invalidated, re-probe all)
+  led.set('studio-d', { name: 'D', version: ps.SCAN_VERSION - 1, hit: '', missed: new Set(ids), last: 'x' });
+  const openD = ps.ledgerOpen(led, 'studio-d', ids);
+  if (open0 === null && openB.size === 2 && !openB.has('greenhouse') && openC.size === 0 && openD === null) {
+    pass('ledgerOpen: none→all, partial→open subset, full→skip, stale-version→re-probe all');
+  } else {
+    fail(`ledgerOpen logic wrong: open0=${open0} B=${[...(openB||[])]} C=${openC&&openC.size} D=${openD}`);
+  }
+  // mergeLedger unions new misses onto known ones; a stale prior is reset first.
+  const lm = new Map([['k', { name: 'K', version: ps.SCAN_VERSION, hit: '', missed: new Set(['greenhouse']), last: 'x' }]]);
+  ps.mergeLedger(lm, 'k', 'K', { ats: null, missedAts: ['breezy'] });
+  const lm2 = new Map([['s', { name: 'S', version: ps.SCAN_VERSION - 1, hit: '', missed: new Set(['lever']), last: 'x' }]]);
+  ps.mergeLedger(lm2, 's', 'S', { ats: null, missedAts: ['ashby'] });
+  if ([...lm.get('k').missed].sort().join(',') === 'breezy,greenhouse' && [...lm2.get('s').missed].join(',') === 'ashby') {
+    pass('mergeLedger: unions at current version, resets a stale-version record');
+  } else {
+    fail('mergeLedger union/reset wrong');
+  }
+
+  // --quick must NOT close a provider that has an untried domain endpoint (it
+  // skips the custom-domain sweep), so a later full run still probes it. A
+  // slug-only provider IS fully covered by quick and DOES close. We re-import
+  // with --quick in argv (cache-busted) since QUICK is read at module load.
+  const savedArgv = process.argv;
+  process.argv = [...savedArgv, '--quick'];
+  const psQ = await import(pathToFileURL(join(ROOT, 'probe-studios.mjs')).href + '?quick=1');
+  process.argv = savedArgv;
+  // A tiny local server that 200s with an empty body, so parse()→null is a CLEAN
+  // miss (not a network/uncertain). Both providers point at it.
+  const tQ = { names: new Set(), hosts: new Set() };
+  const http = await import('node:http');
+  const srv = http.createServer((_, res) => { res.writeHead(200); res.end(''); });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const portUrl = `http://127.0.0.1:${srv.address().port}/x`;
+  const missEndpoint = { url: () => portUrl, where: (s) => s, parse: () => null };
+  const provDomain = { id: 'teamtailor', endpoints: [{ kind: 'slug', ...missEndpoint }, { kind: 'domain', ...missEndpoint }] };
+  const provSlug = { id: 'greenhouse', endpoints: [{ kind: 'slug', ...missEndpoint }] };
+  const rQ = await psQ.probe({ name: 'Nonexistent Studio XYZ' }, tQ, [provDomain, provSlug], {});
+  await new Promise((r) => srv.close(r));
+  const missed = new Set(rQ.missedAts || []);
+  if (!missed.has('teamtailor') && missed.has('greenhouse')) {
+    pass('quick mode: leaves domain-capable provider OPEN in ledger, closes slug-only provider');
+  } else {
+    fail(`quick miss-recording wrong: missedAts=${[...missed]}`);
+  }
+
+  // per-host gate: a burst to ONE host is capped (default 4) so a WAF can't be
+  // tripped; different hosts run fully in parallel (unaffected).
+  let activeH = 0, peakH = 0, peakOther = 0, activeOther = 0;
+  const slow = (track) => async () => { track(1); await new Promise((r) => setTimeout(r, 15)); track(-1); };
+  const trackH = (d) => { activeH += d; peakH = Math.max(peakH, activeH); };
+  const trackO = (d) => { activeOther += d; peakOther = Math.max(peakOther, activeOther); };
+  await Promise.all([
+    ...Array.from({ length: 12 }, () => ps._withHostLimit('one.example', slow(trackH))),
+    ...Array.from({ length: 6 }, () => ps._withHostLimit('two.example', slow(trackO))),
+  ]);
+  if (peakH <= 4 && peakOther <= 4 && peakOther >= 1) {
+    pass(`per-host gate caps one host's burst (peak ${peakH} ≤ 4) while other hosts run in parallel`);
+  } else {
+    fail(`per-host gate wrong: peakH=${peakH} peakOther=${peakOther}`);
+  }
+} catch (e) {
+  fail(`adaptive probe runner tests crashed: ${e.message}`);
+}
+
+// ── 20. FETCH ERROR CLASSIFICATION ──────────────────────────────
+console.log('\n20. Fetch error classification (throttle/block monitoring)');
+try {
+  const { classifyFetchError } = await import(pathToFileURL(join(ROOT, 'providers/_http.mjs')).href);
+  const cases = [
+    [{ status: 429, message: 'HTTP 429: error code: 1015' }, 'throttled', 'Cloudflare 1015 → throttled'],
+    [{ status: 503, message: 'unavailable' }, 'throttled', '503 → throttled'],
+    [{ status: 200, message: 'Too Many Requests' }, 'throttled', 'rate-limit copy in body → throttled'],
+    [{ status: 403, message: 'forbidden' }, 'blocked', '403 → blocked'],
+    [{ status: 401, message: 'unauthorized' }, 'blocked', '401 → blocked'],
+    [{ status: 404, message: 'not found' }, 'notfound', '404 → notfound (benign, not a miss)'],
+    [{ name: 'AbortError', message: 'aborted' }, 'timeout', 'AbortError → timeout'],
+    [{ message: 'fetch failed' }, 'network', 'network error → network'],
+    [{ status: 500, message: 'boom' }, 'http', 'other HTTP → http'],
+  ];
+  let allOk = true;
+  for (const [inp, exp, label] of cases) {
+    const got = classifyFetchError(inp);
+    if (got !== exp) { allOk = false; fail(`classifyFetchError: ${label} (got "${got}")`); }
+  }
+  if (allOk) pass(`classifyFetchError maps ${cases.length} cases correctly (throttle/block/notfound/timeout/network/http)`);
+  // Throttle and block are the two "miss" kinds the scanner aggregates into a
+  // provider-blackout signal; everything else is benign or a plain error.
+  const miss = (k) => k === 'throttled' || k === 'blocked';
+  if (miss(classifyFetchError({ status: 429 })) && miss(classifyFetchError({ status: 403 })) &&
+      !miss(classifyFetchError({ status: 404 })) && !miss(classifyFetchError({ message: 'x' }))) {
+    pass('miss-kinds (throttled/blocked) stay distinct from benign 404/network — no silent blackout');
+  } else {
+    fail('miss-kind partition is wrong — blackout detection would misfire');
+  }
+} catch (e) {
+  fail(`fetch error classification tests crashed: ${e.message}`);
+}
+
+// ── 21. HEALTH TALLY (departed-ATS detection) ───────────────────
+console.log('\n21. Health tally (per-company failure streaks)');
+try {
+  const { mergeHealth } = await import(pathToFileURL(join(ROOT, 'merge-health.mjs')).href);
+  const T = 3;
+  const d = (s) => new Date(`2026-06-0${s}T00:00:00Z`);
+
+  // A streak builds across runs and fires an alert exactly at the threshold.
+  let s = mergeHealth(null, [{ name: 'Acme', ok: false, error: 'HTTP 404', kind: 'notfound' }], { threshold: T, now: d(1) });
+  let ok1 = s.companies.Acme.fails === 1 && s.alerts.length === 0;
+  s = mergeHealth(s, [{ name: 'Acme', ok: false, error: 'HTTP 403', kind: 'blocked' }], { threshold: T, now: d(2) });
+  ok1 = ok1 && s.companies.Acme.fails === 2 && s.companies.Acme.since === '2026-06-01' && s.alerts.length === 0;
+  s = mergeHealth(s, [{ name: 'Acme', ok: false, error: 'timeout', kind: 'timeout' }], { threshold: T, now: d(3) });
+  ok1 = ok1 && s.companies.Acme.fails === 3 && s.alerts.join() === 'Acme';
+  if (ok1) pass('streak increments across runs (any error kind), `since` is pinned, alert fires at threshold');
+  else fail(`streak/alert wrong: ${JSON.stringify(s)}`);
+
+  // A single success resets the streak (dropped) and clears the alert.
+  const recovered = mergeHealth(s, [{ name: 'Acme', ok: true }], { threshold: T, now: d(4) });
+  if (!recovered.companies.Acme && recovered.alerts.length === 0) {
+    pass('one reachable fetch resets the streak and clears the alert');
+  } else {
+    fail(`recovery did not reset: ${JSON.stringify(recovered)}`);
+  }
+
+  // A company NOT attempted this run carries forward untouched (scoped runs and
+  // temporary studios.yml removals must not reset or drop another's streak).
+  const carried = mergeHealth(s, [{ name: 'Other', ok: true }], { threshold: T, now: d(4) });
+  if (carried.companies.Acme && carried.companies.Acme.fails === 3 && carried.alerts.join() === 'Acme') {
+    pass('un-attempted companies carry forward unchanged (no reset, no drop)');
+  } else {
+    fail(`carry-forward wrong: ${JSON.stringify(carried)}`);
+  }
+} catch (e) {
+  fail(`health tally tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));

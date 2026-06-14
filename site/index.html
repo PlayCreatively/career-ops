@@ -430,6 +430,25 @@
   @keyframes pillflash {
     0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 75%, transparent); }
     100% { box-shadow: 0 0 0 9px transparent; } }
+  /* ── Unsaved-changes diff popover (localhost only) ─────────────────────────
+     Floats above the "Save to portals.yml" button on hover, listing what differs
+     between the live board filters and the YAML on disk. Reuses the diff that
+     decides whether the button shows at all. */
+  #saveYml.dirty { border-color: var(--warm); color: var(--warm); }
+  .savediff { position: absolute; z-index: 60; min-width: 250px; max-width: 380px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(60,48,36,.18); padding: 10px 12px; display: none;
+    font-size: 12.5px; line-height: 1.5; max-height: 340px; overflow-y: auto; }
+  .savediff.open { display: block; }
+  .savediff h4 { margin: 0 0 7px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--dim); font-weight: 700; }
+  .savediff .dl { display: flex; gap: 8px; padding: 2px 0; align-items: baseline; }
+  .savediff .dl .s { flex: none; width: 11px; text-align: center; font-weight: 800;
+    font-variant-numeric: tabular-nums; line-height: 1.5; }
+  .savediff .dl .x { color: var(--txt); }
+  .savediff .add .s { color: var(--accent2); }
+  .savediff .del .s { color: var(--danger); }
+  .savediff .mod .s { color: var(--warm); }
 </style>
 <script>
 // ── Theme registry ─────────────────────────────────────────────────────────
@@ -461,6 +480,7 @@ window.__themeKey = "gamedevboard.theme";
     <span id="generated"></span>
   </div>
 </header>
+<div id="healthAlert" role="status" style="display:none;margin:0 auto;max-width:1100px;padding:8px 14px;border:1px solid #b45309;border-radius:8px;background:#78350f22;color:#fbbf24;font-size:13px;line-height:1.4"></div>
 <div class="wrap">
   <div class="controls">
     <div class="row">
@@ -480,6 +500,9 @@ window.__themeKey = "gamedevboard.theme";
         <button class="btn clear" id="reset">Clear all labels</button>
         <button class="btn restore" id="restore" title="Restore the default labels from targeting.yml" aria-label="Restore default labels">↻</button>
       </span>
+      <!-- Localhost only (board-dev.mjs server): persist the current filters back
+           into portals.yml. Hidden by default; shown when LIVE (see init). -->
+      <button class="btn" id="saveYml" style="display:none" title="Save these filters back into portals.yml">💾 Save to portals.yml</button>
     </div>
     <div id="groups"></div>
     <div class="row"><button class="btn addgroup" id="addGroup">+ new group</button></div>
@@ -618,6 +641,25 @@ function loadStatus() {
   catch (e) { STATUS = {}; }
 }
 function saveStatus() { try { localStorage.setItem(STATUS_KEY, JSON.stringify(STATUS)); } catch (e) {} }
+// Departed-ATS banner: health.json carries an `alerts` list of studios that have
+// failed the daily CI scan N+ times in a row (likely gone from their ATS). It's
+// a separate, optional file — a missing/empty one just hides the strip.
+function loadHealth() {
+  var el = document.getElementById("healthAlert");
+  if (!el) return;
+  fetch("data/health.json", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (h) {
+      var names = h && Array.isArray(h.alerts) ? h.alerts : [];
+      if (!names.length) return;
+      var n = h.threshold || 10;
+      el.textContent = "⚠ " + names.length + " stud" + (names.length === 1 ? "io" : "ios") +
+        " stopped responding for " + n + "+ scans and may have left their ATS — listings may be missing: " +
+        names.join(", ") + ".";
+      el.style.display = "";
+    })
+    .catch(function () {});
+}
 function jobStatus(url) { return STATUS[url] || ""; }
 function setStatus(url, key) {
   if (STATUS[url] === key) delete STATUS[url];   // re-clicking the active mark clears it
@@ -1070,6 +1112,7 @@ function render() {
   if (ci) ci.onclick = function (e) { e.preventDefault(); ISOLATE = null; schedule({ groups: true }); };
   document.getElementById("more").textContent =
     filtered.length > RENDER_CAP ? "…" + (filtered.length - RENDER_CAP) + " more — narrow your filters to see them." : "";
+  updateSaveState();   // refresh the localhost Save button + its diff
 }
 
 function esc(s) {
@@ -1077,6 +1120,116 @@ function esc(s) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
   });
 }
+
+// ── Unsaved-changes diff (localhost "Save to portals.yml") ────────────────────
+// Mirror of runtimeToSchema in board-targeting-write.mjs: project the live GROUPS
+// down to the on-disk YAML shape so we can diff them against the projected
+// baseline (DEFAULT_GROUPS_SEED — what portals.yml currently holds). The same
+// diff both gates the button's visibility and feeds its hover preview, so the
+// button only appears when a save would actually change the file.
+function normFieldJS(field) {
+  if (Array.isArray(field)) return field.length === 1 ? field[0] : field.slice();
+  return field;
+}
+function currentSchema() {
+  return GROUPS.map(function (g) {
+    return {
+      name: typeof g.name === "string" ? g.name : "Group",
+      field: normFieldJS(g.field),
+      combine: g.combine || "min",
+      weight: typeof g.weight === "number" ? g.weight : 0.1,
+      filters: g.filters.map(function (f) {
+        var ff = {};
+        if (f.name) ff.name = f.name;
+        if (f.else) ff.else = true;
+        else ff.keywords = (f.keywords || []).slice();
+        if (f.weight != null) ff.weight = f.weight;
+        if (f.muted) ff.muted = true;
+        return ff;
+      }),
+    };
+  });
+}
+function diffFieldLabel(field) { return Array.isArray(field) ? field.join("+") : String(field); }
+function diffWeightLabel(w) { return w == null ? "off" : String(w); }
+// A filter's identity for matching across base/current: its visible label (the
+// same name → first-keyword → catch-all fallback the board uses elsewhere).
+function diffFilterLabel(f) {
+  if (f.name) return f.name;
+  if (f.else) return "(catch-all)";
+  return (f.keywords && f.keywords[0]) || "(empty)";
+}
+function diffFilters(gname, base, cur, out) {
+  var bByL = {}, cByL = {};
+  base.forEach(function (f) { bByL[diffFilterLabel(f)] = f; });
+  cur.forEach(function (f) { cByL[diffFilterLabel(f)] = f; });
+  base.forEach(function (f) {
+    var l = diffFilterLabel(f);
+    if (!(l in cByL)) out.push({ k: "del", t: gname + " › “" + l + "” removed" });
+  });
+  cur.forEach(function (f) {
+    var l = diffFilterLabel(f), b = bByL[l];
+    if (!b) { out.push({ k: "add", t: gname + " › “" + l + "” added" }); return; }
+    if (diffWeightLabel(f.weight) !== diffWeightLabel(b.weight))
+      out.push({ k: "mod", t: gname + " › " + l + ": weight " + diffWeightLabel(b.weight) + " → " + diffWeightLabel(f.weight) });
+    if (!!f.muted !== !!b.muted) out.push({ k: "mod", t: gname + " › " + l + ": " + (f.muted ? "muted" : "unmuted") });
+    if (!!f.else !== !!b.else) out.push({ k: "mod", t: gname + " › " + l + ": " + (f.else ? "now catch-all" : "no longer catch-all") });
+    var bk = (b.keywords || []).join(", "), ck = (f.keywords || []).join(", ");
+    if (bk !== ck) out.push({ k: "mod", t: gname + " › " + l + ": keywords [" + bk + "] → [" + ck + "]" });
+  });
+}
+function diffGroups(base, cur) {
+  var out = [];
+  base = base || []; cur = cur || [];
+  var bByN = {}, cByN = {};
+  base.forEach(function (g) { bByN[g.name] = g; });
+  cur.forEach(function (g) { cByN[g.name] = g; });
+  base.forEach(function (g) { if (!(g.name in cByN)) out.push({ k: "del", t: "Group “" + g.name + "” removed" }); });
+  cur.forEach(function (g) {
+    var b = bByN[g.name];
+    if (!b) { out.push({ k: "add", t: "Group “" + g.name + "” added" }); return; }
+    if (diffFieldLabel(g.field) !== diffFieldLabel(b.field))
+      out.push({ k: "mod", t: g.name + ": fields " + diffFieldLabel(b.field) + " → " + diffFieldLabel(g.field) });
+    if ((g.combine || "min") !== (b.combine || "min"))
+      out.push({ k: "mod", t: g.name + ": combine " + b.combine + " → " + g.combine });
+    if (g.weight !== b.weight)
+      out.push({ k: "mod", t: g.name + ": group weight " + b.weight + " → " + g.weight });
+    diffFilters(g.name, b.filters || [], g.filters || [], out);
+  });
+  return out;
+}
+// Recompute the diff and toggle the Save button to match. Called at the end of
+// every render (cheap — a handful of groups). No-op off localhost.
+var _saveDiff = [];
+function updateSaveState() {
+  if (!LIVE) return;
+  var btn = document.getElementById("saveYml");
+  if (!btn) return;
+  var base = (DEFAULT_GROUPS_SEED && DEFAULT_GROUPS_SEED.groups) || [];
+  _saveDiff = diffGroups(base, currentSchema());
+  var dirty = _saveDiff.length > 0;
+  btn.style.display = dirty ? "" : "none";
+  btn.classList.toggle("dirty", dirty);
+  if (!dirty) hideDiffPop();
+}
+var _diffPop = null;
+function showDiffPop(btn) {
+  if (!_saveDiff.length) return;
+  if (!_diffPop) { _diffPop = document.createElement("div"); _diffPop.className = "savediff"; document.body.appendChild(_diffPop); }
+  var p = _diffPop, sign = { add: "+", del: "−", mod: "~" };
+  p.innerHTML = "<h4>" + _saveDiff.length + " unsaved change" + (_saveDiff.length > 1 ? "s" : "") + " vs portals.yml</h4>" +
+    _saveDiff.map(function (d) {
+      return '<div class="dl ' + d.k + '"><span class="s">' + sign[d.k] + '</span><span class="x">' + esc(d.t) + '</span></div>';
+    }).join("");
+  p.classList.add("open");
+  var r = btn.getBoundingClientRect(), pr = p.getBoundingClientRect();
+  var top = r.top + window.scrollY - pr.height - 8;
+  if (top < window.scrollY + 4) top = r.bottom + window.scrollY + 8;   // flip below if no room above
+  var left = r.right + window.scrollX - pr.width;
+  if (left < 8) left = 8;
+  p.style.top = top + "px"; p.style.left = left + "px";
+}
+function hideDiffPop() { if (_diffPop) _diffPop.classList.remove("open"); }
 
 // Mark the active sort column header with its direction arrow (↓ descending,
 // ↑ ascending) so the table's order is always legible at a glance.
@@ -1667,6 +1820,7 @@ function init(data) {
   load();
   loadStatus();
   loadView();
+  loadHealth();
   // On localhost the projected YAML wins: seed groups straight from the file
   // (ignore any saved board state) so the page always reflects portals.yml.
   if (LIVE) GROUPS = defaultGroups();
@@ -1724,6 +1878,39 @@ function init(data) {
     GROUPS = defaultGroups(); ISOLATE = null;    // re-seed the labels from targeting.yml
     reindex(); recompute(); save(); buildGroups(); render();
   };
+  // Save to portals.yml — localhost only (the board-dev.mjs server exposes the
+  // endpoint). POST the live groups; the server writes them into the YAML's
+  // `targeting:` block, the watcher reprojects, and startLivePolling reseeds the
+  // board from the file — so a successful save visibly round-trips on its own.
+  var saveBtn = document.getElementById("saveYml");
+  if (LIVE && saveBtn) {
+    // Visibility is driven by updateSaveState (shown only when the live filters
+    // differ from portals.yml); start hidden until the first diff runs.
+    saveBtn.addEventListener("mouseenter", function () { showDiffPop(saveBtn); });
+    saveBtn.addEventListener("mouseleave", hideDiffPop);
+    saveBtn.onclick = function () {
+      saveBtn.disabled = true;
+      var original = saveBtn.textContent;
+      saveBtn.textContent = "Saving…";
+      fetch("/save-targeting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groups: GROUPS }),
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (!res.ok || !res.j.ok) throw new Error((res.j && res.j.error) || "save failed");
+          saveBtn.textContent = "✓ Saved to " + res.j.file;
+        })
+        .catch(function (e) {
+          saveBtn.textContent = "✗ " + (e.message || "save failed");
+        })
+        .finally(function () {
+          saveBtn.disabled = false;
+          setTimeout(function () { saveBtn.textContent = original; }, 2600);
+        });
+    };
+  }
   document.querySelectorAll("th[data-sort]").forEach(function (th) {
     th.onclick = function () {
       var col = th.getAttribute("data-sort");     // fit | company | role | location | posted

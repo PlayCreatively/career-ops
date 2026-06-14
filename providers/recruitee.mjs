@@ -39,6 +39,16 @@ function resolveApiUrl(entry) {
   return `https://${parsed.hostname}/api/offers/`;
 }
 
+const rcParse = (d) => (d && Array.isArray(d.offers)) ? { count: d.offers.length, loc: d.offers[0]?.location || '' } : null;
+
+/** @type {import('./_types.js').Probe} */
+export const probe = {
+  endpoints: [
+    { kind: 'slug', url: (s) => `https://${s}.recruitee.com/api/offers/`, where: (s) => `${s}.recruitee.com`, parse: rcParse },
+    { kind: 'domain', confidence: 'high', url: (host) => `https://${host}/api/offers/`, where: (host) => host, parse: rcParse },
+  ],
+};
+
 /** @type {Provider} */
 export default {
   id: 'recruitee',
