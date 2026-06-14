@@ -176,15 +176,24 @@ function loadBacklog() {
 const LEDGER_PATH = path.join('data', 'probe-state.tsv');
 const today = () => new Date().toISOString().slice(0, 10);
 
-// name_norm \t name \t scan_version \t hit_ats \t missed_ats(csv) \t last_probe
+// Confidence tiers a slug/domain hit can carry (see tierFor). HIGH = own-domain
+// match, MEDIUM = name-specific slug — both trustworthy. VERIFY = generic slug
+// (namesake risk: a different company on the same ATS). An empty tier is a legacy
+// row written before the ledger tracked confidence — treated as untrusted too, so
+// it re-surfaces for review rather than silently counting as a win.
+const TRUSTED_TIERS = new Set(['high', 'medium']);
+
+// name_norm \t name \t scan_version \t hit_ats \t missed_ats(csv) \t last_probe \t hit_confidence
+// hit_confidence is the LAST column so a legacy 6-column row still parses (conf
+// reads as undefined → '' → untrusted). Never insert columns mid-row.
 export function loadLedger(file = LEDGER_PATH) {
   const m = new Map();
   if (!existsSync(file)) return m;
   for (const line of readFileSync(file, 'utf8').split('\n')) {
     const t = line.trimEnd(); if (!t || t.startsWith('#')) continue;
-    const [key, name, version, hit, missed, last] = t.split('\t');
+    const [key, name, version, hit, missed, last, conf] = t.split('\t');
     if (!key) continue;
-    m.set(key, { name: name || '', version: Number(version) || 0, hit: hit || '', missed: new Set((missed || '').split(',').filter(Boolean)), last: last || '' });
+    m.set(key, { name: name || '', version: Number(version) || 0, hit: hit || '', hitConf: conf || '', missed: new Set((missed || '').split(',').filter(Boolean)), last: last || '' });
   }
   return m;
 }
@@ -192,10 +201,11 @@ function writeLedger(m, file = LEDGER_PATH) {
   const rows = [
     '# probe-state ledger — per-studio ATS coverage so re-runs skip already-cleared work.',
     '# Written by probe-studios.mjs. name_norm and missed_ats use provider ids.',
-    '# name_norm\tname\tscan_version\thit_ats\tmissed_ats(csv)\tlast_probe',
+    '# hit_confidence: high|medium = trusted win, verify = namesake risk (needs review), empty = legacy.',
+    '# name_norm\tname\tscan_version\thit_ats\tmissed_ats(csv)\tlast_probe\thit_confidence',
   ];
   for (const [key, v] of [...m.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
-    rows.push([key, v.name, v.version, v.hit, [...v.missed].sort().join(','), v.last].join('\t'));
+    rows.push([key, v.name, v.version, v.hit, [...v.missed].sort().join(','), v.last, v.hitConf || ''].join('\t'));
   }
   writeFileSync(file, rows.join('\n') + '\n');
 }
@@ -204,18 +214,27 @@ function writeLedger(m, file = LEDGER_PATH) {
 // An empty Set = nothing open (fully cleared / already hit) → caller skips it.
 export function ledgerOpen(led, key, providerIds) {
   const e = led.get(key);
-  if (!e || e.version < SCAN_VERSION) return null; // never probed at this version → all open
-  if (e.hit) return new Set();                     // already found → nothing to do
+  if (!e || e.version < SCAN_VERSION) return null;     // never probed at this version → all open
+  if (e.hit && TRUSTED_TIERS.has(e.hitConf)) return new Set(); // trusted hit → resolved, skip
+  // A verify/legacy-tier hit is NOT a confirmed win (namesake risk): keep the
+  // studio OPEN so it stays in the needs-review bucket on every run until a human
+  // resolves it (adds the real careers_url to studios.yml, or confirms it's junk).
   return new Set(providerIds.filter(id => !e.missed.has(id)));
 }
 // Fold one studio's result into the ledger: union the newly-cleared ATSes onto
 // what we already knew (reset first if the prior record predates SCAN_VERSION).
+// A hit also records the confidence tier the probe computed so re-runs and
+// downstream readers can tell a trusted win from a namesake-risk match.
 export function mergeLedger(led, key, name, result) {
-  const prev = led.get(key) || { version: 0, hit: '', missed: new Set() };
+  const prev = led.get(key) || { version: 0, hit: '', hitConf: '', missed: new Set() };
   const base = prev.version >= SCAN_VERSION ? prev.missed : new Set(); // version bump wipes stale misses
   const missed = new Set(base);
   for (const id of (result.missedAts || [])) missed.add(id);
-  led.set(key, { name, version: SCAN_VERSION, hit: result.ats || prev.hit || '', missed, last: today() });
+  const hit = result.ats || prev.hit || '';
+  // On a fresh hit, store its tier; otherwise carry the prior tier alongside the
+  // prior hit (a no-hit pass must not blank an earlier hit's confidence).
+  const hitConf = result.ats ? (result.confidence || '') : (prev.hitConf || '');
+  led.set(key, { name, version: SCAN_VERSION, hit, hitConf, missed, last: today() });
 }
 
 // ── slug + domain generation ────────────────────────────────────────
@@ -668,18 +687,27 @@ async function main() {
   const cleanMisses = results.length - hits.length - skipped.length - uncertain.length;
   const order = { high: 0, medium: 1, verify: 2 };
   hits.sort((a, b) => order[a.confidence] - order[b.confidence]);
+  // Split trusted wins (own-domain / name-specific slug) from generic-slug matches
+  // that carry namesake risk — the latter must be human-verified before they count.
+  const trustedHits = hits.filter(h => h.confidence !== 'verify');
+  const reviewHits = hits.filter(h => h.confidence === 'verify');
+  const fmtHit = (h) => `  [${h.confidence.toUpperCase().padEnd(6)}] ${h.name.padEnd(28)} ${h.ats.padEnd(15)} ${h.where}  (${h.count} jobs${h.loc ? ', e.g. ' + h.loc : ''})`;
   const reasonAgg = [...uncertainReasons].sort((a, b) => b[1] - a[1]);
   if (JSON_OUT) {
     console.log(JSON.stringify({
-      hits, uncertain,
+      hits, trustedHits, reviewHits, uncertain,
       throttled: Object.fromEntries(throttleHosts),
       uncertainReasons: Object.fromEntries(reasonAgg),
       skippedCount: skipped.length, ledgerSkipped, cleanMisses, total: names.length,
       passes, waves: waveLog, scanVersion: SCAN_VERSION,
     }, null, 2));
   } else {
-    console.log(`\n=== NEW HITS (${hits.length}) — not already in studios.yml ===`);
-    for (const h of hits) console.log(`  [${h.confidence.toUpperCase().padEnd(6)}] ${h.name.padEnd(28)} ${h.ats.padEnd(15)} ${h.where}  (${h.count} jobs${h.loc ? ', e.g. ' + h.loc : ''})`);
+    console.log(`\n=== NEW HITS (${trustedHits.length}) — trusted, not already in studios.yml ===`);
+    for (const h of trustedHits) console.log(fmtHit(h));
+    if (reviewHits.length) {
+      console.log(`\n⚠️  NEEDS REVIEW (${reviewHits.length}) — generic-slug matches, NAMESAKE RISK. A different company may own this slug; confirm before adding to studios.yml (these stay open and re-surface here until resolved):`);
+      for (const h of reviewHits) console.log(fmtHit(h));
+    }
     console.log(`\nSkipped ${skipped.length} already-tracked · ${ledgerSkipped} ledger-cleared (scan v${SCAN_VERSION}) · ${cleanMisses} confirmed no-feed (404/empty) · ${passes} wave(s).`);
     if (uncertain.length) {
       console.log(`\n⚠️  UNCERTAIN (${uncertain.length}) — could NOT confirm or deny after ${passes} adaptive wave(s) (throttle / 5xx / network / canary-distrusted 404 or 2xx). "No feed" is NOT proven here.`);

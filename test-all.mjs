@@ -1596,6 +1596,57 @@ try {
     fail('mergeLedger union/reset wrong');
   }
 
+  // ── hit confidence tier (namesake quarantine) ──
+  // Only a TRUSTED hit (high/medium) closes a studio. A verify-tier hit (generic
+  // slug, namesake risk) or a legacy hit with no recorded tier keeps it OPEN so it
+  // re-surfaces for review instead of silently counting as a resolved win.
+  const lt = new Map([
+    ['hi', { name: 'Hi', version: ps.SCAN_VERSION, hit: 'greenhouse', hitConf: 'high', missed: new Set(), last: 'x' }],
+    ['me', { name: 'Me', version: ps.SCAN_VERSION, hit: 'lever', hitConf: 'medium', missed: new Set(), last: 'x' }],
+    ['ve', { name: 'Ve', version: ps.SCAN_VERSION, hit: 'breezy', hitConf: 'verify', missed: new Set(['greenhouse']), last: 'x' }],
+    ['lg', { name: 'Lg', version: ps.SCAN_VERSION, hit: 'breezy', hitConf: '', missed: new Set(['greenhouse']), last: 'x' }],
+  ]);
+  const openHi = ps.ledgerOpen(lt, 'hi', ids);
+  const openMe = ps.ledgerOpen(lt, 'me', ids);
+  const openVe = ps.ledgerOpen(lt, 've', ids);
+  const openLg = ps.ledgerOpen(lt, 'lg', ids);
+  if (openHi.size === 0 && openMe.size === 0 &&
+      openVe.size === 2 && !openVe.has('greenhouse') &&
+      openLg.size === 2 && !openLg.has('greenhouse')) {
+    pass('ledgerOpen: high/medium hit → resolved (skip), verify/legacy hit → stays open (needs review)');
+  } else {
+    fail(`ledgerOpen tier gate wrong: hi=${openHi.size} me=${openMe.size} ve=${[...openVe]} lg=${[...openLg]}`);
+  }
+  // mergeLedger records the probe's confidence on a hit, and carries the prior
+  // tier through a later no-hit pass (must not blank an earlier hit's confidence).
+  const lc = new Map();
+  ps.mergeLedger(lc, 'x', 'X', { ats: 'breezy', confidence: 'verify', missedAts: ['greenhouse'] });
+  const afterHit = lc.get('x');
+  ps.mergeLedger(lc, 'x', 'X', { ats: null, missedAts: ['lever'] }); // a later no-hit pass
+  const afterMiss = lc.get('x');
+  if (afterHit.hit === 'breezy' && afterHit.hitConf === 'verify' &&
+      afterMiss.hit === 'breezy' && afterMiss.hitConf === 'verify') {
+    pass('mergeLedger: records hit confidence, carries it through a later no-hit pass');
+  } else {
+    fail(`mergeLedger confidence wrong: hit=${JSON.stringify(afterHit)} miss=${JSON.stringify(afterMiss)}`);
+  }
+  // loadLedger backward compatibility: a legacy 6-column row parses (hitConf '')
+  // and a 7-column row reads its tier. Round-trips through a temp file.
+  const tmpLed = join(mkdtempSync(join(tmpdir(), 'probe-ledger-')), 'state.tsv');
+  writeFileSync(tmpLed, [
+    '# header',
+    'legacy\tLegacy Co\t' + ps.SCAN_VERSION + '\tbreezy\tgreenhouse\t2026-06-14',          // 6 cols (old)
+    'tiered\tTiered Co\t' + ps.SCAN_VERSION + '\tlever\t\t2026-06-14\tmedium',             // 7 cols (new)
+  ].join('\n') + '\n');
+  const loaded = ps.loadLedger(tmpLed);
+  rmSync(dirname(tmpLed), { recursive: true, force: true });
+  if (loaded.get('legacy')?.hitConf === '' && loaded.get('tiered')?.hitConf === 'medium' &&
+      loaded.get('legacy')?.hit === 'breezy' && loaded.get('legacy')?.missed.has('greenhouse')) {
+    pass('loadLedger: legacy 6-col row → empty tier (untrusted); 7-col row reads its tier');
+  } else {
+    fail(`loadLedger back-compat wrong: ${JSON.stringify([...loaded])}`);
+  }
+
   // --quick must NOT close a provider that has an untried domain endpoint (it
   // skips the custom-domain sweep), so a later full run still probes it. A
   // slug-only provider IS fully covered by quick and DOES close. We re-import
