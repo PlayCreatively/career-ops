@@ -632,6 +632,21 @@ async function main() {
   // real studio). Aggregator entries are skipped — their careers_url points at
   // the aggregator, not a studio.
   const AGG_HOSTS = ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com'];
+  // When an entry carries a job_url_template, its hosted ATS board is dead (that's
+  // the whole reason for the template — see providers/ashby.mjs, Supercell). The
+  // careers_url then 404s, so DON'T link the studio label to it. Derive the live
+  // careers landing page from the template's literal prefix (everything before the
+  // first {token}, cut back to the last path '/'): e.g.
+  // "https://supercell.com/en/careers/{slug}/{id}/" → "https://supercell.com/en/careers/".
+  const studioLandingUrl = (c) => {
+    const tpl = typeof c.job_url_template === 'string' ? c.job_url_template.trim() : '';
+    if (tpl) {
+      const head = tpl.split('{')[0];
+      const cut = head.slice(0, head.lastIndexOf('/') + 1) || head;
+      try { new URL(cut); return cut; } catch { /* fall through to careers_url */ }
+    }
+    return c.careers_url;
+  };
   const studioUrlByName = new Map();
   // Also register a parenthetical-stripped alias ("PlayStation (Sony Interactive)"
   // → "playstation") so a job whose company drops the suffix still resolves. Only
@@ -644,11 +659,12 @@ async function main() {
     try { host = new URL(c.careers_url).hostname.replace(/^www\./, '').toLowerCase(); } catch { continue; }
     if (AGG_HOSTS.some(a => host === a || host.endsWith('.' + a))) continue;
     const key = c.name.trim().toLowerCase();
-    if (!studioUrlByName.has(key)) studioUrlByName.set(key, c.careers_url);
+    const landing = studioLandingUrl(c);
+    if (!studioUrlByName.has(key)) studioUrlByName.set(key, landing);
     const alias = key.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
     if (alias && alias !== key) {
       aliasCount.set(alias, (aliasCount.get(alias) || 0) + 1);
-      if (!aliasUrl.has(alias)) aliasUrl.set(alias, c.careers_url);
+      if (!aliasUrl.has(alias)) aliasUrl.set(alias, landing);
     }
   }
   // Promote only unambiguous aliases that don't shadow an exact studio name.

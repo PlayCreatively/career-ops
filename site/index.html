@@ -1135,17 +1135,26 @@ function render() {
     // Tag the buckets the job falls in (skip catch-alls — they're just noise).
     // Each tag carries its filter id so it can scroll to that pill and
     // cross-highlight the matched words on hover.
-    var tags = "";
+    // Collect first, then order by rating (weight) descending so the strongest
+    // boosts lead and low/excluded filters trail — the same red→amber→green→indigo
+    // ramp the Fit number reads. Stable tie-break on label keeps equal-weight tags
+    // in a predictable order rather than raw group/membership order.
+    var tagList = [];
     GROUPS.forEach(function (g) {
       (j._mem[g.id] || []).forEach(function (fid) {
         var rec = FBYID[fid]; if (!rec || rec.f.else) return;
         var label = Rank.filterLabel(rec.f); if (!label) return;
-        // Tint each tag by its filter's rating, the same red→amber→green→indigo
-        // ramp the pills and the Fit number use (inactive filters read as neutral).
         var w = rec.f.weight != null ? rec.f.weight : 1;
-        tags += '<span class="tag rated' + (/^remote$/i.test(label) ? " remote" : "") +
-          '" data-fid="' + fid + '" style="--pc:' + weightColor(w) + '">' + esc(label) + '</span>';
+        tagList.push({ fid: fid, label: label, w: w });
       });
+    });
+    tagList.sort(function (a, b) { return b.w - a.w || a.label.localeCompare(b.label); });
+    var tags = "";
+    tagList.forEach(function (t) {
+      // Tint each tag by its filter's rating, the same ramp the pills and the Fit
+      // number use (inactive filters read as neutral).
+      tags += '<span class="tag rated' + (/^remote$/i.test(t.label) ? " remote" : "") +
+        '" data-fid="' + t.fid + '" style="--pc:' + weightColor(t.w) + '">' + esc(t.label) + '</span>';
     });
     var tr = document.createElement("tr");
     var st = jobStatus(j.url);   // "" | "s" | "c" | "i"
