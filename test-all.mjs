@@ -1212,6 +1212,9 @@ try {
     // Pass 2 — aggregator mirror of a direct posting → drop the aggregator row.
     { title: 'Senior Software Engineer', company: 'Riot Games', location: 'Los Angeles, USA', url: 'https://www.riotgames.com/en/work-with-us/job/7838553?gh_jid=7838553' },
     { title: 'Senior Software Engineer', company: 'Riot Games', location: 'Los Angeles, USA', url: 'https://hitmarker.net/jobs/riot-games-senior-software-engineer-123' },
+    // Remote Game Jobs aggregator mirror of a direct posting → drop the aggregator row.
+    { title: '2D Animator', company: 'Pine Creek Games', location: 'Remote', url: 'https://pinecreekgames.teamtailor.com/jobs/9001-2d-animator' },
+    { title: '2D Animator', company: 'Pine Creek Games', location: 'Remote', url: 'https://remotegamejobs.com/jobs/pine-creek-games-2d-animator-remote-job' },
     // Two DISTINCT reqs: same title/company/location, different IDs, both direct,
     // no aggregator → keep BOTH (the Epic false-positive guard).
     { title: 'Gameplay Programmer', company: 'Epic Games', location: 'Cary, NC, USA', url: 'https://epicgames.com/careers/jobs/6001690004?gh_jid=6001690004' },
@@ -1225,15 +1228,19 @@ try {
   if (collapsedById === 1) pass('pass 1 collapses one same-company+ID mirror (across hosts, differing location)');
   else fail(`expected 1 collapsed by ID, got ${collapsedById}`);
 
-  if (collapsedByHeuristic === 1) pass('pass 2 drops one aggregator mirror that has a direct twin');
-  else fail(`expected 1 collapsed by heuristic, got ${collapsedByHeuristic}`);
+  if (collapsedByHeuristic === 2) pass('pass 2 drops two aggregator mirrors (Hitmarker + Remote Game Jobs) that have direct twins');
+  else fail(`expected 2 collapsed by heuristic, got ${collapsedByHeuristic}`);
 
-  if (collapsed === 2 && out.length === 5) pass('total: 7 → 5 (one ID dupe + one aggregator mirror removed)');
-  else fail(`expected 5 jobs out (collapsed 2), got ${out.length} (collapsed ${collapsed})`);
+  if (collapsed === 3 && out.length === 6) pass('total: 9 → 6 (one ID dupe + two aggregator mirrors removed)');
+  else fail(`expected 6 jobs out (collapsed 3), got ${out.length} (collapsed ${collapsed})`);
 
   const riot = out.filter(j => j.company === 'Riot Games');
   if (riot.length === 1 && riot[0].url.includes('riotgames.com')) pass('aggregator pass keeps the direct URL, drops Hitmarker');
   else fail('aggregator pass should keep the direct riotgames.com URL');
+
+  const pine = out.filter(j => j.company === 'Pine Creek Games');
+  if (pine.length === 1 && pine[0].url.includes('teamtailor.com')) pass('aggregator pass keeps the direct URL, drops Remote Game Jobs mirror');
+  else fail('aggregator pass should keep the direct Pine Creek URL, drop the remotegamejobs.com mirror');
 
   const epic = out.filter(j => j.company === 'Epic Games');
   if (epic.length === 2) pass('two distinct direct reqs are never merged (Epic false-positive guard)');
@@ -1395,6 +1402,56 @@ try {
   }
 } catch (e) {
   fail(`unless-guard tests crashed: ${e.message}`);
+}
+
+// ── priority rescue — group-scoped exception (the crown flag) ─────
+console.log('\n17c. priority rescue — voids a group\'s excludes when a flagged filter matches');
+try {
+  const { isExcluded, matchGroup, scoreGroup, buildFilterIndex } = await import(pathToFileURL(join(ROOT, 'rank.mjs')).href);
+
+  // A Region group: "Poland" is a hard exclude (weight 0); "Remote" is flagged
+  // priority. A remote Polish job must be rescued (exclude voided); an onsite one
+  // must still be dropped. Both filters live in the SAME group (group-scoped).
+  const groups = [{
+    id: 'region', field: ['location', 'workmode'], combine: 'avg',
+    filters: [
+      { id: 'pl', name: 'Poland', keywords: ['Poland'], weight: 0 },
+      { id: 'rm', name: 'Remote', keywords: ['remote'], weight: 1.3, priority: true },
+    ],
+  }];
+  const onsitePL = { location: 'Warsaw, Poland', workMode: 'onsite' };
+  const remotePL = { location: 'Warsaw, Poland', workMode: 'remote' };
+  if (isExcluded(onsitePL, groups) && !isExcluded(remotePL, groups)) {
+    pass('priority filter (Remote) rescues the group\'s weight-0 exclude only when it also matches');
+  } else {
+    fail(`priority rescue: onsite excluded=${isExcluded(onsitePL, groups)} (want true), remote excluded=${isExcluded(remotePL, groups)} (want false)`);
+  }
+
+  // The rescued job drops the weight-0 filter from its match set, so the priority
+  // filter's own weight drives the score (not the 0).
+  const idx = buildFilterIndex(groups);
+  const matched = matchGroup(remotePL, groups[0], idx);
+  if (!matched.some((f) => f.weight === 0) && matched.some((f) => f.id === 'rm') && scoreGroup(remotePL, groups[0], idx) > 0) {
+    pass('rescue drops the zero-weight exclude from the match set; the priority filter\'s weight scores the job');
+  } else {
+    fail(`rescue match set wrong: hasZero=${matched.some((f) => f.weight === 0)} hasRemote=${matched.some((f) => f.id === 'rm')} score=${scoreGroup(remotePL, groups[0], idx)}`);
+  }
+
+  // Priority is group-scoped: it must NOT rescue an exclude in a DIFFERENT group.
+  const twoGroups = [
+    { id: 'region', field: ['location', 'workmode'], combine: 'avg',
+      filters: [{ id: 'rm', name: 'Remote', keywords: ['remote'], weight: 1.3, priority: true }] },
+    { id: 'role', field: 'title', combine: 'min',
+      filters: [{ id: 'art', name: 'Artist', keywords: ['Artist'], weight: 0 }] },
+  ];
+  const remoteArtist = { title: 'Senior Artist', location: 'Anywhere', workMode: 'remote' };
+  if (isExcluded(remoteArtist, twoGroups)) {
+    pass('priority is group-scoped — a Region priority does not rescue a Role exclude');
+  } else {
+    fail('priority wrongly rescued an exclude in a different group');
+  }
+} catch (e) {
+  fail(`priority-rescue tests crashed: ${e.message}`);
 }
 
 // ── Provider — breezy ───────────────────────────────────────────

@@ -255,6 +255,23 @@
   .bpill.muted .eye::after { content: ""; position: absolute; left: 2px; right: 2px; top: 50%;
     height: 2px; border-radius: 2px; background: currentColor;
     transform: translateY(-50%) rotate(-45deg); }
+  /* Crown toggle: bottom-right mirror of the edit pencil. Flags a filter as a
+     group "rescue" — when it matches, the group's hard excludes (weight 0) are
+     voided for that job (the reverse of mute). Shown on hover; always shown when
+     active so the badge reads at a glance. */
+  .bpill .crown { position: absolute; bottom: -9px; right: -9px; width: 20px; height: 20px;
+    padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; cursor: pointer; background: var(--panel); color: var(--dim);
+    border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 10px; line-height: 1;
+    opacity: 0; transition: opacity .12s, color .12s, border-color .12s; }
+  .bpill:hover .crown, .bpill .crown:focus-visible { opacity: 1; }
+  .bpill .crown:hover { color: var(--gold, #d9a300); border-color: var(--gold, #d9a300); }
+  @media (hover: none) { .bpill .crown { opacity: 1; } }
+  /* An active priority pill gets a soft gold ring and a lit, persistent crown. */
+  .bpill.priority { border-color: var(--gold, #d9a300);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold, #d9a300) 55%, transparent); }
+  .bpill.priority .crown { opacity: 1; color: var(--gold, #d9a300);
+    border-color: var(--gold, #d9a300); }
   /* Editable group name (sits after the combine toggle in a row label). */
   .gname { background: none; border: none; padding: 0; font: inherit; cursor: pointer;
     color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
@@ -322,6 +339,14 @@
   .meta .vlink:hover { color: var(--txt); text-decoration: underline; }
   .meta .vlink.on { color: var(--accent); font-weight: 700; text-decoration: underline; }
   .meta .vlink.zero { opacity: .5; }
+  /* Eye-off icon on the "untagged only" view link — hides the rows you've already
+     starred / applied to / ignored. Sized to sit on the meta line's text baseline.
+     overflow:visible keeps the slash stroke from clipping at the viewBox edge; the
+     border-bottom on hover/active mimics the text links' underline (text-decoration
+     doesn't paint under an SVG). */
+  .meta .vlink .vico { width: 12px; height: 12px; vertical-align: -1.5px; translate: 1px; border-bottom: 1px solid transparent; overflow: visible; }
+  .meta .vlink:hover .vico,
+  .meta .vlink.on .vico { border-bottom: 1px solid currentColor; }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
@@ -455,10 +480,15 @@
     box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--warm) 52%, transparent); }
   body.althl .hlmatch:hover { background: color-mix(in srgb, var(--warm) 32%, transparent); }
   /* Cross-highlight: hovering a tag lights its matched spans (and vice versa) so
-     it's obvious which words a tag captured. Same gold as a live match. */
+     it's obvious which words a tag captured. Same gold as a live match — a colour
+     shift only, no motion (the bounce is reserved for the click-to-pill flash). */
   .hlmatch.xhl { color: var(--warm); }
   .tag.xhl { background: color-mix(in srgb, var(--warm) 30%, transparent);
     border-color: color-mix(in srgb, var(--warm) 55%, var(--line)); color: var(--warm); }
+  /* The work-mode badge carries its own colour (accent/accent2/warm), which
+     out-specifies the generic .hlmatch warm. Bump specificity so hovering or
+     cross-highlighting the badge still flips it to the match gold. */
+  td.loc .mode.hlmatch:hover, td.loc .mode.hlmatch.xhl { color: var(--warm); }
   .tag[data-fid] { cursor: pointer; }
   /* Pencil on a hover-popover row — opens that filter's editor; the row body
      scrolls to (and flashes) the pill instead. */
@@ -466,10 +496,14 @@
     color: var(--dim); font: inherit; font-size: 13px; cursor: pointer; padding: 2px 5px; border-radius: 6px; }
   .selpop .spedit:hover { color: var(--accent); background: var(--panel2); }
   /* Momentary ring when you jump to a pill from a tag / hover-popover. */
-  .bpill.flashpill { animation: pillflash 2.6s ease-out; }
+  .bpill.flashpill { animation: pillflash 6.5s ease-out; }
   @keyframes pillflash {
-    0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 75%, transparent); }
-    100% { box-shadow: 0 0 0 9px transparent; } }
+    0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 75%, transparent); transform: scale(1); }
+    8%   { transform: scale(1.28); }
+    18%  { transform: scale(1); }
+    28%  { transform: scale(1.16); }
+    38%  { transform: scale(1); }
+    100% { box-shadow: 0 0 0 9px transparent; transform: scale(1); } }
   /* ── Unsaved-changes diff popover (localhost only) ─────────────────────────
      Floats above the "Save to portals.yml" button on hover, listing what differs
      between the live board filters and the YAML on disk. Reuses the diff that
@@ -724,9 +758,9 @@ function setStatus(url, key) {
 // collapses to the chosen mark. Persisted like the marks so the view survives a
 // reload.
 var VIEW_KEY = "gamedevboard.markview.v1";
-var VIEW = "all";   // "all" | "s" | "c" | "i"
+var VIEW = "all";   // "all" | "s" | "c" | "i" | "u" (untagged-only)
 function loadView() {
-  try { var v = localStorage.getItem(VIEW_KEY); if (v === "s" || v === "c" || v === "i") VIEW = v; }
+  try { var v = localStorage.getItem(VIEW_KEY); if (v === "s" || v === "c" || v === "i" || v === "u") VIEW = v; }
   catch (e) {}
 }
 function saveView() { try { localStorage.setItem(VIEW_KEY, VIEW); } catch (e) {} }
@@ -736,20 +770,30 @@ function saveView() { try { localStorage.setItem(VIEW_KEY, VIEW); } catch (e) {}
 // Clicking the active one again clears back to "All" (handled in the meta click
 // delegate). Returns "" when no marks exist at all, so the line stays clean.
 function viewControlsHtml() {
-  var cs = 0, cc = 0, ci = 0;
+  var cs = 0, cc = 0, ci = 0, cu = 0;
   ALL.forEach(function (j) {
     if (!passesBase(j)) return;
     var st = jobStatus(j.url);
-    if (st === "s") cs++; else if (st === "c") cc++; else if (st === "i") ci++;
+    if (st === "s") cs++; else if (st === "c") cc++; else if (st === "i") ci++; else cu++;
   });
   if (!cs && !cc && !ci && VIEW === "all") return "";
-  function lk(v, label, n) {
+  function lk(v, label, n, title) {
     return '<a href="#" class="vlink' + (VIEW === v ? " on" : "") + (n ? "" : " zero") +
-      '" data-view="' + v + '">' + label + " " + n + "</a>";
+      '" data-view="' + v + '" title="' + title + '">' + label + " " + n + "</a>";
   }
   // ︎ = text-presentation selector: forces ✓/✕ to render as plain text
   // glyphs instead of oversized color emoji (which inflated the hitbox + gap).
-  return ' · ' + lk("s", "★︎", cs) + lk("c", "✓︎", cc) + lk("i", "✕︎", ci);
+  // The 4th link isolates the UNTAGGED roles — the inverse of the three marks, so
+  // you can hide everything you've already starred / applied to / ignored. No row
+  // glyph mirrors it, so a plain mark would read as cryptic; an eye-off (hide)
+  // icon + a tooltip carries the meaning instead.
+  var EYE_OFF = '<svg class="vico" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.45 18.45 0 0 1 ' +
+    '5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19' +
+    'm-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  return ' · ' + lk("s", "★︎", cs, "Starred only") + lk("c", "✓︎", cc, "Applied / done only") +
+    lk("i", "✕︎", ci, "Ignored only") + lk("u", EYE_OFF, cu, "Untagged only — hide starred, applied & ignored");
 }
 // Local dev: when served from localhost (e.g. `npm run board:dev`), the YAML is
 // the source of truth — the board mirrors data/targeting.json live and ignores
@@ -762,12 +806,15 @@ var DEFAULT_W = 0.5;
 
 var _idc = 0;
 function nid() { return "f" + (++_idc); }
-function mkFilter(name, keywords, weight, isElse, muted, unless) {
+function mkFilter(name, keywords, weight, isElse, muted, unless, priority) {
   return { id: nid(), name: name || "", keywords: keywords || [],
            // `unless` is the guard list (Rank.filterMatches voids the whole
            // filter when one of these also hits the field text). Carried through
            // every reconstruction so it survives edits / localStorage / export.
            unless: unless || [],
+           // `priority` rescues a group: when this filter matches, the group's
+           // hard excludes (weight 0) are voided for that job (Rank.matchGroup).
+           priority: !!priority,
            weight: (weight == null ? null : weight), else: !!isElse, muted: !!muted };
 }
 function mkGroup(name, field, weight, filters) {
@@ -784,7 +831,7 @@ function groupsFromSeed(seed) {
   return ((seed && seed.groups) || []).map(function (g) {
     var grp = mkGroup(g.name, g.field, g.weight, (g.filters || []).map(function (f) {
       return mkFilter(f.name, (f.keywords || []).slice(),
-        f.weight == null ? null : f.weight, !!f.else, !!f.muted, (f.unless || []).slice());
+        f.weight == null ? null : f.weight, !!f.else, !!f.muted, (f.unless || []).slice(), !!f.priority);
     }));
     grp.combine = MODES.indexOf(g.combine) !== -1 ? g.combine : "min";
     return grp;
@@ -854,7 +901,8 @@ function sanitizeGroups(arr) {
         Array.isArray(f.keywords) ? f.keywords.filter(function (k) { return typeof k === "string" && k; }) : [],
         (typeof f.weight === "number") ? Math.max(0, Math.min(2, f.weight)) : null,
         isElse, !!f.muted,
-        Array.isArray(f.unless) ? f.unless.filter(function (k) { return typeof k === "string" && k; }) : []);
+        Array.isArray(f.unless) ? f.unless.filter(function (k) { return typeof k === "string" && k; }) : [],
+        !!f.priority);
     });
     var ng = mkGroup(typeof g.name === "string" ? g.name : "Group", field, weight, filters);
     ng.combine = combine;
@@ -1043,7 +1091,8 @@ function passes(j) {
   // Mark-view: when a chip other than "All" is active, keep only jobs carrying
   // that mark. Layered on top of search/filters; pill counts use passesBase so
   // they stay unaffected.
-  if (VIEW !== "all" && jobStatus(j.url) !== VIEW) return false;
+  if (VIEW === "u") { if (jobStatus(j.url) !== "") return false; }
+  else if (VIEW !== "all" && jobStatus(j.url) !== VIEW) return false;
   // Isolate lens (set by clicking a pill's view/total number): restrict the list
   // to one filter's matches. `total` mode shows EVERY match (even ones your hard-
   // excludes would normally hide); plain mode keeps the other excludes applied.
@@ -1109,6 +1158,34 @@ function highlightCell(text, field, job) {
     }
   }
   return html;
+}
+
+// Work-mode badge (🌐 Anywhere / 🏠 Remote / ⇄ Hybrid). When a workmode filter
+// pulled this row in, wrap the badge as an `.hlmatch` carrying those filters' ids
+// so it joins the cross-highlight pair — hovering it (or its tag) lights both, the
+// same contract `highlightCell` spans use. The badge text isn't the matched token
+// (the regex hits j.workMode), so we can't route it through highlightCell; we tag
+// the whole label instead. Returns "" for onsite/unknown (no badge).
+function modeBadgeHtml(j) {
+  var meta = j.workMode === "anywhere" ? ["anywhere", "🌐 Anywhere"]
+    : j.workMode === "remote" ? ["remote", "🏠 Remote"]
+    : j.workMode === "hybrid" ? ["hybrid", "⇄ Hybrid"] : null;
+  if (!meta) return "";
+  // Keep only filters that actually match the workmode token. A combined group
+  // (e.g. field "location,workmode") shows up in matchersForCell("workmode")
+  // even when it really matched the country text — tagging the badge with it
+  // would cross-highlight "Denmark"/"Iceland" on hover, which is wrong.
+  var wm = String(j.workMode == null ? "" : j.workMode);
+  var fils = matchersForCell(j, "workmode").filter(function (f) {
+    var res = globalRes(f);
+    for (var k = 0; k < res.length; k++) { res[k].lastIndex = 0; if (res[k].test(wm)) return true; }
+    return false;
+  });
+  if (fils.length) {
+    var key = uniqKey(fils.map(function (f) { return f.id; }));
+    return '<span class="mode hlmatch ' + meta[0] + '" data-fids="' + key + '">' + meta[1] + '</span>';
+  }
+  return '<span class="mode ' + meta[0] + '">' + meta[1] + '</span>';
 }
 
 function render() {
@@ -1182,9 +1259,7 @@ function render() {
     // Work mode as a badge on its OWN line below the location text: 🌐 Anywhere /
     // 🏠 Remote / ⇄ Hybrid; onsite and unknown show no badge. The location string
     // is now place-only (work-mode tokens stripped during the scan), so no dup.
-    var modeBadge = j.workMode === "anywhere" ? '<span class="mode anywhere">🌐 Anywhere</span>'
-      : j.workMode === "remote" ? '<span class="mode remote">🏠 Remote</span>'
-      : j.workMode === "hybrid" ? '<span class="mode hybrid">⇄ Hybrid</span>' : '';
+    var modeBadge = modeBadgeHtml(j);
     var locText = highlightCell(j.location, "location", j);
     var modeLine = modeBadge ? '<span class="modeline">' + modeBadge + '</span>' : '';
     var locCell = (locText || (modeBadge ? '' : "—")) + modeLine;
@@ -1203,6 +1278,7 @@ function render() {
     var emptyMsg = VIEW === "s" ? "No starred roles yet — hit ★ on a row to add one."
       : VIEW === "c" ? "Nothing marked done yet — hit ✓ on a row as you apply."
       : VIEW === "i" ? "No ignored roles — hit ✕ on a row to tuck one away here."
+      : VIEW === "u" ? "Nothing left untagged — every match is starred, applied, or ignored."
       : "No openings match these filters.";
     rows.innerHTML = '<tr><td colspan="6" class="empty">' + emptyMsg + '</td></tr>';
   }
@@ -1253,6 +1329,7 @@ function currentSchema() {
         if (f.else) ff.else = true;
         else ff.keywords = (f.keywords || []).slice();
         if (!f.else && f.unless && f.unless.length) ff.unless = f.unless.slice();
+        if (!f.else && f.priority) ff.priority = true;
         if (f.weight != null) ff.weight = f.weight;
         if (f.muted) ff.muted = true;
         return ff;
@@ -1283,6 +1360,7 @@ function diffFilters(gname, base, cur, out) {
     if (diffWeightLabel(f.weight) !== diffWeightLabel(b.weight))
       out.push({ k: "mod", t: gname + " › " + l + ": weight " + diffWeightLabel(b.weight) + " → " + diffWeightLabel(f.weight) });
     if (!!f.muted !== !!b.muted) out.push({ k: "mod", t: gname + " › " + l + ": " + (f.muted ? "muted" : "unmuted") });
+    if (!!f.priority !== !!b.priority) out.push({ k: "mod", t: gname + " › " + l + ": " + (f.priority ? "now priority (rescues group excludes)" : "no longer priority") });
     if (!!f.else !== !!b.else) out.push({ k: "mod", t: gname + " › " + l + ": " + (f.else ? "now catch-all" : "no longer catch-all") });
     var bk = (b.keywords || []).join(", "), ck = (f.keywords || []).join(", ");
     if (bk !== ck) out.push({ k: "mod", t: gname + " › " + l + ": keywords [" + bk + "] → [" + ck + "]" });
@@ -1390,6 +1468,7 @@ function makePill(g, f, nView, nTotal) {
   }
   if (f.else) pill.className += " elsepill";
   if (f.muted) pill.className += " muted";
+  if (!f.else && f.priority) pill.className += " priority";
   // While a lens is active, the isolated pill is highlighted and every OTHER pill
   // is greyed, so it's obvious the list is showing just one filter's matches.
   if (ISOLATE) pill.className += (ISOLATE.fid === f.id) ? " isolating" : " dimmed";
@@ -1423,7 +1502,12 @@ function makePill(g, f, nView, nTotal) {
     '<span class="kw">' + esc(Rank.filterLabel(f) || "unnamed") +
       (f.else ? ' <span class="elsetag">else</span>' : '') + '</span>' +
     cntHtml +
-    '<button class="edit" title="Edit filter" aria-label="Edit filter">✎</button>';
+    '<button class="edit" title="Edit filter" aria-label="Edit filter">✎</button>' +
+    // Crown: only keyword filters can rescue a group (a catch-all matching means
+    // "nothing else did", so flagging it priority is meaningless).
+    (f.else ? "" : '<button class="crown" title="Priority filter" aria-label="Priority filter">' +
+      '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true">' +
+      '<path d="M2.5 8.5 6.8 12 12 4.5 17.2 12 21.5 8.5 19.9 19H4.1L2.5 8.5Z"/></svg></button>');
   pill.title = f.else
     ? "Catch-all: matches when nothing else in “" + g.name + "” does"
     : "Click to cycle inactive ▸ on ▸ filter-out";
@@ -1439,6 +1523,16 @@ function makePill(g, f, nView, nTotal) {
   if (cvEl) cvEl.onclick = function (e) { e.stopPropagation(); toggleIsolate(f, false); };
   pill.querySelector(".ct").onclick = function (e) { e.stopPropagation(); toggleIsolate(f, true); };
   pill.querySelector(".edit").onclick = function (e) { e.stopPropagation(); openFilterModal(g, f); };
+  var crown = pill.querySelector(".crown");
+  if (crown) {
+    crown.title = f.priority
+      ? "Priority on — when this matches, the group's filtered-out hits are rescued for that job. Click to turn off."
+      : "Make priority — when this filter matches, ignore this group's filter-outs for that job (e.g. keep a Remote job even if its country is filtered out).";
+    crown.onclick = function (e) {
+      e.stopPropagation();
+      f.priority = !f.priority; schedule({ recompute: true, groups: true });
+    };
+  }
   return pill;
 }
 

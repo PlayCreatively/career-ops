@@ -49,6 +49,7 @@ export function runtimeToSchema(groups) {
       else ff.keywords = (Array.isArray(f.keywords) ? f.keywords : []).slice();
       if (f.weight != null) ff.weight = f.weight;
       if (f.muted) ff.muted = true;
+      if (!f.else && f.priority) ff.priority = true;
       return ff;
     });
     return out;

@@ -205,6 +205,13 @@
       if (filterMatches(text, f, job, idx)) { matched.push(f); anyKeyword = true; }
     }
     if (elseFilter && !anyKeyword) matched.push(elseFilter);
+    // Priority rescue: a matched filter flagged `priority` voids this group's
+    // hard excludes (weight 0) for the job — "exclude these regions UNLESS the
+    // job also matches a priority filter (e.g. Remote)". Group-scoped; the
+    // priority filter keeps its own weight, only zero-weight excludes drop.
+    if (matched.some(function (f) { return f.priority; })) {
+      return matched.filter(function (f) { return f.priority || f.weight !== 0; });
+    }
     return matched;
   }
 

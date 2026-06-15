@@ -916,7 +916,7 @@ async function main() {
     let snapJobs = snapshot;
     if (dedupCfg.enabled !== false) {
       const { jobs: deduped, collapsed, collapsedById, collapsedByHeuristic } = dedupeSnapshot(snapshot, {
-        aggregators: dedupCfg.aggregators || ['hitmarker.net', 'workwithindies.com'],
+        aggregators: dedupCfg.aggregators || ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com'],
       });
       snapJobs = deduped;
       if (collapsed > 0) {

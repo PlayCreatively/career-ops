@@ -317,6 +317,14 @@ export function matchGroup(job, group, index) {
     if (filterMatches(text, f, job, idx)) { matched.push(f); anyKeyword = true; }
   }
   if (elseFilter && !anyKeyword) matched.push(elseFilter);
+  // Priority rescue: a matched filter flagged `priority` voids this group's hard
+  // excludes (weight 0) for the job — "exclude these regions UNLESS the job also
+  // matches a priority filter (e.g. Remote)". Scoped to the group, so a Region
+  // priority never rescues a Role/Company exclude. The priority filter keeps its
+  // own weight; only the zero-weight excludes are dropped from the match set.
+  if (matched.some((f) => f.priority)) {
+    return matched.filter((f) => f.priority || f.weight !== 0);
+  }
   return matched;
 }
 
