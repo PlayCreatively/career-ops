@@ -1347,6 +1347,56 @@ try {
   fail(`work-mode tests crashed: ${e.message}`);
 }
 
+// ── unless guard — filter references (cross-group) ───────────────
+console.log('\n17b. unless guard — filter references');
+try {
+  const { isExcluded, matchGroup, buildFilterIndex } = await import(pathToFileURL(join(ROOT, 'rank.mjs')).href);
+
+  // "Poland" location exclude (weight 0) guarded by `unless: [Remote]`. The
+  // Remote filter lives in a SEPARATE group keyed on workmode, so the guard must
+  // resolve cross-group and test workMode — not Poland's own location text.
+  const groups = [
+    { id: 'loc', field: 'location', combine: 'min',
+      filters: [{ id: 'pl', name: 'Poland', keywords: ['Poland'], weight: 0, unless: ['Remote'] }] },
+    { id: 'wm', field: 'workmode', combine: 'min',
+      filters: [{ id: 'rm', name: 'Remote', keywords: ['remote'], weight: 1.5 }] },
+  ];
+  const onsitePL = { location: 'Warsaw, Poland', workMode: 'onsite' };
+  const remotePL = { location: 'Warsaw, Poland', workMode: 'remote' };
+  if (isExcluded(onsitePL, groups) && !isExcluded(remotePL, groups)) {
+    pass('unless [Remote] voids the Poland exclude only when the job matches the Remote filter (workmode), cross-group');
+  } else {
+    fail(`unless cross-group: onsite excluded=${isExcluded(onsitePL, groups)} (want true), remote excluded=${isExcluded(remotePL, groups)} (want false)`);
+  }
+
+  // An unresolved reference is inert — it must NOT void the exclusion (fail-safe:
+  // a typo'd guard can't silently let blocked jobs through).
+  const badRef = [{ id: 'loc', field: 'location', combine: 'min',
+    filters: [{ id: 'pl', name: 'Poland', keywords: ['Poland'], weight: 0, unless: ['Nonexistent'] }] }];
+  if (isExcluded(remotePL, badRef)) {
+    pass('unresolved unless reference is inert (exclusion still applies — fail-safe)');
+  } else {
+    fail('unresolved unless reference wrongly voided the exclusion');
+  }
+
+  // The index resolves a reference by label — `name`, or the first keyword when
+  // `name` is absent (filterLabel rule). Reference the Remote filter by keyword.
+  const byKw = [
+    { id: 'loc', field: 'location', combine: 'min',
+      filters: [{ id: 'pl', keywords: ['Poland'], weight: 0, unless: ['remote'] }] },
+    { id: 'wm', field: 'workmode', combine: 'min',
+      filters: [{ id: 'rm', keywords: ['remote'], weight: 1.5 }] },
+  ];
+  const idx = buildFilterIndex(byKw);
+  if (idx.has('remote') && idx.has('poland') && !isExcluded(remotePL, byKw)) {
+    pass('buildFilterIndex keys filters by label (name or first keyword); reference resolves by keyword');
+  } else {
+    fail(`label index / keyword reference wrong: hasRemote=${idx.has('remote')} hasPoland=${idx.has('poland')} excluded=${isExcluded(remotePL, byKw)}`);
+  }
+} catch (e) {
+  fail(`unless-guard tests crashed: ${e.message}`);
+}
+
 // ── Provider — breezy ───────────────────────────────────────────
 
 console.log('\n16. Provider — breezy');

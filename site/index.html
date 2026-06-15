@@ -914,11 +914,17 @@ function visibleGroups() {
 }
 function recompute() {
   var vis = visibleGroups();
+  // Build the label→filter index once per recompute (not per job/group) so an
+  // `unless` reference resolves across ALL groups. Two indexes: the visible one
+  // (muted filters dropped) drives _mem; the full one drives _memFull so pill
+  // counts still report what a muted filter would catch. Mirrors rank.mjs.
+  var visIndex = Rank.buildFilterIndex(vis);
+  var fullIndex = Rank.buildFilterIndex(GROUPS);
   ALL.forEach(function (j) {
     var mem = {}, memFull = {};
     GROUPS.forEach(function (g, gi) {
-      mem[g.id] = Rank.matchGroup(j, vis[gi]).map(function (f) { return f.id; });
-      memFull[g.id] = Rank.matchGroup(j, g).map(function (f) { return f.id; });
+      mem[g.id] = Rank.matchGroup(j, vis[gi], visIndex).map(function (f) { return f.id; });
+      memFull[g.id] = Rank.matchGroup(j, g, fullIndex).map(function (f) { return f.id; });
     });
     j._mem = mem; j._memFull = memFull;
   });

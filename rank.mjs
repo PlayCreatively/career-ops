@@ -239,56 +239,90 @@ function filterRegexes(f) {
   return f._res;
 }
 
-// Compile a filter's `unless` guard into RegExps once, cached as `_unlessRes`.
-// `unless` is a condition that sits on TOP of every keyword in the filter: when
-// any guard keyword also hits the same field text, the whole filter is voided
-// (counts as no match). Same keyword syntax as `keywords` (word-stem or /regex/).
-// Lets a region exclude ("Poland", weight 0) NOT apply to a remote posting
-// ("Poland, Remote") via `unless: [Remote, Anywhere]` — no regex gymnastics.
-function unlessRegexes(f) {
-  if (!f._unlessRes) f._unlessRes = (f.unless || []).map(keyToRegExp).filter(Boolean);
-  return f._unlessRes;
+// `unless` is a guard that sits on TOP of every keyword in the filter: when the
+// guard fires, the whole filter is voided (counts as no match). The guard is a
+// list of REFERENCES to OTHER filters (by their label/name), not raw keywords —
+// so it composes the filters you've already defined. It fires when the job
+// matches ANY referenced filter, evaluated by that filter's own field+keywords.
+// Lets a region exclude ("Poland", weight 0) NOT apply to a remote posting via
+// `unless: [Remote]` — i.e. "exclude Poland unless the job is Remote", where the
+// Remote filter tests workMode itself, no keyword duplication.
+//
+// Build a label→{filter, field} index from all groups so a reference can be
+// resolved to the target filter and the field it matches against. Lowercased,
+// first-wins; catch-alls (`else`) are skipped — they aren't referenceable targets.
+export function buildFilterIndex(groups) {
+  const idx = new Map();
+  for (const g of groups || []) {
+    for (const f of g.filters || []) {
+      if (f.else) continue;
+      const label = filterLabel(f).toLowerCase();
+      if (label && !idx.has(label)) idx.set(label, { f, field: g.field });
+    }
+  }
+  return idx;
+}
+
+// Does the job hit ANY of this filter's keywords against the given field text?
+// Used both for the host filter (membership) and, via the index, for resolving
+// an `unless` reference. Deliberately non-recursive: a referenced filter's own
+// `unless` is NOT re-evaluated, so references can't form cycles.
+function keywordHit(text, f) {
+  for (const re of filterRegexes(f)) {
+    if (re.global) re.lastIndex = 0;
+    if (re.test(text)) return true;
+  }
+  return false;
+}
+
+// True when any of the filter's `unless` references resolves to a filter the job
+// matches. Unresolved references (no such filter, or it's muted/absent from the
+// index) are inert — they void nothing.
+function unlessFires(job, f, index) {
+  const refs = f.unless || [];
+  if (!refs.length || !index) return false;
+  for (const ref of refs) {
+    const rec = index.get(String(ref).trim().toLowerCase());
+    if (rec && keywordHit(fieldText(job, rec.field), rec.f)) return true;
+  }
+  return false;
 }
 
 /**
- * True if any of a filter's keywords matches `text` AND no `unless` guard does.
- * The guard is checked only after a keyword hit, so a filter without `unless`
- * (the common case) behaves exactly as before.
+ * True if any of a filter's keywords matches `text` AND its `unless` guard does
+ * not fire. The guard is checked only after a keyword hit, so a filter without
+ * `unless` (the common case) behaves exactly as before. `index` resolves the
+ * guard's filter references (see buildFilterIndex); omit it and the guard is inert.
  */
-export function filterMatches(text, f) {
-  let hit = false;
-  for (const re of filterRegexes(f)) {
-    if (re.global) re.lastIndex = 0;
-    if (re.test(text)) { hit = true; break; }
-  }
-  if (!hit) return false;
-  for (const re of unlessRegexes(f)) {
-    if (re.global) re.lastIndex = 0;
-    if (re.test(text)) return false;
-  }
+export function filterMatches(text, f, job, index) {
+  if (!keywordHit(text, f)) return false;
+  if (unlessFires(job, f, index)) return false;
   return true;
 }
 
 /**
  * The filters of `group` that match `job`. An `else` (catch-all) filter is
- * included only when no keyword filter in the group matched.
+ * included only when no keyword filter in the group matched. `index` (optional)
+ * resolves `unless` references across all groups; when omitted it is built from
+ * this group alone, so cross-group references simply don't fire.
  */
-export function matchGroup(job, group) {
+export function matchGroup(job, group, index) {
+  const idx = index || buildFilterIndex([group]);
   const text = fieldText(job, group.field);
   const matched = [];
   let anyKeyword = false;
   let elseFilter = null;
   for (const f of group.filters || []) {
     if (f.else) { elseFilter = f; continue; }
-    if (filterMatches(text, f)) { matched.push(f); anyKeyword = true; }
+    if (filterMatches(text, f, job, idx)) { matched.push(f); anyKeyword = true; }
   }
   if (elseFilter && !anyKeyword) matched.push(elseFilter);
   return matched;
 }
 
 /** A group's score: its matched *active* filters combined via `combine`. */
-export function scoreGroup(job, group) {
-  const vals = matchGroup(job, group)
+export function scoreGroup(job, group, index) {
+  const vals = matchGroup(job, group, index)
     .filter((f) => typeof f.weight === 'number')
     .map((f) => f.weight);
   if (!vals.length) return DEFAULT_GROUP_WEIGHT;
@@ -297,17 +331,19 @@ export function scoreGroup(job, group) {
 
 /** True if the job matched an active filter weighted exactly 0 (hard exclude). */
 export function isExcluded(job, groups) {
-  return groups.some((g) => matchGroup(job, g).some((f) => f.weight === 0));
+  const index = buildFilterIndex(groups);
+  return groups.some((g) => matchGroup(job, g, index).some((f) => f.weight === 0));
 }
 
 /** Weighted fit across groups (group weights normalized at use). */
 export function fitGroups(job, groups) {
+  const index = buildFilterIndex(groups);
   let total = 0;
   let sum = 0;
   for (const g of groups) {
     const w = g.weight || 0;
     total += w;
-    sum += w * scoreGroup(job, g);
+    sum += w * scoreGroup(job, g, index);
   }
   return total ? sum / total : DEFAULT_GROUP_WEIGHT;
 }
@@ -317,12 +353,13 @@ export function fitGroups(job, groups) {
  * group breakdown, a combined `fit`, and an `excluded` flag (a hard 0 anywhere).
  */
 export function scoreJobGroups(job, groups) {
+  const index = buildFilterIndex(groups);
   const breakdown = groups.map((g) => {
-    const matched = matchGroup(job, g);
+    const matched = matchGroup(job, g, index);
     return {
       name: g.name,
       field: g.field,
-      score: scoreGroup(job, g),
+      score: scoreGroup(job, g, index),
       matched: matched.filter((f) => !f.else).map(filterLabel).filter(Boolean),
     };
   });

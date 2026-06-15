@@ -37,7 +37,7 @@ import yaml from 'js-yaml';
 import { makeHttpCtx, classifyFetchError } from './providers/_http.mjs';
 import { mergeHealth } from './merge-health.mjs';
 import { splitLocationMode } from './providers/_util.mjs';
-import { scoreCategory, matchGroup, isExcluded } from './rank.mjs';
+import { scoreCategory, matchGroup, isExcluded, buildFilterIndex } from './rank.mjs';
 
 const parseYaml = yaml.load;
 
@@ -185,8 +185,11 @@ export function buildTargetingFilter(targeting) {
 // group's `field` so the per-field counters stay meaningful ('any' → title).
 export function groupDropReason(job, groups) {
   if (!isExcluded(job, groups)) return null;
+  // Share one index across the loop so `unless` references resolve the same way
+  // isExcluded saw them (a guard-voided exclusion must not be re-detected here).
+  const index = buildFilterIndex(groups);
   for (const g of groups) {
-    if (matchGroup(job, g).some((f) => f.weight === 0)) {
+    if (matchGroup(job, g, index).some((f) => f.weight === 0)) {
       // `field` may be an array (multi-source group) — map it to one counter
       // bucket, preferring location > company > title.
       const fields = Array.isArray(g.field) ? g.field : [g.field];

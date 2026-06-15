@@ -142,65 +142,97 @@
     return f._res;
   }
 
-  // `unless` is a guard that sits on TOP of every keyword in the filter: when
-  // any guard keyword also hits the same field text, the whole filter is voided.
-  // Lets a region exclude ("Poland", weight 0) NOT apply to a remote posting
-  // ("Poland, Remote") via `unless: [Remote, Anywhere]`. Mirrors rank.mjs.
-  function unlessRegexes(f) {
-    if (!f._unlessRes) f._unlessRes = (f.unless || []).map(keyToRegExp).filter(Boolean);
-    return f._unlessRes;
+  // `unless` is a guard that sits on TOP of every keyword in the filter: when it
+  // fires, the whole filter is voided. The guard is a list of REFERENCES to OTHER
+  // filters (by label), not raw keywords — it fires when the job matches ANY
+  // referenced filter, evaluated by that filter's own field+keywords. Lets a
+  // region exclude ("Poland", weight 0) NOT apply to a remote posting via
+  // `unless: [Remote]` ("exclude Poland unless the job is Remote"). Mirrors rank.mjs.
+  //
+  // label→{filter, field} index across all groups so a reference resolves to its
+  // target filter and that filter's field. Lowercased, first-wins; else skipped.
+  function buildFilterIndex(groups) {
+    var idx = {};
+    (groups || []).forEach(function (g) {
+      (g.filters || []).forEach(function (f) {
+        if (f.else) return;
+        var label = filterLabel(f).toLowerCase();
+        if (label && !Object.prototype.hasOwnProperty.call(idx, label)) idx[label] = { f: f, field: g.field };
+      });
+    });
+    return idx;
   }
 
-  function filterMatches(text, f) {
-    var res = filterRegexes(f), hit = false, i;
-    for (i = 0; i < res.length; i++) {
+  // Does the job hit ANY of this filter's keywords against the given field text?
+  // Non-recursive: a referenced filter's own `unless` is NOT re-evaluated, so
+  // references can't form cycles.
+  function keywordHit(text, f) {
+    var res = filterRegexes(f);
+    for (var i = 0; i < res.length; i++) {
       var re = res[i]; if (re.global) re.lastIndex = 0;
-      if (re.test(text)) { hit = true; break; }
+      if (re.test(text)) return true;
     }
-    if (!hit) return false;
-    var guard = unlessRegexes(f);
-    for (i = 0; i < guard.length; i++) {
-      var g = guard[i]; if (g.global) g.lastIndex = 0;
-      if (g.test(text)) return false;
+    return false;
+  }
+
+  // True when any `unless` reference resolves to a filter the job matches.
+  // Unresolved references (no such filter / muted / absent) are inert.
+  function unlessFires(job, f, index) {
+    var refs = f.unless || [];
+    if (!refs.length || !index) return false;
+    for (var i = 0; i < refs.length; i++) {
+      var key = String(refs[i]).trim().toLowerCase();
+      var rec = Object.prototype.hasOwnProperty.call(index, key) ? index[key] : null;
+      if (rec && keywordHit(fieldText(job, rec.field), rec.f)) return true;
     }
+    return false;
+  }
+
+  function filterMatches(text, f, job, index) {
+    if (!keywordHit(text, f)) return false;
+    if (unlessFires(job, f, index)) return false;
     return true;
   }
 
-  function matchGroup(job, group) {
+  function matchGroup(job, group, index) {
+    var idx = index || buildFilterIndex([group]);
     var text = fieldText(job, group.field);
     var matched = [], anyKeyword = false, elseFilter = null;
     var filters = group.filters || [];
     for (var i = 0; i < filters.length; i++) {
       var f = filters[i];
       if (f.else) { elseFilter = f; continue; }
-      if (filterMatches(text, f)) { matched.push(f); anyKeyword = true; }
+      if (filterMatches(text, f, job, idx)) { matched.push(f); anyKeyword = true; }
     }
     if (elseFilter && !anyKeyword) matched.push(elseFilter);
     return matched;
   }
 
-  function scoreGroup(job, group) {
+  function scoreGroup(job, group, index) {
     var vals = [];
-    matchGroup(job, group).forEach(function (f) { if (typeof f.weight === 'number') vals.push(f.weight); });
+    matchGroup(job, group, index).forEach(function (f) { if (typeof f.weight === 'number') vals.push(f.weight); });
     if (!vals.length) return DEFAULT_GROUP_WEIGHT;
     return combineGroup(vals, group.combine || 'min');
   }
 
   function isExcluded(job, groups) {
-    return groups.some(function (g) { return matchGroup(job, g).some(function (f) { return f.weight === 0; }); });
+    var index = buildFilterIndex(groups);
+    return groups.some(function (g) { return matchGroup(job, g, index).some(function (f) { return f.weight === 0; }); });
   }
 
   function fitGroups(job, groups) {
+    var index = buildFilterIndex(groups);
     var total = 0, sum = 0;
-    groups.forEach(function (g) { var w = g.weight || 0; total += w; sum += w * scoreGroup(job, g); });
+    groups.forEach(function (g) { var w = g.weight || 0; total += w; sum += w * scoreGroup(job, g, index); });
     return total ? sum / total : DEFAULT_GROUP_WEIGHT;
   }
 
   function scoreJobGroups(job, groups) {
+    var index = buildFilterIndex(groups);
     var breakdown = groups.map(function (g) {
-      var matched = matchGroup(job, g);
+      var matched = matchGroup(job, g, index);
       return {
-        name: g.name, field: g.field, score: scoreGroup(job, g),
+        name: g.name, field: g.field, score: scoreGroup(job, g, index),
         matched: matched.filter(function (f) { return !f.else; }).map(filterLabel).filter(Boolean),
       };
     });
@@ -264,6 +296,7 @@
     combineGroup: combineGroup,
     filterLabel: filterLabel,
     fieldText: fieldText,
+    buildFilterIndex: buildFilterIndex,
     filterMatches: filterMatches,
     matchGroup: matchGroup,
     scoreGroup: scoreGroup,
