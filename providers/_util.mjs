@@ -84,7 +84,7 @@ export function slugifyTitle(title) {
  */
 export function normalizeWorkMode(raw) {
   const s = String(raw == null ? '' : raw).trim().toLowerCase().replace(/[\s_-]+/g, '');
-  if (s === 'anywhere' || s === 'distributed' || s === 'workfromanywhere') return 'anywhere';
+  if (s === 'anywhere' || s === 'any' || s === 'anylocation' || s === 'distributed' || s === 'workfromanywhere') return 'anywhere';
   if (s === 'remote' || s === 'fullyremote') return 'remote';
   if (s === 'hybrid') return 'hybrid';
   if (s === 'onsite' || s === 'inoffice' || s === 'office') return 'onsite';
@@ -92,11 +92,14 @@ export function normalizeWorkMode(raw) {
 }
 
 // Work-mode tokens an ATS commonly bakes into the location string. Word-bounded
-// so "Remoteville" or a hyphenated place won't false-match. Order doesn't matter
-// (we resolve the resulting mode by priority below). "anywhere"/"distributed"
-// map to the geography-free 'anywhere' mode.
+// so "Remoteville" or a hyphenated place won't false-match (and "any" can't fire
+// inside "Germany"/"Albany"/"company" — no word boundary before its 'a'). Order
+// doesn't matter for resolution (priority below) but DOES for matching: the
+// longer alternatives ("anywhere", "any location") precede bare "any" so the
+// engine consumes the full phrase, not just the "any" prefix.
+// "anywhere"/"any"/"any location"/"distributed" → the geography-free 'anywhere'.
 const LOCATION_MODE_RE =
-  /\b(?:work[\s-]+from[\s-]+anywhere|anywhere|distributed|fully[\s-]+remote|remote|hybrid|on[-\s]?site|in[-\s]?office|work[\s-]+from[\s-]+home|wfh)\b/gi;
+  /\b(?:work[\s-]+from[\s-]+anywhere|anywhere|any[\s-]+locations?|any|distributed|fully[\s-]+remote|remote|hybrid|on[-\s]?site|in[-\s]?office|work[\s-]+from[\s-]+home|wfh)\b/gi;
 
 /**
  * Many postings carry the work arrangement INSIDE the location string —
@@ -123,7 +126,7 @@ export function splitLocationMode(rawLocation) {
 
   const lc = found.map((s) => s.toLowerCase());
   let workMode = '';
-  if (lc.some((s) => s.includes('anywhere') || s.includes('distributed'))) workMode = 'anywhere';
+  if (lc.some((s) => s.includes('anywhere') || s.includes('distributed') || /^any\b/.test(s))) workMode = 'anywhere';
   else if (lc.some((s) => s.includes('remote') || s.includes('home') || s === 'wfh')) workMode = 'remote';
   else if (lc.some((s) => s.includes('hybrid'))) workMode = 'hybrid';
   else if (lc.some((s) => s.includes('site') || s.includes('office'))) workMode = 'onsite';

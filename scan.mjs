@@ -780,11 +780,17 @@ async function main() {
         // provider had no structured value, and strip the token so the board's
         // work-mode badge doesn't duplicate it. Runs AFTER the targeting gate so
         // location-keyed filters still see the original string; a structured
-        // workMode from the provider always wins over the location-derived one.
+        // workMode from the provider normally wins over the location-derived one.
+        // EXCEPTION: when the location was PURELY a location-agnostic token
+        // ("Any", "Any Location", "Anywhere") nothing is left after stripping, so
+        // the derived 'anywhere' is authoritative geography and OVERRIDES a
+        // provider default like onsite — otherwise a studio that tags such roles
+        // OnSite (e.g. Larian) shows an onsite badge over an empty location.
         {
           const { location: cleanLoc, workMode: locMode } = splitLocationMode(job.location);
           job.location = cleanLoc;
-          if (!job.workMode && locMode) job.workMode = locMode;
+          if (locMode === 'anywhere' && !cleanLoc) job.workMode = 'anywhere';
+          else if (!job.workMode && locMode) job.workMode = locMode;
         }
         // Snapshot collection happens BEFORE history dedup so jobs.json is the
         // full current set even when data/scan-history.tsv already lists these.

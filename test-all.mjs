@@ -1276,6 +1276,11 @@ try {
     ['Anywhere', '', 'anywhere'],        // geography-free → 4th state
     ['Distributed', '', 'anywhere'],
     ['Remote, Anywhere', '', 'anywhere'],// most permissive wins
+    ['Any', '', 'anywhere'],             // bare "Any" → anywhere
+    ['Any Location', '', 'anywhere'],    // phrase consumed whole, not just "Any"
+    ['Germany', 'Germany', ''],          // "any" inside a word never fires
+    ['Albany, NY', 'Albany, NY', ''],    // ditto — no word boundary before its 'a'
+    ['Anytown, USA', 'Anytown, USA', ''],// "any" prefix of a place is left intact
   ];
   let splitOk = true;
   for (const [input, loc, mode] of cases) {
@@ -1289,6 +1294,7 @@ try {
 
   if (normalizeWorkMode('OnSite') === 'onsite' && normalizeWorkMode('Hybrid') === 'hybrid'
       && normalizeWorkMode('Anywhere') === 'anywhere' && normalizeWorkMode('distributed') === 'anywhere'
+      && normalizeWorkMode('Any') === 'anywhere'
       && normalizeWorkMode('unspecified') === '') {
     pass('normalizeWorkMode maps ATS values to the work-mode enum (unknown → "")');
   } else {
