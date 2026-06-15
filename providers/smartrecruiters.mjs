@@ -30,6 +30,7 @@ function assertSmartRecruitersUrl(url) {
 
 /** @type {import('./_types.js').Probe} */
 export const probe = {
+  canary: 'Visa',      // known-live tenant — proves SmartRecruiters isn't throttling us
   // SR slugs are case-sensitive; try the verbatim and upper-cased forms.
   slugs: (name) => {
     const a = name.replace(/[^A-Za-z0-9]+/g, '');

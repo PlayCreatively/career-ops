@@ -41,6 +41,30 @@ export function toIsoDate(input) {
 }
 
 /**
+ * Slugify a job title the way studios that mirror their ATS board on their own
+ * domain do: lowercase, drop punctuation (keep letters/digits/spaces), then
+ * collapse whitespace runs to single hyphens. Deliberately does NOT trim leading
+ * or trailing hyphens — the observed convention (Supercell) keeps a trailing
+ * hyphen when the title has trailing whitespace, and the canonical URL only
+ * resolves with the exact slug. Used by job_url_template (see providers/ashby.mjs).
+ *
+ * Examples (verified against supercell.com, 33/33):
+ *   "Head of R&D, Clash Royale"        -> "head-of-rd-clash-royale"
+ *   "Product Lead, Project R.I.S.E"    -> "product-lead-project-rise"
+ *   "Senior Server Engineer, Tech "    -> "senior-server-engineer-tech-"
+ *
+ * @param {unknown} title
+ * @returns {string}
+ */
+export function slugifyTitle(title) {
+  return String(title == null ? '' : title)
+    .toLowerCase()
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '') // strip combining accents
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '-');
+}
+
+/**
  * Normalise an ATS work-arrangement value into one of four tokens:
  * 'remote' | 'hybrid' | 'onsite' | 'anywhere'. Returns '' for anything
  * unrecognised or absent (ATS values like Lever's 'unspecified'), so the field

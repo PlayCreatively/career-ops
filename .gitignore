@@ -48,6 +48,8 @@ modes/_profile.md
 .resolved-prompt-*
 node_modules/
 bun.lock
+# probe-studios.mjs run logs (transient diagnostic output, never source)
+*.out
 
 # OS
 .DS_Store

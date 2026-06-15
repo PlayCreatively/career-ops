@@ -138,7 +138,7 @@ function main() {
     '  # Swedish-industry directory, bulk-imported tokenlessly (import-gdi.mjs).\n' +
     '  # status: unresolved → scan.mjs skips; /career-ops resolve walks them.\n' +
     fresh.map(n =>
-      `  - name: ${/[:#]/.test(n) ? JSON.stringify(n) : n}\n    status: unresolved\n    notes: "GDI 2025 (Dataspelsbranschen)."`
+      `  - name: ${/[:#]/.test(n) ? JSON.stringify(n) : n}\n    country: SE\n    status: unresolved\n    notes: "GDI 2025 (Dataspelsbranschen)."`
     ).join('\n') + '\n';
 
   let file = readFileSync(STUDIOS, 'utf-8');

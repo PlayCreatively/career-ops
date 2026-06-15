@@ -22,6 +22,12 @@
     --chip: #ede2cf; --chipOn: #9a6336; --warm: #ab7c2e;  /* gold — boosts */
     --onAccent: #fdf8f0;     /* text on a filled accent */
     --danger: #ad5238;
+    /* Curated 4-band rating scale (poor → weak → good → boost). Per-theme so
+       each scheme keeps its own contrast against its chip/panel surfaces. */
+    --rate-poor: #c14a30;    /* excluded / very low — terracotta red */
+    --rate-weak: #c5872a;    /* below neutral — warm ochre amber */
+    --rate-good: #5f8a4e;    /* on-target / neutral — sage green */
+    --rate-boost: #5a6fd6;   /* boosted above 1 — indigo */
     --overlay: rgba(52,44,33,.38);
     --shadow: 0 1px 2px rgba(52,44,33,.08), 0 2px 8px rgba(52,44,33,.07);
     color-scheme: light;
@@ -39,6 +45,11 @@
     --chip: #352e25; --chipOn: #dc9c5f; --warm: #e2b35e;  /* gold — boosts */
     --onAccent: #221c14;     /* text on a filled accent */
     --danger: #df9078;
+    /* Curated 4-band rating scale — brighter for the dark warm surface. */
+    --rate-poor: #e8896f;
+    --rate-weak: #e2b35e;
+    --rate-good: #9fc081;
+    --rate-boost: #93a6f0;
     --overlay: rgba(0,0,0,.55);
     --shadow: 0 1px 2px rgba(0,0,0,.30), 0 2px 10px rgba(0,0,0,.32);
     color-scheme: dark;
@@ -56,6 +67,11 @@
     --chip: #eceef1; --chipOn: #2563eb; --warm: #b45309;  /* amber — boosts */
     --onAccent: #ffffff;     /* text on a filled accent */
     --danger: #dc2626;
+    /* Curated 4-band rating scale — saturated for the neutral light surface. */
+    --rate-poor: #cc3a2e;
+    --rate-weak: #c27a12;
+    --rate-good: #2f8f43;
+    --rate-boost: #4f56e0;
     --overlay: rgba(17,24,39,.45);
     --shadow: 0 1px 2px rgba(17,24,39,.06), 0 2px 8px rgba(17,24,39,.06);
     color-scheme: light;
@@ -73,6 +89,11 @@
     --chip: #2a2e36; --chipOn: #3b82f6; --warm: #fbbf24;  /* amber — boosts */
     --onAccent: #0b0e13;     /* text on a filled accent */
     --danger: #f87171;
+    /* Curated 4-band rating scale — bright for the neutral dark surface. */
+    --rate-poor: #f3776a;
+    --rate-weak: #f5b13c;
+    --rate-good: #4fc26a;
+    --rate-boost: #687fff;
     --overlay: rgba(0,0,0,.6);
     --shadow: 0 1px 2px rgba(0,0,0,.30), 0 2px 10px rgba(0,0,0,.32);
     color-scheme: dark;
@@ -157,15 +178,16 @@
   /* Boost keywords */
   #boostBox { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 280px; }
   .chips { flex: 1; display: flex; flex-wrap: wrap; gap: 16px 12px; align-items: center; padding-top: 8px; }
-  /* The pill colour (border + text + bullet) is set inline in JS by lerping
-     --danger → --accent2 across the weight (red at 0, green at ≥1). */
+  /* The pill colour (border + text + bullet) is set inline in JS from the curated
+     4-band rating scale (rampColor): red poor → amber weak → green neutral → indigo boost. */
   .bpill { position: relative; display: inline-flex; align-items: center; gap: 7px;
     background: var(--chip); border: 1px solid var(--line); color: var(--txt);
     border-radius: 999px; padding: 5px 13px; font-size: 13px; cursor: pointer; }
   /* Hover always lifts the outline to green (like the original chips). */
   .bpill:hover { border-color: var(--accent2); }
-  /* Active (rated) pills carry their weight colour in --pc (red at 0 → green at
-     ≥1): solid full fill, contrasting text, matching border. No transition —
+  /* Active (rated) pills carry their weight colour in --pc (red poor → amber weak
+     → green neutral → indigo boost): solid full fill, contrasting text, matching
+     border. No transition —
      the toggle should feel instant. */
   .bpill.active { background: var(--pc); border-color: var(--pc); color: var(--onAccent); }
   .bpill.active .n { color: var(--onAccent); }
@@ -242,6 +264,11 @@
   /* Sit the group name on the first pill row's baseline rather than centering it
      against the full (often wrapped) height of the pills block. */
   .row:has(.grouplabel) { align-items: baseline; }
+  /* A very faint rule between filter groups, for separation without clutter. */
+  #groups .row + .row {
+    margin-top: 10px; padding-top: 14px;
+    border-top: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  }
   /* Catch-all (else) pills read a touch differently from keyword pills. */
   .bpill.elsepill { border-style: solid; }
   .bpill .elsetag { font-size: 9px; opacity: .55; text-transform: uppercase;
@@ -302,6 +329,7 @@
   th[data-sort].sorted { color: var(--accent); }
   th[data-sort].sorted::after { content: " ↓"; font-size: 10px; }
   th[data-sort].sorted.asc::after { content: " ↑"; }
+  tr.jobrow td { vertical-align: middle; }
   tr:hover td { background: var(--panel2); }
   th:hover { background: var(--panel2); }
   /* ── Per-row quick actions ───────────────────────────────────────────────
@@ -341,13 +369,19 @@
   /* Status look on the row itself. Starred gets a gold edge; checked and ignored
      grey the row out (everything but the action cluster, which must stay lit). */
   tr.starred td.fit { box-shadow: inset 3px 0 0 var(--warm); }
-  tr.checked td:not(.fit), tr.checked .fitval { opacity: .5; }
-  tr.ignored td:not(.fit), tr.ignored .fitval { opacity: .38; }
+  tr.checked td:not(.fit), tr.checked .fitval { opacity: .25; }
+  tr.ignored td:not(.fit), tr.ignored .fitval { opacity: .25; }
   td.fit { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
   td.role a { color: var(--txt); text-decoration: none; font-weight: 500; }
   td.role a:hover { color: var(--accent); text-decoration: underline; }
-  td.role .dept { display: block; margin-top: 2px; color: var(--dim); font-size: 12px; }
+  td.role .dept { display: block; margin-top: 2px; color: var(--dim); font-size: 12px;
+    line-height: 16px; }
   td.role .dept::before { content: "· "; }
+  /* Keep the dept in normal flow (so it reserves space and never spills into the
+     row below), but balance it with an equal spacer above the title. The title
+     then sits centred on the row's middle line instead of being pushed up. The
+     18px mirrors the dept's 16px line-box + 2px margin-top. */
+  td.role:has(.dept)::before { content: ""; display: block; height: 18px; }
   td.loc .modeline { display: block; margin-top: 3px; }
   td.loc .mode { font-weight: 500; white-space: nowrap; font-size: 12px; }
   td.loc .mode.anywhere { color: var(--accent); }
@@ -361,11 +395,17 @@
   .age-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
     margin-right: 6px; vertical-align: middle; background: var(--line); }
   .age-dot.na { opacity: .35; }
+  td.tags .tagwrap { display: flex; flex-wrap: wrap; gap: 5px; }
   .tag { display: inline-block; background: var(--panel2); border: 1px solid var(--line);
-    color: var(--dim); padding: 2px 10px; border-radius: 6px; font-size: 11px; margin-right: 5px; }
+    color: var(--dim); padding: 2px 10px; border-radius: 6px; font-size: 11px; }
   .tag.remote { color: var(--accent2);
     border-color: color-mix(in srgb, var(--accent2) 40%, var(--line));
     background: color-mix(in srgb, var(--accent2) 12%, transparent); }
+  /* Rating tint: --pc carries the filter's ramp colour (set inline per tag), so a
+     tag reads its weight at a glance — same scale as the pills and the Fit number. */
+  .tag.rated { color: var(--pc);
+    border-color: color-mix(in srgb, var(--pc) 45%, var(--line));
+    background: color-mix(in srgb, var(--pc) 12%, transparent); }
   .empty { padding: 40px; text-align: center; color: var(--dim); }
   .more { padding: 16px; text-align: center; color: var(--dim); font-size: 13px; }
   footer { color: var(--dim); font-size: 12px; padding: 24px; text-align: center; border-top: 1px solid var(--line); }
@@ -496,6 +536,12 @@ window.__themeKey = "gamedevboard.theme";
         <option value="location">Sort: Location A–Z</option>
         <option value="posted">Sort: Newest</option>
       </select>
+      <select id="freshness" title="Hide postings older than this. Jobs with no posting date are always kept.">
+        <option value="0">Posted: Any age</option>
+        <option value="30">Posted: ≤1 month</option>
+        <option value="90">Posted: ≤3 months</option>
+        <option value="180">Posted: ≤6 months</option>
+      </select>
       <span class="split">
         <button class="btn clear" id="reset">Clear all labels</button>
         <button class="btn restore" id="restore" title="Restore the default labels from targeting.yml" aria-label="Restore default labels">↻</button>
@@ -619,6 +665,12 @@ var FBYID = {};           // filterId -> {f: filter, g: group}
 var MODES = ["max", "min", "avg"];
 var FIELDS = ["title", "company", "location", "department", "workmode", "any"];
 var sortMode = "fit";
+// Freshness gate: hide postings older than this many days (0 = no gate, the
+// default). The scanner's API feed only returns reqs still flagged OPEN in the
+// ATS, so even a months-old date means "open but old" (evergreen/forgotten req),
+// not a dead listing — hence no hiding by default; the dropdown lets you opt in.
+// Jobs with no posting date are ALWAYS kept (fail-safe — see passesBase).
+var maxAgeDays = 0;
 // Each column's natural (first-click) direction. sortDir holds the live one;
 // clicking the active header again flips it (see the th click handler).
 var NATURAL_DIR = { fit: "desc", company: "asc", role: "asc", location: "asc", posted: "desc" };
@@ -710,8 +762,12 @@ var DEFAULT_W = 0.5;
 
 var _idc = 0;
 function nid() { return "f" + (++_idc); }
-function mkFilter(name, keywords, weight, isElse, muted) {
+function mkFilter(name, keywords, weight, isElse, muted, unless) {
   return { id: nid(), name: name || "", keywords: keywords || [],
+           // `unless` is the guard list (Rank.filterMatches voids the whole
+           // filter when one of these also hits the field text). Carried through
+           // every reconstruction so it survives edits / localStorage / export.
+           unless: unless || [],
            weight: (weight == null ? null : weight), else: !!isElse, muted: !!muted };
 }
 function mkGroup(name, field, weight, filters) {
@@ -728,7 +784,7 @@ function groupsFromSeed(seed) {
   return ((seed && seed.groups) || []).map(function (g) {
     var grp = mkGroup(g.name, g.field, g.weight, (g.filters || []).map(function (f) {
       return mkFilter(f.name, (f.keywords || []).slice(),
-        f.weight == null ? null : f.weight, !!f.else, !!f.muted);
+        f.weight == null ? null : f.weight, !!f.else, !!f.muted, (f.unless || []).slice());
     }));
     grp.combine = MODES.indexOf(g.combine) !== -1 ? g.combine : "min";
     return grp;
@@ -765,7 +821,7 @@ function globalRes(f) {
 function save() {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({
-      q: document.getElementById("q").value, sort: sortMode, sortDir: sortDir, groups: GROUPS,
+      q: document.getElementById("q").value, sort: sortMode, sortDir: sortDir, maxAgeDays: maxAgeDays, groups: GROUPS,
     }));
   } catch (e) {}
 }
@@ -797,7 +853,8 @@ function sanitizeGroups(arr) {
         typeof f.name === "string" ? f.name : "",
         Array.isArray(f.keywords) ? f.keywords.filter(function (k) { return typeof k === "string" && k; }) : [],
         (typeof f.weight === "number") ? Math.max(0, Math.min(2, f.weight)) : null,
-        isElse, !!f.muted);
+        isElse, !!f.muted,
+        Array.isArray(f.unless) ? f.unless.filter(function (k) { return typeof k === "string" && k; }) : []);
     });
     var ng = mkGroup(typeof g.name === "string" ? g.name : "Group", field, weight, filters);
     ng.combine = combine;
@@ -811,6 +868,8 @@ function load() {
     GROUPS = (Array.isArray(s.groups) && s.groups.length) ? sanitizeGroups(s.groups) : defaultGroups();
     if (s.sort) sortMode = s.sort;
     sortDir = (s.sortDir === "asc" || s.sortDir === "desc") ? s.sortDir : (NATURAL_DIR[sortMode] || "desc");
+    // Restore the freshness gate; only accept the values the dropdown offers.
+    if ([0, 30, 90, 180].indexOf(s.maxAgeDays) !== -1) maxAgeDays = s.maxAgeDays;
     if (s.q != null) document.getElementById("q").value = s.q;
   } catch (e) { GROUPS = defaultGroups(); }
 }
@@ -891,14 +950,22 @@ function excluded(j) {
     });
   });
 }
-// Colour the Rating number the way the pills are coloured: red (--danger) at 0
-// → green (--accent2) at the neutral 1, then gold (--warm) for anything boosted
-// above 1. This carries the old "★ boosted" signal inline in the number itself.
-function fitColor(w) {
-  if (w > 1) return "var(--warm)";
-  var t = w <= 0 ? 0 : (w >= 1 ? 1 : w);
-  return "color-mix(in srgb, var(--accent2) " + Math.round(t * 100) + "%, var(--danger))";
+// The curated rating ramp, shared by the pills and the Rating number so both
+// carry the same signal. Four CURATED traffic-light bands (not a gradient) so
+// every theme controls its own colours and the mid-range never muddies:
+//   poor   (red)    — excluded / very low            v < 0.5
+//   weak   (amber)  — below neutral, de-prioritised   0.5 ≤ v < 0.85
+//   good   (green)  — on-target / neutral (1)         0.85 ≤ v ≤ 1
+//   boost  (indigo) — boosted above 1                 v > 1
+// The actual colours live in the per-theme --rate-* CSS vars (light and dark
+// each define their own), so this function just maps a value to a band.
+function rampColor(w) {
+  if (w > 1) return "var(--rate-boost)";
+  if (w >= 0.85) return "var(--rate-good)";
+  if (w >= 0.5) return "var(--rate-weak)";
+  return "var(--rate-poor)";
 }
+function fitColor(w) { return rampColor(w); }
 
 // Compact "time since posted" label from an ISO date: today · 5d · 3w · 4mo · 2y.
 function timeSince(iso) {
@@ -910,6 +977,22 @@ function timeSince(iso) {
   if (days < 56) return Math.round(days / 7) + "w";
   if (days < 365) return Math.round(days / 30) + "mo";
   return Math.floor(days / 365) + "y";
+}
+// Human "time since" for the header's last-updated line: "just now", "3 hours
+// ago", "2 days ago", "5 weeks ago". Finer than timeSince (hours/minutes) since
+// the board refreshes daily and "today" would be too vague.
+function sinceLabel(iso) {
+  var t = iso ? Date.parse(iso) : NaN;
+  if (isNaN(t)) return "";
+  var s = Math.max(0, (Date.now() - t) / 1000);
+  function plural(n, unit) { return n + " " + unit + (n === 1 ? "" : "s") + " ago"; }
+  if (s < 90) return "just now";
+  var m = Math.round(s / 60); if (m < 60) return plural(m, "minute");
+  var h = Math.round(s / 3600); if (h < 24) return plural(h, "hour");
+  var d = Math.round(s / 86400); if (d < 14) return plural(d, "day");
+  if (d < 60) return plural(Math.round(d / 7), "week");
+  if (d < 365) return plural(Math.round(d / 30), "month");
+  return plural(Math.floor(d / 365), "year");
 }
 // STALE_DAYS = age at which the staleness dot is fully red; fresh roles are green.
 var STALE_DAYS = 60;
@@ -934,15 +1017,23 @@ function jobMatchesFilter(j, fid) {
 // The list WITHOUT the isolate lens: search box + hard-excludes only. Pill
 // `view` counts use this, so they reflect your actual filters and DON'T collapse
 // onto the isolated set when you click a number.
+// Freshness gate. Fail-safe: a job with no posting date (_posted === 0) is never
+// dropped — we only hide postings whose KNOWN date is older than the threshold.
+function tooOld(j) {
+  if (!maxAgeDays || !j._posted) return false;
+  return (Date.now() - j._posted) / 86400000 > maxAgeDays;
+}
 function passesBase(j) {
   var q = document.getElementById("q").value.trim().toLowerCase();
   if (q && j._search.indexOf(q) === -1) return false;
+  if (tooOld(j)) return false;
   if (excluded(j)) return false;
   return true;
 }
 function passes(j) {
   var q = document.getElementById("q").value.trim().toLowerCase();
   if (q && j._search.indexOf(q) === -1) return false;
+  if (tooOld(j)) return false;
   // Mark-view: when a chip other than "All" is active, keep only jobs carrying
   // that mark. Layered on top of search/filters; pill counts use passesBase so
   // they stay unaffected.
@@ -1049,8 +1140,11 @@ function render() {
       (j._mem[g.id] || []).forEach(function (fid) {
         var rec = FBYID[fid]; if (!rec || rec.f.else) return;
         var label = Rank.filterLabel(rec.f); if (!label) return;
-        tags += '<span class="tag' + (/^remote$/i.test(label) ? " remote" : "") +
-          '" data-fid="' + fid + '">' + esc(label) + '</span>';
+        // Tint each tag by its filter's rating, the same red→amber→green→indigo
+        // ramp the pills and the Fit number use (inactive filters read as neutral).
+        var w = rec.f.weight != null ? rec.f.weight : 1;
+        tags += '<span class="tag rated' + (/^remote$/i.test(label) ? " remote" : "") +
+          '" data-fid="' + fid + '" style="--pc:' + weightColor(w) + '">' + esc(label) + '</span>';
       });
     });
     var tr = document.createElement("tr");
@@ -1084,7 +1178,7 @@ function render() {
       '<td class="co">' + coCell + '</td>' +
       '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + highlightCell(j.title, "title", j) + '</a>' + deptLine + '</td>' +
       '<td class="loc">' + locCell + '</td>' +
-      '<td>' + tags + '</td>' +
+      '<td class="tags"><div class="tagwrap">' + tags + '</div></td>' +
       '<td class="posted">' + postedCell(j.postedDate) + '</td>';
     frag.appendChild(tr);
   });
@@ -1143,6 +1237,7 @@ function currentSchema() {
         if (f.name) ff.name = f.name;
         if (f.else) ff.else = true;
         else ff.keywords = (f.keywords || []).slice();
+        if (!f.else && f.unless && f.unless.length) ff.unless = f.unless.slice();
         if (f.weight != null) ff.weight = f.weight;
         if (f.muted) ff.muted = true;
         return ff;
@@ -1176,6 +1271,8 @@ function diffFilters(gname, base, cur, out) {
     if (!!f.else !== !!b.else) out.push({ k: "mod", t: gname + " › " + l + ": " + (f.else ? "now catch-all" : "no longer catch-all") });
     var bk = (b.keywords || []).join(", "), ck = (f.keywords || []).join(", ");
     if (bk !== ck) out.push({ k: "mod", t: gname + " › " + l + ": keywords [" + bk + "] → [" + ck + "]" });
+    var bu = (b.unless || []).join(", "), cu = (f.unless || []).join(", ");
+    if (bu !== cu) out.push({ k: "mod", t: gname + " › " + l + ": unless [" + bu + "] → [" + cu + "]" });
   });
 }
 function diffGroups(base, cur) {
@@ -1250,11 +1347,9 @@ function weightBand(w) {
   if (w <= 0) return { sign: "−", cls: "out" };
   return w >= 1 ? { sign: "+", cls: "strong" } : { sign: "~", cls: "soft" };
 }
-// Lerp the pill colour from red (--danger) at 0 to green (--accent2) at ≥1.
-function weightColor(w) {
-  var t = w >= 1 ? 1 : (w <= 0 ? 0 : w);
-  return "color-mix(in srgb, var(--accent2) " + Math.round(t * 100) + "%, var(--danger))";
-}
+// The pill colour is the same curated 4-band scale the Rating number uses (see
+// rampColor): red poor → amber weak → green neutral → indigo boost.
+function weightColor(w) { return rampColor(w); }
 // Cycle, on any click: inactive (null) ▸ on (1) ▸ filter-out (0) ▸ inactive.
 function cycleWeight(f) {
   if (f.weight == null) f.weight = 1;
@@ -1378,7 +1473,17 @@ function groupRow(g, passing) {
   passing.forEach(function (j) {
     (j._memFull[g.id] || []).forEach(function (fid) { if (cView[fid] != null) cView[fid]++; });
   });
-  g.filters.forEach(function (f) { chips.appendChild(makePill(g, f, cView[f.id] || 0, cTotal[f.id] || 0)); });
+  // Display order = by ranking: purple boosts first, then green/red, excludes (0)
+  // sinking to the bottom, inactive (null) below them, and catch-all `else` pills
+  // always last. Sorts a COPY — g.filters keeps its authored order so the saved
+  // YAML doesn't churn. Array.sort is stable, so equal weights hold their place.
+  var orderW = function (f) { return f.weight == null ? -Infinity : f.weight; };
+  g.filters.slice()
+    .sort(function (a, b) {
+      if (!!a.else !== !!b.else) return a.else ? 1 : -1;   // else → end
+      return orderW(b) - orderW(a);                        // weight desc
+    })
+    .forEach(function (f) { chips.appendChild(makePill(g, f, cView[f.id] || 0, cTotal[f.id] || 0)); });
   var add = document.createElement("button");
   add.className = "btn addkw addfilter";
   add.textContent = "+";
@@ -1814,8 +1919,9 @@ function showHlPop(spanEl) {
 function init(data) {
   ALL = prep(data.jobs || []);
   if (data.generated) {
-    document.getElementById("generated").textContent =
-      "· updated " + new Date(data.generated).toISOString().slice(0, 10);
+    var gEl = document.getElementById("generated");
+    gEl.textContent = "· updated " + sinceLabel(data.generated);
+    gEl.title = "Last scan: " + new Date(data.generated).toISOString().slice(0, 16).replace("T", " ") + " UTC";
   }
   load();
   loadStatus();
@@ -1826,6 +1932,7 @@ function init(data) {
   if (LIVE) GROUPS = defaultGroups();
   reindex(); recompute();
   document.getElementById("sort").value = sortMode;
+  document.getElementById("freshness").value = String(maxAgeDays);
   buildGroups();
   bindFilterModal(); bindGroupModal();
   document.getElementById("addGroup").onclick = addGroup;
@@ -1869,6 +1976,11 @@ function init(data) {
   syncClearQ();
   document.getElementById("sort").addEventListener("change", function (e) {
     sortMode = e.target.value; sortDir = NATURAL_DIR[sortMode] || "desc"; schedule({});
+  });
+  document.getElementById("freshness").addEventListener("change", function (e) {
+    maxAgeDays = parseInt(e.target.value, 10) || 0;
+    // Pill counts depend on the visible set, so recompute groups too.
+    schedule({ groups: true });
   });
   document.getElementById("reset").onclick = function () {
     GROUPS = []; ISOLATE = null;                 // wipe every label + its rating

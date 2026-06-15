@@ -142,13 +142,28 @@
     return f._res;
   }
 
+  // `unless` is a guard that sits on TOP of every keyword in the filter: when
+  // any guard keyword also hits the same field text, the whole filter is voided.
+  // Lets a region exclude ("Poland", weight 0) NOT apply to a remote posting
+  // ("Poland, Remote") via `unless: [Remote, Anywhere]`. Mirrors rank.mjs.
+  function unlessRegexes(f) {
+    if (!f._unlessRes) f._unlessRes = (f.unless || []).map(keyToRegExp).filter(Boolean);
+    return f._unlessRes;
+  }
+
   function filterMatches(text, f) {
-    var res = filterRegexes(f);
-    for (var i = 0; i < res.length; i++) {
+    var res = filterRegexes(f), hit = false, i;
+    for (i = 0; i < res.length; i++) {
       var re = res[i]; if (re.global) re.lastIndex = 0;
-      if (re.test(text)) return true;
+      if (re.test(text)) { hit = true; break; }
     }
-    return false;
+    if (!hit) return false;
+    var guard = unlessRegexes(f);
+    for (i = 0; i < guard.length; i++) {
+      var g = guard[i]; if (g.global) g.lastIndex = 0;
+      if (g.test(text)) return false;
+    }
+    return true;
   }
 
   function matchGroup(job, group) {

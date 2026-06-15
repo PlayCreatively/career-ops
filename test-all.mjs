@@ -1260,7 +1260,7 @@ try {
 
 console.log('\n17. Work mode — location split + multi-source filter fields');
 try {
-  const { splitLocationMode, normalizeWorkMode } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
+  const { splitLocationMode, normalizeWorkMode, slugifyTitle } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
   const { fieldText, isExcluded, matchGroup } = await import(pathToFileURL(join(ROOT, 'rank.mjs')).href);
 
   // splitLocationMode: strip the mode token from common shapes, derive workMode.
@@ -1294,6 +1294,23 @@ try {
   } else {
     fail('normalizeWorkMode enum mapping wrong');
   }
+
+  // slugifyTitle: powers ashby job_url_template for studios that mirror their
+  // board on their own domain (Supercell). Drops punctuation (not &→and),
+  // keeps a trailing hyphen for trailing whitespace, no leading/trailing trim.
+  const slugCases = [
+    ['Gameplay Programmer', 'gameplay-programmer'],
+    ['Head of R&D, Clash Royale', 'head-of-rd-clash-royale'],
+    ['Product Lead, Project R.I.S.E', 'product-lead-project-rise'],
+    ['Senior Server Engineer, Central Tech ', 'senior-server-engineer-central-tech-'],
+    ['Head of Entertainment & Partnerships', 'head-of-entertainment-partnerships'],
+  ];
+  let slugOk = true;
+  for (const [input, want] of slugCases) {
+    const got = slugifyTitle(input);
+    if (got !== want) { slugOk = false; fail(`slugifyTitle(${JSON.stringify(input)}) = ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`); }
+  }
+  if (slugOk) pass(`slugifyTitle matches the observed convention across ${slugCases.length} titles`);
 
   // fieldText: array field joins multiple sources into one combined string.
   const job = { title: 'Eng', company: 'X', location: 'US', workMode: 'remote', department: 'Audio' };
@@ -1551,6 +1568,50 @@ try {
   const breezy = (await import(pathToFileURL(join(dir, 'breezy.mjs')).href)).probe;
   if (breezy.canary === 'pine-creek-games') pass('breezy probe declares a canary (pine-creek-games) for 404-as-throttle defense');
   else fail('breezy probe should declare canary pine-creek-games');
+
+  // classifyCanary: ROT-SAFETY. A throttle/error disables the ATS, but a clean 404
+  // or unparseable 2xx (the canary company left the ATS) only flags STALE — it must
+  // NEVER disable, so a discontinued canary can't silently kill a working ATS.
+  const cc = ps.classifyCanary;
+  if (cc({ kind: 'data', data: { jobs: [] } }) === 'ok' &&          // empty board = still live
+      cc({ kind: 'data', data: null }) === 'stale-2xx' &&           // 2xx unparseable = maybe rot
+      cc({ kind: 'notfound' }) === 'stale-404' &&                   // 404 = company left → stale, NOT disabled
+      cc({ kind: 'uncertain', reason: 'throttled' }) === 'disabled' &&
+      cc({ kind: 'dnsfail', reason: 'dns_notfound' }) === 'disabled') {
+    pass('classifyCanary: throttle/error→disabled, but a stale 404/2xx canary only warns (rot-safe)');
+  } else {
+    fail('classifyCanary rot-safety contract wrong');
+  }
+
+  // Namesake vetting — country/location cross-check. inferCountry fires only on
+  // clear place signals; locContradicts is true only when both sides are known and
+  // differ (bare "Remote" never contradicts → no false rejects).
+  const { inferCountry, locContradicts } = ps;
+  if (inferCountry('Palo Alto') === 'US' && inferCountry('Eindhoven, Nederland') === 'NL' &&
+      inferCountry('Seoul, Korea') === 'KR' && inferCountry('Remote') === '' && inferCountry('') === '') {
+    pass('inferCountry: reads clear place signals, returns empty for bare "Remote"/unknown');
+  } else {
+    fail(`inferCountry wrong: ${inferCountry('Palo Alto')}/${inferCountry('Eindhoven, Nederland')}/${inferCountry('Remote')}`);
+  }
+  if (locContradicts('NL', 'Palo Alto') === true &&        // NL studio, US-only role → namesake
+      locContradicts('NL', 'Amsterdam') === false &&       // matches → fine
+      locContradicts('NL', 'Remote') === false &&          // undeterminable → can't disprove
+      locContradicts('', 'Palo Alto') === false &&         // unknown studio country → no judgement
+      locContradicts('SE', 'Stockholm') === false) {
+    pass('locContradicts: true only when studio country and a determinable hit location differ');
+  } else {
+    fail('locContradicts contract wrong');
+  }
+
+  // tierFor common-word review gate: a lone everyday-word slug on a namesake-prone
+  // ATS is VERIFY; a distinctive name-slug is MEDIUM.
+  const np = { id: 'ashby', namesakeProne: true, endpoints: [] };
+  if (ps.tierFor(np, {}, 'vector') === 'verify' && ps.tierFor(np, {}, 'architect') === 'verify' &&
+      ps.tierFor(np, {}, 'playerunknown') === 'medium') {
+    pass('tierFor: everyday-word slug → VERIFY (review gate), distinctive slug → MEDIUM');
+  } else {
+    fail(`tierFor review gate wrong: vector=${ps.tierFor(np, {}, 'vector')} pu=${ps.tierFor(np, {}, 'playerunknown')}`);
+  }
 
   // restrict: probe() with an empty restrict set hits NO providers → clean miss,
   // no network, no throw (proves later waves can scope to specific ATSes).

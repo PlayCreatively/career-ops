@@ -43,6 +43,7 @@ const rcParse = (d) => (d && Array.isArray(d.offers)) ? { count: d.offers.length
 
 /** @type {import('./_types.js').Probe} */
 export const probe = {
+  canary: 'recruitee', // Recruitee's own tenant (won't leave its own ATS) — throttle check
   endpoints: [
     { kind: 'slug', url: (s) => `https://${s}.recruitee.com/api/offers/`, where: (s) => `${s}.recruitee.com`, parse: rcParse },
     { kind: 'domain', confidence: 'high', url: (host) => `https://${host}/api/offers/`, where: (host) => host, parse: rcParse },

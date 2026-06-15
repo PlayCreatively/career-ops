@@ -80,6 +80,7 @@ const ttParse = (d) =>
 
 /** @type {import('./_types.js').Probe} */
 export const probe = {
+  canary: 'polestar',  // known-live tenant — proves teamtailor isn't throttling/blocking us
   endpoints: [
     { kind: 'slug', url: (s) => `https://${s}.teamtailor.com/jobs.json`, where: (s) => `${s}.teamtailor.com`, parse: ttParse },
     // Many TT studios run on a custom domain — sweep the studio's own host too.

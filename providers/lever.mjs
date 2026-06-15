@@ -30,6 +30,7 @@ function resolveApiUrl(entry) {
 /** @type {import('./_types.js').Probe} */
 export const probe = {
   namesakeProne: true,
+  canary: 'lever',     // Lever's own board (won't leave its own ATS) — throttle check
   endpoints: [
     { kind: 'slug', url: (s) => `https://api.lever.co/v0/postings/${s}?mode=json`, where: (s) => s,
       parse: (d) => Array.isArray(d) ? { count: d.length, loc: d[0]?.categories?.location || '' } : null },

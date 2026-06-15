@@ -307,7 +307,7 @@ function classifyRemote(raw) {
   if (/\b(us[- ]?only|canada[- ]?only|residents only|usa only|us residents|canada residents)\b/.test(lower)) return 'geo-restricted';
   if (/\bargentina\s+remote\s+only\b/.test(lower)) return 'geo-restricted';
   if (/\b(hybrid|on-?site|office|columbus|cape town|relocat)\b/.test(lower)) return 'hybrid/onsite';
-  if (/\b(global|anywhere|worldwide|no restrict|70\+|work from anywhere)\b/.test(lower)) return 'global remote';
+  if (/\b(global|anywhere|any|worldwide|no restrict|70\+|work from anywhere)\b/.test(lower)) return 'global remote';
   if (/\b(remote|latam|americas|brazil|fully remote)\b/.test(lower)) return 'regional remote';
   return 'unknown';
 }

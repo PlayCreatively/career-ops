@@ -235,6 +235,9 @@ tracked_companies:
 
   - name: Supercell
     careers_url: https://jobs.ashbyhq.com/supercell
+    # Supercell runs Ashby for applications but disabled the hosted board, so
+    # j.jobUrl 404s; their roles live on supercell.com. Rewrite to the live URL.
+    job_url_template: "https://supercell.com/en/careers/{slug}/{id}/"
     notes: "Helsinki. Clash of Clans, Brawl Stars, Clash Royale. ~45 roles."
     enabled: true
 
@@ -1270,2769 +1273,3683 @@ tracked_companies:
   # Swedish-industry directory, bulk-imported tokenlessly (import-gdi.mjs).
   # status: unresolved → scan.mjs skips; /career-ops resolve walks them.
   - name: A bit ago
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: A Creative Endeavor
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: A Million Flies
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: A Small Game
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Abrahamsson Flamm
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Acegikmo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Acino
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ActFirst Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ActiveQuiz Europe
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Activout
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Adly
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Advenimus
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Adventure Party Games Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Aegik
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Aftnareld
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Agera Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: AL Spelutveckling
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Aldgard Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Allscope
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Almost Fantastic
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: aMASE
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: AmberWing
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ampd
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Amplifier Boot Camp
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Amplifier Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: An Otter Team
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: anananas studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ancient Well Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Angry Demon Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Another Game Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Antediluvian Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Antler Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Aonic
+    country: SE
     provider: teamtailor
     careers_url: https://careers.aonic.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe HIGH — own domain, 24 jobs). Resolve pass #7."
   - name: AppsAlliance
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Apskeppet
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Arcade Mixtape
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Archipelago Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Arcmill
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Arctic Bones
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Argent Realms
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ark Island Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Aroko Game Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: art by rens
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Art in Heart
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ashes
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ashkan Namousi
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Astelsie
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Atlantic Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Atlantika Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: AtomicElbow
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Atvis
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Aurora Arts
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Aurora Punks
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Avokodo Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Axolot Games
+    country: SE
     provider: teamtailor
     careers_url: https://axolotgames.teamtailor.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe MEDIUM, 5 jobs). Scrap Mechanic devs. Resolve pass #7."
   - name: Baldheads Creative
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ball Lightning
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ballistic Pork
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bambino Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bandit Island Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Barnacles Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Battlecamp
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: BBS Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Beadhead Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Beardybird
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Beartwigs
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Beck and Branch Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Begagnade Rymdskepp
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bergavinter
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bewildermill
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Big Hearth
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: BigMood
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Binary Peak
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: BitBear
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bitfix
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bitwave
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Björkman Consulting Group
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bjuret
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Black Tundra Productions
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Black Voyage Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Blackdoor
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Blackdrop Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bläckfisk Förlag
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Blackfox Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Blamorama Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Blast Bit Enterprises
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Blastronaut
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bloom
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Blue Scarab Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bluell
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bmetrix Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: bNosy
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Book of travel
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Borrowed Soul Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Box Dragon
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Brandywise
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Breaker Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: BridgeCo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bridgeside Productions
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bright Gambit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Brikk Animation
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Brillianton
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Brimstone Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Broadside Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: BTR Goose
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bulbsort
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: BulletHell Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bumble Byte
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Burning Planet Digital
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Caeiro
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Caketown Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Campcreation
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Campground Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Carlcadium
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Carry Castle
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cassius Creative
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Catalope Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: CF Digital
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Challenge GG
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Chamateur
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Chessiverse
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: chillbro studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Chimera Garden Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Choofun Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Christian Nordgren
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Chromatic ink
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Chronocle
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ciscal Holding
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ClayCastle
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Clear River Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Clifftop Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cloudberry Pine
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Code Club
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Codeborn
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cognisim
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Coherence Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Coilworks
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cold Pixel
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cold Sector
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Colin Lane Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Collecting Smiles
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Conchimpur
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Contentasoft
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Corncrow Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Correcture Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cortopia
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cosmico
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Coulianos Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Counterspell
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Crackshell
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Crafty Ducks
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Creation Zero Point Holding
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Creative AI Nordic
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Creative Crowd
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Creative Vault
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cresthelm studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: CroolBright
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cross Reality International
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cryptic Club
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cuddle Monster
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Curiosa
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Cutting Corner Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dagg AI
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Daltitten
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dark Riviera
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dashy Studios
+    country: SE
     provider: teamtailor
     careers_url: https://careers.dashystudios.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe HIGH — own domain, 3 jobs). Resolve pass #7."
   - name: Datacraft Holding
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: David Marquardt Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dazed Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dead Astronauts
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dead People Dreaming
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Deadghost Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Deadly Serious Media Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: DeadToast Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Decaying Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Decemberborn
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Define Reality
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dejan Dimic
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Delayed Again
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Designlayout EGU
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Devkittens
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Devm Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Diagram Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Diatomic
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Diax Game
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Diffident Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Digiai
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Digital Awakening
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Digital Exception Sthlm
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Digital kittens
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Divine Robot
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Diving Swan Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: DIVR Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Doctor Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: dofhouse
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Domoore
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: DorDor
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: doublecap
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: DoubleMoose Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dovora Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Draconic Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Draw Three Cards
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dreamon Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dreamwalker Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: DualNorth
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Duck Tape
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Duckpond Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dunderbit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Dunkan
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: DVapps
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: E Games Invest Nordic
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Eagle games Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Early Morning Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Easy Trigger
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Echo Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Edyoutec
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: eelDev
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ekvall Games Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: El Huervo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Elda Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Elden Pixels
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Elder Grounds
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Eldring Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Electric Succubi
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Elemental Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Elmseld Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Elscar Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Elsewhere Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Elva Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ember Paw Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Emberoath Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Embracer Group
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: EMW Media
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Endjui Productions
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Enember Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Erik Svedäng
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Eternal Minds
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Evergreen IT
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Everlight Studio
+    country: SE
     provider: teamtailor
     careers_url: https://career.everlight.se
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe HIGH — own domain; 0 open now). Resolve pass #7."
   - name: Evermore Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Everywhen Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Exertis Ztorm
+    country: SE
     provider: teamtailor
     careers_url: https://exertisztorm.teamtailor.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Game distribution. Resolve pass #7."
   - name: ExoCorp
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ExtraLives
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fablebit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fancade
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: FanLad
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fargo Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fast Travel Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: FCV Sverige
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Feather Force
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Feeble Minds
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Feral Flame Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: FeWes
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Filimundus
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Filmic Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Final Key Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Flarie
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Flip For Fate
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Folded Fox
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fourth Floor Nordic
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fragbite Group
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fredaikis
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Freezelance
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frictional Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Friendbase
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Friendly Foe Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Friendly Mountain
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frogsong Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frojo Apps
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frojo Investment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frostcore
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frostglade
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Froströk
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frostspektrum Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frozen Dev
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frozen North Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Full Rogue
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fullscreen Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fully Multiplayer
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: FunDoubler
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: FunGI
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: FunRock Development
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fury Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Fuyu Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gamatron
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gambit Technologies
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Game Advisor Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Game Boost Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Game in Game
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Game Thrill
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Game-Hosting GH
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gamersgate
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gamescan Stockholm Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gamesclub International
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gamethrill
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gellyberry Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: GeoGuessr
+    country: SE
     provider: teamtailor
     careers_url: https://geoguessr.teamtailor.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe MEDIUM, 5 jobs). Resolve pass #7."
   - name: Ghetto Blaster
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Giantsbane
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gigantic Duck
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Giron Software
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Glass Rock Gathering
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: GleeMill
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Glorious Games Group
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gnista Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Go Maddox Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Goals
+    country: SE
     provider: teamtailor
     careers_url: https://goals.teamtailor.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Football game, Stockholm. Resolve pass #7."
   - name: GOES International
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gold Town Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Golf Dreams
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Good Decision
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Good Night Brave Warrior
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Good Old Pixel
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gr IT
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Graewolv
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Grand Pike
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Grannkampen
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: GraphN
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Green Leap Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Greenblade Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Grenaa Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Grey Tower
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Greyling Invest
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gridly
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Grip Jaw
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gro Play Digital
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: GSP golf
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gumlin Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Guppek Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: GURATRON Industries
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Haderajan
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hamlab
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hängagubbe studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hapki
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Happi Papi
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Haraflax
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hati Hati Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hatokuma Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hatrabbit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hazel Interval
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Head Coach Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Heirloom Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hex Foundry Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hexagrammaton
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Heyman Atelje
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hihat Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hindelid Development
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hitbox Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Höganäs Spel
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Holmcom
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Holmgång
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hology Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: House of How Games Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Housefire Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Humla Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: HVNT Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Hyperspeed Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Icehelm
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ichigoichie
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: IdaP Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Idun Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: IG Consulting
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ilbiz Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Illusion Labs
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Illwinter Game Design
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ilo Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Imaginative Ones
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: IMGNRY International
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Impact Unified
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Imperial Playgrounds
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Incredible Concepts of Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: inDirection Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Infinite Mana Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Infinite Monkey Theorem
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Inntq
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Inre Natur Sverige
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Insanto Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Insert Coin
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Inzanity
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Iron Gate
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Irrbloss
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Itatake
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Iterative Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ius innovation
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jacklin Game Consultancy
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jämmerdal Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: JE Software
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jhony Ljungstedt
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jidindi
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jim Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jitesoft
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: JN Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: JN Programutveckling
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Johra
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jona Marklund
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jonas Levin
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jopter Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jordi Creations
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: JPR Ventures
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jumpgate
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jumping Pixels
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Junno Labs
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: just some games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Kaguya Project
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Kakigori
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Kalla frestelser
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Karl Johannisson
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Keepsake Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: KEP Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Kernel Iron
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: KFH Graphics
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Khazi Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Kibix
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Kickflip Digital
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Killmonday Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Kinda Brave Entertainment Group
+    country: SE
     provider: teamtailor
     careers_url: https://kindabrave.teamtailor.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Publisher. Resolve pass #7."
   - name: Kiwick Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Knackelibang Productions
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Knowledgegrind Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Kolesterol Cät Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: KoniWorx Animation
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Kroonatus
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Krufs Productions
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: LandFall Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lantto Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lavapotion
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: LeadTurn Gaming
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Learning Loop Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lejongrejer
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lekis
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Let it roll
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Level Stars
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lialum
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lilla Bas
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lilla Fezen
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Linbasta
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lingon Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Liopep
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Liquid Media
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Llama Lane
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Localize Direct
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Longhand Electric
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: LootLocker
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lost Hive Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lost Sock Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Low Peak Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: LOYD Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: LS Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ludohobo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ludosity
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lunar Madness
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lundqvist
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lurkit
+    country: SE
     provider: teamtailor
     careers_url: https://lurkit.teamtailor.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Games marketing platform. Resolve pass #7."
   - name: Lutra Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Lxip Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Maadwalk Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mabozo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: MachineGames Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Madcake Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Magnetic Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Magoo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Majewski Holding
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Malformation
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mambo Jambo Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mana Brigade
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Manaii World
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Manavind
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Martin Magni
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Massive Shapes
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mattias Wiking Development
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Maximum Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Med Svärd
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Megadib
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Merrybrain
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Metropolis Digital
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mibi Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Microcuts Holding
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mighty Magpie
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: MIKIM Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Millionth Line
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Miltonic Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mind Detonator
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: MindArk PE
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mindforce Game Lab
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ming Media
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Minoan Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Miracle Bread
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Miso Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: MistByte
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mistwave Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Modern Times Group MTG
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Modoyo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mojang
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Molndust Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Molntuss Spel
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Monsoon Bit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Monsuta
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Moon Mode
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Moon Rover
+    country: SE
     provider: teamtailor
     careers_url: https://moonrover.teamtailor.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe MEDIUM; 0 open now). Resolve pass #7."
   - name: Moonhood
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Moose on the Loose
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Moreish Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Morningdew Media
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Motorica
+    country: SE
     provider: teamtailor
     careers_url: https://motorica.teamtailor.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe MEDIUM, 5 jobs). AI animation/mocap. Resolve pass #7."
   - name: Motvind Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mount West Music
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Moxville
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: MU Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: MuddyPixel
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mudpike
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Multiscription
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: MVRX games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: My Left Head Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mystik
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mystwood Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: MythoLogic Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nampa Design
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nattland Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: NBrigade Music
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nebryx
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Neckbolt
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Neighbourly Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nena Innovation
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Neogon Holding
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Neon Artery
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Neon Haze Game Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Neon Noroshi
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: NetherMoon Game Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Neuston
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: nevsram
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: New Galaxy Games Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nexile
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: NFG Nordic Forest Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nibiru Software
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: nication
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nifly Apps
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ninmark Soundworks
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nisshagen Advisory
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: NL Productions
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: NMBRS Production
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nodbrim Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Noodleloop
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nordic Game Resources
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nordic Game Ventures i Malmö
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nordic Stone Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nørdlight Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nordsken Handlingskraft
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: nornware
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: North Concept ArtStudio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: North Modding Company
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Northerner Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Northify
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: nostop horses
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Not My Jeans
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Noumenon Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Novamitech
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nuggets Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Nuttery Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Odd Raven Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Oddiko
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Odens Mind Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Odensity Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Off-Leash Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Offworld Corporation
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Oganon interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Oh My Godmode
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Okatima
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Oldways Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Omino Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Omniscapes Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: On Pixel Graphics
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: On the Outskirts
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: One Potato Kingdom
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Onsite Sport
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Oort Cloud
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Orion Eunix
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Orsak Verkan
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Oscar Makes Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Oskar Stålberg
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Outbreak Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Outlean
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Oxeye Game Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: P Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Palabit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Palebits
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Palomar Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Paperplay Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Parabel Game Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Parrexion Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pathos Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: PD company
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Perfect Random
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Perpetuum Media Sverige
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Petter Bergmar
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pfanne
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Photon Forge
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pica Nest
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pietro Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pigs Will Fly Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Piktiv
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pixel Ferrets
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pixel Pointer Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pixel tales
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pixelbite
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pixeldiet Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pixilated Production
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pixleon
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Planeshift Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Playcentric Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: PlayCom Game Design
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Playstack
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Playtrigger Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pley
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Plink&Plonk Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Plotagon Production
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: PMAbit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pointless Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Polarbit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Polarcade
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Polygongruvan
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Polyregular Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Power Challenge
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Powersnake
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pregame
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pretty Broken Code
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pretty Fly Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pretty Ugly
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: PrettyByte
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Previous
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Primary Hive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ProCloud Media Invest
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Proga Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pronoia
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Psychic Sidekick
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pugstorm
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Pusselbit Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Puzzle Mill
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Puzzlebox Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: QA Design
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Qanyou
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: QDE Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Qiiwi Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: QuadArk
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Quel Solaar
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Quiz Anytime
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Radgivery
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Radical Sunset
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rain of Reflections
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rainbow Road
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Raketspel
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: RankOne Global
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rapix Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rashidi Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rau Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Räven
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Razzleberries
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Re-koup
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Reality Park
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Really Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Recycled Humans
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Red Cabin Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Red Cup games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Red Nerv
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Red Rose Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Red Vault Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Redbeet Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Redgrim
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Refold
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Remedy Entertainment Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rennert Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: RENNSPORT Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Reset Media
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rift Consulting
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rightsized Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: RimeLime
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: River End Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Robertson Nordic Partners
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rock A Role Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: RocketMoose Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rockheart Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Roden Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Romeo Invest
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: RoRo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rovio Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rowil
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rubycone
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rusty Pug Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Rymdfall
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Safe Lane Gaming
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sagoverse
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sam
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sannin Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Scion Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Screenput
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Scuttled Tech
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Semiwork Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sequel Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: SetShape Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Shaggy Dog Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Shanyar Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Shapefarm
+    country: SE
     provider: teamtailor
     careers_url: https://shapefarm.teamtailor.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe MEDIUM, 2 jobs). Resolve pass #7."
   - name: Shaping Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sharcoal Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Shellander Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Shelter Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Shemshem Design
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Shima Services
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Short Circuit Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Short Infinity
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: SideQuest Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sidres
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Silent Factory
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Simogo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Simple Magic Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Simway
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sista Potatis
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sjöberg Game Consulting
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Skydiver Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Skyfox Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: SkyGoblin
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sleeper Cell
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sleipner Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: SLS Global
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Slugware
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Smojo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Snapbreak Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Snojken
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Solid Block of Power
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Solid Studios Creative Lab
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Solutions Skövde
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Solvarg
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Somatoform
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Some Giants North
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Something We Made
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sonigon
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Soundkids
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Soupmasters
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Source Empire
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: South North Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sozap
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Space Plunge
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spagank
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sparrowland
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sparsit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spelagon
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spelcell
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Speldosa Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spelkollektivet Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spelkraft Sthlm
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spelkultur i Sverige
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spelmakare Jens Nilsson
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spherical Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spiddekauga Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Spinoff Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Square Dreams
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Star Vault
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Steamice studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sticky Games STHLM
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Stockholm VR Center
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: STOFF Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: StoneLeap
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Strategy Mill
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Straw hat games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Strawberry Hill
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Stringent Ljud
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Stroboskop
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Stromb Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Strunke Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Stuck Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Studio Far Out Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Studio Knick-Knack
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Studio Malosi
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Studio Norberg Design
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Studio Northshade
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Studio Three Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Subfrost Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Surtrflame
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sutur
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Svantech Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Svartskägg
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Svavelstickan
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Swarm Creations
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Swedish Game Development
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Swiss Peak Ventures
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sydow Production
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Synical Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Synthetic Mind
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sysiac games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tableflip Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Talawa Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tale Maker Productions STHLM
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tales
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tappily
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tealbit
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Team Jape
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Team Velocita
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tell No Lies
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tension technology
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ternios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: The Fine Arc Nordic
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: The Froghouse
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: The Fully Arcade
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: The Gang Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: The New Branch
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: The Notlanders
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: The Sleeping Machine
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Therese Kristoffer Publishing
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Thespian
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Think First
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Three Friends
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Thriving Ventures
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ThunderAy
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tiger
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tinto Consulting
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tiny Nomads
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: TinyHill
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: To the Sky
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Toadman Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Toasty Leaf
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Toca Boca
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ToeDev
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tomorroworld
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Toppluva
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Trancenders Media
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Transmuted Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: TRB Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: TreasureQuesting
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tretton Adam
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tricky Wispers
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Triple Hex
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Troisdim
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Trollheim Tveir
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: True Ending
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: TTK Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tuxedo Labs
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Two Foot Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Typosaurus
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tyrant Films
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ullbors Illustrations
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Uncloudy Labs
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Undone Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Unity Technologies Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Unleash the Giraffe
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Unordinal
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Urban Binary
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Usurpator
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vanilla Sky Productions
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: VaragtP Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Varia Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vavel Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Velodrom
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vendel Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: vibynary
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vidunder Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Viktorart
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Villa Gorilla
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vinternatt Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Virtual Beasts
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Virtual Tree Design
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Virtuverse
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vishindo
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: VISIARC Inclusive Design
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: VisionPunk
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Visiontrick Media
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vobling
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vorto Gaming
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vovoid Media Technologies
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vreski
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: VZ Holding
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wadonk
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: WalldoffStudios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Walrus Game Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wanderword i Sverige
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Warcry Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Warm Kitten
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Warpzone Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wayfare Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wayfinder Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wereviz
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Westre Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Whacky Mole Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Whale Peak Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: WhatAreBirds
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Whirlybird Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: White Imp Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: White Warlock
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: WhyKev
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wild Labs
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wildcore
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wildlife Studios Sweden
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wilnyl Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Windup Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Winteractive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wishful Whale
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wogglawooh Entertainment
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Woopaz
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Work with Kuba
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: wrlds technologies
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wrong Organ
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: WuzzyWizard Studio
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wynne Technology
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Xpert Eleven
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: YanDesign
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Yangmei Studios
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: YCJY Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: YemSoft
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Yoger Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Yotsuba Interactive
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Zapray Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Zcooly
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Zero Inches
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Zoikum Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ztar Games
+    country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
 
@@ -4046,6 +4963,7 @@ tracked_companies:
   # the rest are backlog for `/career-ops resolve` (careers_url provided).
 
   - name: Fenris Creations
+    country: IS
     careers_url: https://careers.fenriscreations.com
     notes: "Formerly CCP Games (EVE Online). Reykjavík (+ London, Shanghai). Pinpoint ATS — keyless JSON feed."
     recipe:
@@ -4058,105 +4976,2484 @@ tracked_companies:
         location: location.name
 
   - name: Mainframe Industries
+    country: IS
     careers_url: https://themainframe.com
     status: unresolved
     notes: "Pax Dei MMO. Reykjavík + Helsinki. No standard ATS slug — needs resolve pass."
   - name: Solid Clouds
+    country: IS
     careers_url: https://www.solidclouds.com/jobs
     status: unresolved
     notes: "Starborne. Reykjavík (publicly listed, Nasdaq First North IS). No standard ATS slug."
   - name: Myrkur Games
+    country: IS
     careers_url: https://myrkur.is/careers
     status: unresolved
     notes: "Echoes of the End. Reykjavík. No standard ATS slug."
   - name: 1939 Games
+    country: IS
     careers_url: https://www.1939games.com
     status: unresolved
     notes: "KARDS (WWII CCG). Reykjavík; founded by ex-CCP. No standard ATS slug."
   - name: Parity
+    country: IS
     careers_url: https://parity.is
     status: unresolved
     notes: "Reykjavík game studio. NOTE: distinct from Parity Technologies (Polkadot) which owns the ashby[parity] board — do NOT wire that slug."
   - name: Porcelain Fortress
+    country: IS
     careers_url: https://www.porcelainfortress.com
     status: unresolved
     notes: "Aurora. Reykjavík. No standard ATS slug."
   - name: Aldin Dynamics
+    country: IS
     careers_url: https://aldin.io
     status: unresolved
     notes: "VR (Waltz of the Wizard, Asunder). Reykjavík. No standard ATS slug."
   - name: Aska Studios
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Bunkhouse Games
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Rocky Road Games
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Vitar Games
+    country: IS
     status: unresolved
     notes: "Iceland game studio, founded by Baldvin Albertsson (Game Makers Iceland). Careers page TBD."
   - name: Evolytes
+    country: IS
     careers_url: https://www.evolytes.com
     status: unresolved
     notes: "Educational adventure game. Iceland. No standard ATS slug."
   - name: Directive Games
+    country: IS
     careers_url: https://directivegames.com/careers
     notes: "Reykjavík + Singapore. Applications by email (jobs@directivegames.com) — no ATS feed."
     recipe:
       kind: blocked
       reason: "Careers page is email-only (jobs@directivegames.com); no job board / ATS feed to poll."
   - name: Rauðás Games
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Polykite Games
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Skjoldr Games
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Ghosts
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Tasty Rook
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Huldufugl
+    country: IS
     careers_url: https://www.huldufugl.com
     status: unresolved
     notes: "Interactive theatre / narrative games. Reykjavík. Careers page TBD."
   - name: Jooncorp
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Licorice
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: pgWave
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: That Other Fish
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Miðeind
+    country: IS
     careers_url: https://mideind.is
     status: unresolved
     notes: "NLP/AI + games (Game Makers Iceland). Reykjavík. Borderline games. Careers page TBD."
   - name: Locatify
+    country: IS
     careers_url: https://locatify.com
     status: unresolved
     notes: "Location-based AR games & tours (Game Makers Iceland). Careers page TBD."
   - name: Polar Region Games
+    country: IS
     status: unresolved
     notes: "Iceland game studio (Game Makers Iceland). Careers page TBD."
   - name: Sólfar Studios
+    country: IS
     careers_url: https://www.solfar.com
     status: unresolved
     notes: "VR (In Death, Everest VR). Reykjavík. Careers page TBD."
   - name: Quest Portal
+    country: IS
     careers_url: https://www.questportal.com
     status: unresolved
     notes: "Virtual tabletop (TTRPG) platform. Reykjavík. Careers page TBD."
   - name: Radiant Games
+    country: IS
     status: unresolved
     notes: "Box Island. Reykjavík (Game Makers Iceland / IGI). Careers page TBD."
+
+  # ── DGA import (Dutch Game Industry Directory, dutchgamesassociation.nl) ──
+  # Active NL studios, bulk-imported tokenlessly (import-dga.mjs).
+  # status: unresolved → scan.mjs skips; careers_url = own domain hint for
+  # probe-studios/`resolve`. Real jobs page (when known) is in notes.
+  - name: "&ranj"
+    country: NL
+    status: unresolved
+    careers_url: https://ranj.com/
+    notes: "DGA directory · Rotterdam · ~35 · jobs: https://ranj.com/en/ranj-vacancies"
+  - name: 2Awesome Studio
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: 3xBlast
+    country: NL
+    status: unresolved
+    careers_url: https://3xblast.com/
+    notes: "DGA directory · Groningen · ~1"
+  - name: 8D Games
+    country: NL
+    status: unresolved
+    careers_url: https://8d-games.nl/
+    notes: "DGA directory · Leeuwarden · ~10+"
+  - name: A Bunch of Hacks
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Abbey Games
+    country: NL
+    status: unresolved
+    careers_url: https://abbeygames.com/
+    notes: "DGA directory · Utrecht · ~3"
+  - name: Abe Wits
+    country: NL
+    status: unresolved
+    careers_url: https://abewits.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Abstraction Games
+    country: NL
+    status: unresolved
+    careers_url: https://abstraction.games/
+    notes: "DGA directory · Valkenswaard · ~100+"
+  - name: Adriaan de Jongh
+    country: NL
+    status: unresolved
+    careers_url: https://adriaan.games/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: AFTERNATURE productions
+    country: NL
+    status: unresolved
+    careers_url: https://afternatureproductions.com/
+    notes: "DGA directory · The Hague · ~1"
+  - name: ALASQ
+    country: NL
+    status: unresolved
+    careers_url: https://alasqmusic.com/
+    notes: "DGA directory · Dreumel · ~1"
+  - name: Amber Holtrop
+    country: NL
+    status: unresolved
+    careers_url: https://amberholtrop.nl/
+    notes: "DGA directory · Oss · ~1"
+  - name: Amsterdam Game Lab
+    country: NL
+    status: unresolved
+    careers_url: https://amsterdamgamelab.nl/
+    notes: "DGA directory · Hilversum · ~1"
+  - name: Anti-Wisdom Studios
+    country: NL
+    status: unresolved
+    careers_url: https://anti-wisdom.com/
+    notes: "DGA directory · Tilburg · ~3"
+  - name: AnyPercent Studios
+    country: NL
+    status: unresolved
+    careers_url: https://anypercent.studio/
+    notes: "DGA directory · Den Haag · ~7"
+  - name: appelmoes games
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Arcane Circus
+    country: NL
+    status: unresolved
+    careers_url: https://arcanecircus.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Artking studio
+    country: NL
+    status: unresolved
+    careers_url: https://artkingstudio.nl/
+    notes: "DGA directory · Eindhoven · ~10"
+  - name: Aryeh Loeb, Loebzuiver
+    country: NL
+    status: unresolved
+    careers_url: https://aryehloeb.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Auris Media
+    country: NL
+    status: unresolved
+    careers_url: https://auris-media.com/
+    notes: "DGA directory · Soest · ~2"
+  - name: Avans
+    country: NL
+    status: unresolved
+    careers_url: https://avans.nl/
+    notes: "DGA directory · Den Bosch · ~3600"
+  - name: Aventus
+    country: NL
+    status: unresolved
+    careers_url: https://aventus.nl/
+    notes: "DGA directory · Apeldoorn · ~1200"
+  - name: Azerion
+    country: NL
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/Azerion
+    notes: "DGA directory · Schiphol-Rijk · ~850+"
+  - name: Bart Delissen
+    country: NL
+    status: unresolved
+    careers_url: https://bartdelissen.com/
+    notes: "DGA directory · Utrecht · ~2"
+  - name: BDO Accountancy, Tax & Legal
+    country: NL
+    status: unresolved
+    careers_url: https://bdo.nl/
+    notes: "DGA directory · Rotterdam · ~3000"
+  - name: Behaviour Rotterdam (formerly Codeglue)
+    country: NL
+    status: unresolved
+    careers_url: https://bhvr.com/
+    notes: "DGA directory · Rotterdam · ~30+ · jobs: https://www.bhvr.com/rotterdam/"
+  - name: Belmon Studios
+    country: NL
+    status: unresolved
+    careers_url: https://belmonstudios.com/
+    notes: "DGA directory · Ede · ~1"
+  - name: Better Than Life
+    country: NL
+    status: unresolved
+    careers_url: https://betterthanlife.io/
+    notes: "DGA directory · Amsterdam · ~3"
+  - name: Black Cube Games
+    country: NL
+    status: unresolved
+    careers_url: https://blackcubegames.com/
+    notes: "DGA directory · Amstelveen · ~3"
+  - name: BlackMill Games
+    country: NL
+    status: unresolved
+    careers_url: https://blackmillgames.com/
+    notes: "DGA directory · Alkmaar · ~20+ · jobs: https://focusentertainment.recruitee.com/l/en?jobs-c88dea0d%5Btag%5D%5B%5D=BlackMill%20Games"
+  - name: Blast Zero
+    country: NL
+    status: unresolved
+    careers_url: https://blast-zero.com/
+    notes: "DGA directory · Rotterdam · ~8"
+  - name: Blastmode
+    country: NL
+    status: unresolved
+    careers_url: https://blastmode.games/
+    notes: "DGA directory · Rotterdam · ~2"
+  - name: BlewScreen
+    country: NL
+    status: unresolved
+    careers_url: https://blewscreen.com/
+    notes: "DGA directory · Tilburg · ~2+"
+  - name: Bohemia Interactive B.V.
+    country: NL
+    status: unresolved
+    careers_url: https://bohemia.net/
+    notes: "DGA directory · Amsterdam · ~8"
+  - name: Bonte Avond
+    country: NL
+    status: unresolved
+    careers_url: https://bonte-avond.com/
+    notes: "DGA directory · Utrecht · ~2"
+  - name: BoterJan
+    country: NL
+    status: unresolved
+    careers_url: https://boterjan.com/
+    notes: "DGA directory · Groningen · ~1"
+  - name: Breda University of Applied Sciences
+    country: NL
+    status: unresolved
+    careers_url: https://buas.nl/
+    notes: "DGA directory · Breda · ~800+"
+  - name: Brenda van Vugt art
+    country: NL
+    status: unresolved
+    careers_url: https://brendavanvugtart.com/
+    notes: "DGA directory · Rotterdam · ~1"
+  - name: Bruna translates
+    country: NL
+    status: unresolved
+    careers_url: https://brunatranslates.com/
+    notes: "DGA directory · Eindhoven · ~1"
+  - name: Buckethead Entertainment
+    country: NL
+    status: unresolved
+    careers_url: https://bucketheadentertainment.com/
+    notes: "DGA directory · Haren · ~4"
+  - name: Build it Games
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: By Bleep
+    country: NL
+    status: unresolved
+    careers_url: https://bybleep.com/
+    notes: "DGA directory · Groningen · ~3"
+  - name: Carbon Black Creative
+    country: NL
+    status: unresolved
+    careers_url: https://carbonblackcreative.com/
+    notes: "DGA directory · Heemstede · ~1"
+  - name: Celine Veltman
+    country: NL
+    status: unresolved
+    careers_url: https://celineveltman.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Changefied
+    country: NL
+    status: unresolved
+    careers_url: https://en.changefied.nl/
+    notes: "DGA directory · Heerhugowaard · ~5"
+  - name: Chaotic Spirit Studio
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Arnhem · ~1"
+  - name: Charlotte Madelon
+    country: NL
+    status: unresolved
+    careers_url: https://charlottemadelon.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: ChimpWorks
+    country: NL
+    provider: recruitee
+    careers_url: https://chimpworks.recruitee.com
+    notes: "DGA directory · Eindhoven · ~30+"
+  - name: Claynote
+    country: NL
+    status: unresolved
+    careers_url: https://claynote.nl/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Codename Red
+    country: NL
+    status: unresolved
+    careers_url: https://codenamered.nl/
+    notes: "DGA directory · The Hague · ~6"
+  - name: Control Magazine
+    country: NL
+    status: unresolved
+    careers_url: https://control-online.nl/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Convoy Games
+    country: NL
+    status: unresolved
+    careers_url: https://convoy-games.com/
+    notes: "DGA directory · Leeuwarden · ~3"
+  - name: Cordyceps Collective
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Rotterdam · ~3"
+  - name: Crimson Owl Studios
+    country: NL
+    status: unresolved
+    careers_url: https://caromble.com/
+    notes: "DGA directory · Utrecht · ~5"
+  - name: Critical Bit
+    country: NL
+    status: unresolved
+    careers_url: https://critical-bit.com/
+    notes: "DGA directory · Leeuwarden · ~1"
+  - name: CurvePoint Studios
+    country: NL
+    status: unresolved
+    careers_url: https://curvepointstudios.nl/
+    notes: "DGA directory · Harderwijk · ~1"
+  - name: CVS-Gaming
+    country: NL
+    status: unresolved
+    careers_url: https://cvs-gaming.com/
+    notes: "DGA directory · Akersloot · ~2"
+  - name: Cyber Crime Game
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: De Haagse Hogeschool
+    country: NL
+    status: unresolved
+    careers_url: https://hhs.nl/
+    notes: "DGA directory · The Hague · ~2000"
+  - name: degoma
+    country: NL
+    status: unresolved
+    careers_url: https://reggiegame.com/
+    notes: "DGA directory · Amsterdam · ~8"
+  - name: Delayed Victory
+    country: NL
+    status: unresolved
+    careers_url: https://delayedvictory.com/
+    notes: "DGA directory · Dordrecht · ~1"
+  - name: Denda Games
+    country: NL
+    status: unresolved
+    careers_url: https://denda-corporate.com/
+    notes: "DGA directory · Hengelo · ~20+"
+  - name: Deviant Legal
+    country: NL
+    status: unresolved
+    careers_url: https://deviantlegal.com/
+    notes: "DGA directory · Bergen op Zoom · ~3"
+  - name: DialogueTrainer
+    country: NL
+    status: unresolved
+    careers_url: https://dialoguetrainer.com/
+    notes: "DGA directory · Utrecht · ~10+"
+  - name: Digipuzzle Games
+    country: NL
+    status: unresolved
+    careers_url: https://digipuzzle.net/
+    notes: "DGA directory · Oisterwijk · ~1"
+  - name: Dirk Boer
+    country: NL
+    status: unresolved
+    careers_url: https://dirkboer.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Disc Room
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Divirgo
+    country: NL
+    status: unresolved
+    careers_url: https://divirgo.com/
+    notes: "DGA directory · Apeldoorn · ~1"
+  - name: Djuri Boot Music
+    country: NL
+    status: unresolved
+    careers_url: https://djuriboot.com/
+    notes: "DGA directory · Tilburg · ~1"
+  - name: DoubleDutch Games
+    country: NL
+    status: unresolved
+    careers_url: https://doubledutchgames.com/
+    notes: "DGA directory · Utrecht · ~2"
+  - name: Doyle
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Dragonspirit Games
+    country: NL
+    status: unresolved
+    careers_url: https://dragonspiritgames.nl/
+    notes: "DGA directory · Nieuwaal · ~1"
+  - name: Dtecta
+    country: NL
+    status: unresolved
+    careers_url: https://dtecta.com/
+    notes: "DGA directory · Best · ~1"
+  - name: Duckland Games
+    country: NL
+    status: unresolved
+    careers_url: https://ducklandgames.com/
+    notes: "DGA directory · Breda · ~8"
+  - name: Duh-Events
+    country: NL
+    status: unresolved
+    careers_url: https://duh-events.nl/
+    notes: "DGA directory · Houten · ~5"
+  - name: Dunk Technologies
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Gouda · ~1"
+  - name: Dutch Game Studio
+    country: NL
+    status: unresolved
+    careers_url: https://dutchgamestudio.com/
+    notes: "DGA directory · Woerden · ~50+ · jobs: https://dutchgamestudio.com/gaming-industry-careers/"
+  - name: Dutch Games Association
+    country: NL
+    status: unresolved
+    careers_url: https://dutchgamesassociation.nl/
+    notes: "DGA directory · Zoetermeer · ~3+ · jobs: https://dutchgamesassociation.nl/vacancies/"
+  - name: Dylan Nagel
+    country: NL
+    status: unresolved
+    careers_url: https://dylannagel.com/
+    notes: "DGA directory · Den Haag · ~1"
+  - name: Easting Solutions
+    country: NL
+    status: unresolved
+    careers_url: https://eastingsolutions.nl/
+    notes: "DGA directory · Groningen · ~1+"
+  - name: Edward Ray - Composer and Sound Designer
+    country: NL
+    status: unresolved
+    careers_url: https://edward-ray.com/
+    notes: "DGA directory · Amersfoort · ~1"
+  - name: Eendhoorn Games
+    country: NL
+    status: unresolved
+    careers_url: https://twitter.com/
+    notes: "DGA directory · Haarlem · ~1"
+  - name: Ellis in Wonderland
+    country: NL
+    status: unresolved
+    careers_url: https://ellisinwonderland.nl/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Ember Glitch
+    country: NL
+    status: unresolved
+    careers_url: https://emberglitch.com/
+    notes: "DGA directory · Amersfoort · ~3"
+  - name: Enchanted Works
+    country: NL
+    status: unresolved
+    careers_url: https://enchantedworks.nl/
+    notes: "DGA directory · Amstelveen · ~5"
+  - name: Energiegames
+    country: NL
+    status: unresolved
+    careers_url: https://energiegames.nl/
+    notes: "DGA directory · Culemborg · ~1"
+  - name: Engine Software
+    country: NL
+    status: unresolved
+    careers_url: https://engine-software.com/
+    notes: "DGA directory · Doetinchem · ~30+"
+  - name: Enversed Studios
+    country: NL
+    status: unresolved
+    careers_url: https://enversedstudios.com/
+    notes: "DGA directory · Eindhoven · ~15+ · jobs: https://enversedstudios.com/werken-bij/"
+  - name: Escape Room op Maat
+    country: NL
+    status: unresolved
+    careers_url: https://escaperoomopmaat.nl/
+    notes: "DGA directory · Wageningen · ~2"
+  - name: Esciri
+    country: NL
+    status: unresolved
+    careers_url: https://esciri.com/
+    notes: "DGA directory · Zoetermeer · ~1"
+  - name: Everforge Studio
+    country: NL
+    status: unresolved
+    careers_url: https://everforgestudio.com/
+    notes: "DGA directory · Eindhoven · ~1"
+  - name: EVRgreen Studio
+    country: NL
+    status: unresolved
+    careers_url: https://evrgreenstudio.com/
+    notes: "DGA directory · Hattem · ~1"
+  - name: Ewoud van der Werf
+    country: NL
+    status: unresolved
+    careers_url: https://ewoud.dev/
+    notes: "DGA directory · Leeuwarden · ~1"
+  - name: Extra Nice
+    country: NL
+    status: unresolved
+    careers_url: https://extra-nice.net/
+    notes: "DGA directory · Leeuwarden · ~6+"
+  - name: Fanflock
+    country: NL
+    status: unresolved
+    careers_url: https://fanflock.nl/
+    notes: "DGA directory · Veenendaal · ~4"
+  - name: Fantazm
+    country: NL
+    status: unresolved
+    careers_url: https://fantazm.com/
+    notes: "DGA directory · Den Bosch · ~8"
+  - name: FB Projecten
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Muiden · ~1"
+  - name: Feel Free Games
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Fifth Harbour Studios
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Finitude
+    country: NL
+    status: unresolved
+    careers_url: https://finitude.dev/
+    notes: "DGA directory · Maastricht · ~5 · jobs: https://finitude.dev/careers"
+  - name: Firda
+    country: NL
+    status: unresolved
+    careers_url: https://firda.nl/
+    notes: "DGA directory · Drachten · ~350+"
+  - name: Firi Games
+    country: NL
+    status: unresolved
+    careers_url: https://firigames.com/
+    notes: "DGA directory · Den Haag · ~2"
+  - name: flapbox studios
+    country: NL
+    status: unresolved
+    careers_url: https://flapboxstudios.com/
+    notes: "DGA directory · Emmen · ~1"
+  - name: Fontys
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Eindhoven · ~350"
+  - name: Force Field Entertainment(closed/acquired)
+    country: NL
+    status: unresolved
+    careers_url: https://forcefieldxr.com/
+    notes: "DGA directory · Amsterdam · ~60+"
+  - name: Four Horsemen Games
+    country: NL
+    status: unresolved
+    careers_url: https://fourhorsemengames.net/
+    notes: "DGA directory · Amsterdam · ~11"
+  - name: Friendloop
+    country: NL
+    status: unresolved
+    careers_url: https://friendloop-studio.com/
+    notes: "DGA directory · Amsterdam · ~2"
+  - name: Frisse Blikken - Game Studio
+    country: NL
+    provider: recruitee
+    careers_url: https://frisseblikken.recruitee.com
+    notes: "DGA directory · Utrecht · ~85 · jobs: https://frisseblikken.com/vacatures/"
+  - name: Froggy Frog Games
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: FrogVibes
+    country: NL
+    status: unresolved
+    careers_url: https://frogvibes.com/
+    notes: "DGA directory · Utrecht · ~2"
+  - name: Frostbolt Games
+    country: NL
+    status: unresolved
+    careers_url: https://frostboltgames.com/
+    notes: "DGA directory · Nijmegen · ~2"
+  - name: Frozen Fractal
+    country: NL
+    status: unresolved
+    careers_url: https://frozenfractal.com/
+    notes: "DGA directory · Beilen · ~1"
+  - name: Future Minimalism
+    country: NL
+    status: unresolved
+    careers_url: https://futureminimalism.com/
+    notes: "DGA directory · Alkmaar · ~1"
+  - name: FuzeField
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Galaxy Grove
+    country: NL
+    status: unresolved
+    careers_url: https://galaxy-grove.com/
+    notes: "DGA directory · Utrecht · ~23 · jobs: http://www.galaxy-grove.com"
+  - name: Game Architect Studio
+    country: NL
+    status: unresolved
+    careers_url: https://gamearchitect.eu/
+    notes: "DGA directory · Utrecht · ~4"
+  - name: Game Audio Squad
+    country: NL
+    status: unresolved
+    careers_url: https://gameaudiosquad.com/
+    notes: "DGA directory · Utrecht · ~2"
+  - name: Game Drive
+    country: NL
+    status: unresolved
+    careers_url: https://game-drive.nl/
+    notes: "DGA directory · Utrecht · ~10+ · jobs: https://www.game-drive.nl/vacancies/"
+  - name: Game Foley
+    country: NL
+    status: unresolved
+    careers_url: https://gamefoley.com/
+    notes: "DGA directory · Utrecht · ~5"
+  - name: Game Tailors
+    country: NL
+    status: unresolved
+    careers_url: https://gametailors.com/
+    notes: "DGA directory · Delft · ~13+ · jobs: https://www.gametailors.com/over-ons/vacatures"
+  - name: Game Taste
+    country: NL
+    status: unresolved
+    careers_url: https://gametaste.nl/
+    notes: "DGA directory · Den Haag · ~1"
+  - name: GamedeatH
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Leiden · ~1"
+  - name: Gamedesign.nl
+    country: NL
+    status: unresolved
+    careers_url: https://gamedesign.nl/
+    notes: "DGA directory · Heerhugowaard · ~3"
+  - name: GAMEDIA
+    country: NL
+    status: unresolved
+    careers_url: https://gamedia.nl/
+    notes: "DGA directory · Alkmaar · ~15+ · jobs: https://gamedia.nl/jobs"
+  - name: GameHouse
+    country: NL
+    status: unresolved
+    careers_url: https://gamehouseplus.com/
+    notes: "DGA directory · Remote · ~50 · jobs: https://www.linkedin.com/company/gamehouse/jobs/"
+  - name: Gameowdio
+    country: NL
+    status: unresolved
+    careers_url: https://gameowdio.nl/
+    notes: "DGA directory · Rotterdam · ~1"
+  - name: Gamepie
+    country: NL
+    status: unresolved
+    careers_url: https://gamepiegames.com/
+    notes: "DGA directory · Eindhoven · ~2"
+  - name: GamePoint
+    country: NL
+    status: unresolved
+    careers_url: https://gamepoint.biz/
+    notes: "DGA directory · Den Haag · ~140 · jobs: https://gamepoint.biz/jobs/"
+  - name: Games [4Diversity]
+    country: NL
+    status: unresolved
+    careers_url: https://games4diversity.com/
+    notes: "DGA directory · Utrecht · ~3+"
+  - name: GameSome
+    country: NL
+    status: unresolved
+    careers_url: https://gamesome.nl/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Gametje
+    country: NL
+    status: unresolved
+    careers_url: https://gametje.com/
+    notes: "DGA directory · Rotterdam · ~1"
+  - name: Gameye
+    country: NL
+    status: unresolved
+    careers_url: https://gameye.com/
+    notes: "DGA directory · Rotterdam · ~10+"
+  - name: Gamious
+    country: NL
+    status: unresolved
+    careers_url: https://gamious.com/
+    notes: "DGA directory · Haarlem · ~10+"
+  - name: GamoVation
+    country: NL
+    status: unresolved
+    careers_url: https://gamovation.com/
+    notes: "DGA directory · Zwolle · ~15"
+  - name: Gamunity
+    country: NL
+    status: unresolved
+    careers_url: https://gamunity.nl/
+    notes: "DGA directory · Amsterdam · ~3"
+  - name: Gamze Gulez
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Gazingy Interactive
+    country: NL
+    status: unresolved
+    careers_url: https://gazingy.com/
+    notes: "DGA directory · Zwolle · ~3"
+  - name: Ghost in a Bottle
+    country: NL
+    status: unresolved
+    careers_url: https://ghostinabottle.com/
+    notes: "DGA directory · Amsterdam · ~4"
+  - name: Gilles van Leeuwen
+    country: NL
+    status: unresolved
+    careers_url: https://gillesvanleeuwen.nl/
+    notes: "DGA directory · Eindhoven · ~1"
+  - name: Goal043
+    country: NL
+    status: unresolved
+    careers_url: https://goal043.nl/
+    notes: "DGA directory · Maastricht · ~15+"
+  - name: Gobbledygook Games
+    country: NL
+    status: unresolved
+    careers_url: https://gggames.nl/
+    notes: "DGA directory · Zutphen · ~1"
+  - name: Goudvisie
+    country: NL
+    status: unresolved
+    careers_url: https://goudvisie.nl/
+    notes: "DGA directory · Amsterdam · ~20 · jobs: https://goudvisie.nl/over-ons/werken-bij/"
+  - name: Grafisch Lyceum Utrecht
+    country: NL
+    status: unresolved
+    careers_url: https://glu.nl/
+    notes: "DGA directory · Utrecht · ~240"
+  - name: Grendel
+    country: NL
+    status: unresolved
+    careers_url: https://grendelgames.com/
+    notes: "DGA directory · Leeuwarden · ~15+ · jobs: https://grendelgames.com/vacancies/"
+  - name: Grimmwyrd Studios
+    country: NL
+    status: unresolved
+    careers_url: https://grimmwyrdstudios.com/
+    notes: "DGA directory · Amsterdam · ~15+"
+  - name: Guerrilla Games
+    country: NL
+    careers_url: https://job-boards.greenhouse.io/guerrilla-games
+    api: https://boards-api.greenhouse.io/v1/boards/guerrilla-games/jobs
+    notes: "DGA directory · Amsterdam · ~350+ · jobs: https://www.guerrilla-games.com/join"
+  - name: hackshield
+    country: NL
+    status: unresolved
+    careers_url: https://nl.joinhackshield.com/
+    notes: "DGA directory · Utrecht · ~35 · jobs: https://www.flavour.nl/vacatures/"
+  - name: HAN
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Arnhem · ~4000+"
+  - name: Hanze UAS Groningen
+    country: NL
+    status: unresolved
+    careers_url: https://hanze.nl/
+    notes: "DGA directory · Groningen · ~45+"
+  - name: heartcase
+    country: NL
+    status: unresolved
+    careers_url: https://milanlefferts.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Hedgefield
+    country: NL
+    status: unresolved
+    careers_url: https://timhengeveld.com/
+    notes: "DGA directory · Den Bosch · ~1"
+  - name: Hero Center (formerly known as Flavour)
+    country: NL
+    status: unresolved
+    careers_url: https://herocenter.com/
+    notes: "DGA directory · Utrecht, Haarlem · ~25 · jobs: https://www.flavour.nl/vacatures/"
+  - name: Hi5 Music
+    country: NL
+    status: unresolved
+    careers_url: https://soundcloud.com/
+    notes: "DGA directory · Rotterdam · ~1"
+  - name: Hidden Folks
+    country: NL
+    status: unresolved
+    careers_url: https://hiddenfolks.com/
+    notes: "DGA directory · Amsterdam · ~4"
+  - name: HitP Studio
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: HKU
+    country: NL
+    status: unresolved
+    careers_url: https://hku.nl/
+    notes: "DGA directory · Utrecht · ~680"
+  - name: Hogeschool Leiden
+    country: NL
+    status: unresolved
+    careers_url: https://hsleiden.nl/
+    notes: "DGA directory · Leiden · ~1500+"
+  - name: Hogeschool Rotterdam
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Rotterdam · ~4200"
+  - name: Hogeschool van Amsterdam
+    country: NL
+    status: unresolved
+    careers_url: https://hva.nl/
+    notes: "DGA directory · Amsterdam · ~4800+"
+  - name: HoloMoves
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Hosu Game Audio
+    country: NL
+    status: unresolved
+    careers_url: https://hosugameaudio.com/
+    notes: "DGA directory · The Hague · ~1"
+  - name: Hulan
+    country: NL
+    status: unresolved
+    careers_url: https://hulan.nl/
+    notes: "DGA directory · Eindhoven · ~14"
+  - name: Hunchback Music
+    country: NL
+    status: unresolved
+    careers_url: https://hunchbackmusic.com/
+    notes: "DGA directory · Hoofddorp · ~10+"
+  - name: Hydra
+    country: NL
+    status: unresolved
+    careers_url: https://hydra-games.com/
+    notes: "DGA directory · Haarlem · ~3"
+  - name: Hypersome Games (Closed)
+    country: NL
+    status: unresolved
+    careers_url: https://hypersome.com/
+    notes: "DGA directory · Den Bosch · ~2"
+  - name: i3D.net
+    country: NL
+    status: unresolved
+    careers_url: https://i3d.net/
+    notes: "DGA directory · Rotterdam · ~100+ · jobs: https://www.i3d.net/career/"
+  - name: Iceberg Interactive
+    country: NL
+    status: unresolved
+    careers_url: https://iceberg-games.com/
+    notes: "DGA directory · Haarlem · ~10+"
+  - name: IJsfontein
+    country: NL
+    status: unresolved
+    careers_url: https://ijsfontein.nl/
+    notes: "DGA directory · Amsterdam · ~20+ · jobs: https://ijsfontein.nl/over/vacatures"
+  - name: ImproVive
+    country: NL
+    status: unresolved
+    careers_url: https://improvive.com/
+    notes: "DGA directory · Amersfoort · ~8"
+  - name: InContext Consultancy Group
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Jacobs Development
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Den Haag · ~9"
+  - name: Jagaco
+    country: NL
+    status: unresolved
+    careers_url: https://jagaco.com/
+    notes: "DGA directory · Zoetermeer · ~4+"
+  - name: JamPics
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Breda · ~2"
+  - name: Jasper Oprel & Indiana-Jonas
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Jaywalkers Interactive
+    country: NL
+    status: unresolved
+    careers_url: https://jaywalkersinteractive.com/
+    notes: "DGA directory · Rotterdam · ~2"
+  - name: Jeroen Wimmers
+    country: NL
+    status: unresolved
+    careers_url: https://jeroenwimmers.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Jim Offerman
+    country: NL
+    status: unresolved
+    careers_url: https://jimofferman.com/
+    notes: "DGA directory · Nijmegen · ~1"
+  - name: Johan Scherft
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Joost Eggermont
+    country: NL
+    status: unresolved
+    careers_url: https://joosteggermont.nl/
+    notes: "DGA directory · Rotterdam · ~1"
+  - name: Joost van Dongen
+    country: NL
+    status: unresolved
+    careers_url: https://joostvandongen.com/
+    notes: "DGA directory · Nieuwegein · ~1"
+  - name: JoTo Games
+    country: NL
+    status: unresolved
+    careers_url: https://joto.games/
+    notes: "DGA directory · Rotterdam · ~4"
+  - name: Kakao Games Europe B.V.
+    country: NL
+    status: unresolved
+    careers_url: https://kakaocorp.com/
+    notes: "DGA directory · Amstelveen · ~60"
+  - name: Käy Vriend
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Venhuizen · ~1"
+  - name: Kenney
+    country: NL
+    status: unresolved
+    careers_url: https://kenney.nl/
+    notes: "DGA directory · Kerkrade · ~1"
+  - name: KeokeN Interactive
+    country: NL
+    status: unresolved
+    careers_url: https://keokeninteractive.com/
+    notes: "DGA directory · Hoofddorp · ~2+"
+  - name: King Kelpo
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Wateringen · ~1"
+  - name: Kiss the Frog
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Knucklehead Studios
+    country: NL
+    status: unresolved
+    careers_url: https://knucklehead-studios.com/
+    notes: "DGA directory · Utrecht · ~10"
+  - name: Koen Vroom Music Productions
+    country: NL
+    status: unresolved
+    careers_url: https://koenvroom.com/
+    notes: "DGA directory · Vriezenveen · ~1"
+  - name: Konafa Games
+    country: NL
+    status: unresolved
+    careers_url: https://konafagames.com/
+    notes: "DGA directory · Amsterdam · ~2"
+  - name: Koning Willem I College
+    country: NL
+    status: unresolved
+    careers_url: https://kw1c.nl/
+    notes: "DGA directory · Den Bosch · ~1550"
+  - name: Kucheza B.V.
+    country: NL
+    status: unresolved
+    careers_url: https://kucheza.nl/
+    notes: "DGA directory · Utrecht · ~6"
+  - name: Kwa Qua Games
+    country: NL
+    status: unresolved
+    careers_url: https://kwaqua.com/
+    notes: "DGA directory · Amsterdam · ~5"
+  - name: Lawa World BV
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Leon van Oldenborgh
+    country: NL
+    status: unresolved
+    careers_url: https://leonvanoldenborgh.nl/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Leopold Meijnen Oosterbaan
+    country: NL
+    status: unresolved
+    careers_url: https://leopoldmeijnenoosterbaan.nl/
+    notes: "DGA directory · Amsterdam · ~3"
+  - name: Linx Interactive
+    country: NL
+    status: unresolved
+    careers_url: https://linx-interactive.com/
+    notes: "DGA directory · Utrecht · ~25 · jobs: https://linx-interactive.com/careers/"
+  - name: Lion Castle BV
+    country: NL
+    status: unresolved
+    careers_url: https://lion-castle.com/
+    notes: "DGA directory · Assen · ~15+"
+  - name: Lirio Games B.V.
+    country: NL
+    status: unresolved
+    careers_url: https://liriogames.com/
+    notes: "DGA directory · Apeldoorn · ~5"
+  - name: Little Chicken Game Company
+    country: NL
+    status: unresolved
+    careers_url: https://littlechicken.nl/
+    notes: "DGA directory · Amsterdam · ~20+ · jobs: https://www.littlechicken.nl/jobs/"
+  - name: Living Story
+    country: NL
+    status: unresolved
+    careers_url: https://livingstory.nl/
+    notes: "DGA directory · Baarn · ~5"
+  - name: Local Heroes Worldwide
+    country: NL
+    status: unresolved
+    careers_url: https://local-heroes.com/
+    notes: "DGA directory · Utrecht · ~8+"
+  - name: Localize It!
+    country: NL
+    status: unresolved
+    careers_url: https://localizeit.it/
+    notes: "DGA directory · Den Haag · ~1"
+  - name: Loobeensky
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Baarle-Nassau · ~1"
+  - name: Lost Again
+    country: NL
+    status: unresolved
+    careers_url: https://lostagain.nl/
+    notes: "DGA directory · Tilburg · ~1"
+  - name: Lotta Andriesse
+    country: NL
+    status: unresolved
+    careers_url: https://lottaandriesse.artstation.com/
+    notes: "DGA directory · Dordrecht · ~1"
+  - name: Luc Versleijen
+    country: NL
+    status: unresolved
+    careers_url: https://lucversleijen.nl/
+    notes: "DGA directory · Horst · ~1"
+  - name: Lucky Kat
+    country: NL
+    provider: teamtailor
+    careers_url: https://careers.lucky-kat.com
+    notes: "DGA directory · Den Haag · ~15+"
+  - name: Ludens Labs
+    country: NL
+    status: unresolved
+    careers_url: https://ludenslabs.nl/
+    notes: "DGA directory · Haarlem · ~2"
+  - name: Ludomo Gamestudio
+    country: NL
+    status: unresolved
+    careers_url: https://ludomo.com/
+    notes: "DGA directory · Almere · ~1"
+  - name: Ludomotion
+    country: NL
+    status: unresolved
+    careers_url: https://ludomotion.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: LuosArts
+    country: NL
+    status: unresolved
+    careers_url: https://luosarts.com/
+    notes: "DGA directory · Dordrecht · ~1"
+  - name: M2H
+    country: NL
+    status: unresolved
+    careers_url: https://m2h.nl/
+    notes: "DGA directory · Den Haag · ~1"
+  - name: Made-up Rules
+    country: NL
+    status: unresolved
+    careers_url: https://madeuprul.es/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Martijn van Zwieten
+    country: NL
+    status: unresolved
+    careers_url: https://martijnvanzwieten.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Martine Spaans (Fourth Moon Games)
+    country: NL
+    status: unresolved
+    careers_url: https://fourthmoon.games/
+    notes: "DGA directory · Lith · ~1"
+  - name: MatthijsDierckx.com
+    country: NL
+    status: unresolved
+    careers_url: https://matthijsdierckx.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Max de Kroon
+    country: NL
+    status: unresolved
+    careers_url: https://maxdekroon.carrd.co/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Mediaheads
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Medu Health
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: MeetToMatch
+    country: NL
+    status: unresolved
+    careers_url: https://meettomatch.com/
+    notes: "DGA directory · Utrecht · ~10"
+  - name: MelonadeFX
+    country: NL
+    status: unresolved
+    careers_url: https://melonadefx.com/
+    notes: "DGA directory · Rotterdam · ~5"
+  - name: Menno Stas
+    country: NL
+    status: unresolved
+    careers_url: https://mennostas.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Michiel Nijhof
+    country: NL
+    status: unresolved
+    careers_url: https://michielnijhof.nl/
+    notes: "DGA directory · Arnhem · ~1"
+  - name: Mindscape
+    country: NL
+    status: unresolved
+    careers_url: https://mindscape.com/
+    notes: "DGA directory · Amstelveen · ~15+"
+  - name: Miniclip Nederland (F.K.A. Gamebasics)
+    country: NL
+    status: unresolved
+    careers_url: https://gamebasics.nl/
+    notes: "DGA directory · Zoetermeer · ~90+ · jobs: https://www.gamebasics.nl/vacatures/"
+  - name: Minit Fun Racer
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Miomi Game Studio
+    country: NL
+    status: unresolved
+    careers_url: https://miomigamestudio.com/
+    notes: "DGA directory · Heerhugowaard · ~1"
+  - name: Mitzi Games
+    country: NL
+    status: unresolved
+    careers_url: https://spacecatstactics.com/
+    notes: "DGA directory · Haarlem · ~1"
+  - name: Modoka
+    country: NL
+    status: unresolved
+    careers_url: https://modokastudios.com/
+    notes: "DGA directory · Zwolle · ~7"
+  - name: ModularMood
+    country: NL
+    status: unresolved
+    careers_url: https://modularmood.com/
+    notes: "DGA directory · Utrecht · ~2"
+  - name: Monkey Strike Games
+    country: NL
+    status: unresolved
+    careers_url: https://monkeystrikegames.com/
+    notes: "DGA directory · Breda · ~2"
+  - name: Monobanda
+    country: NL
+    status: unresolved
+    careers_url: https://monobanda.eu/
+    notes: "DGA directory · Utrecht · ~3+"
+  - name: Monovoid
+    country: NL
+    status: unresolved
+    careers_url: https://monovoid.co/
+    notes: "DGA directory · Rijswijk Zh · ~2"
+  - name: Multiverse Narratives
+    country: NL
+    status: unresolved
+    careers_url: https://multiverse-narratives.com/
+    notes: "DGA directory · Groningen · ~1"
+  - name: Musicbyjonathan
+    country: NL
+    status: unresolved
+    careers_url: https://musicbyjonathan.com/
+    notes: "DGA directory · Moerkapelle · ~1"
+  - name: MY.GAMES
+    country: NL
+    status: unresolved
+    careers_url: https://my.games/
+    notes: "DGA directory · Amsterdam · ~100+"
+  - name: Mystic ERA games
+    country: NL
+    status: unresolved
+    careers_url: https://mysticeragames.com/
+    notes: "DGA directory · Harderwijk · ~1"
+  - name: NCOI
+    country: NL
+    status: unresolved
+    careers_url: https://ncoi.nl/
+    notes: "DGA directory · Utrecht · ~10000"
+  - name: Neonic Game Studios
+    country: NL
+    status: unresolved
+    careers_url: https://neonicgamestudios.com/
+    notes: "DGA directory · Emmen · ~2"
+  - name: Nether Lion Studios
+    country: NL
+    status: unresolved
+    careers_url: https://netherlion.nl/
+    notes: "DGA directory · Schiphol-Rijk · ~6"
+  - name: NeuroReality
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Newzoo
+    country: NL
+    provider: recruitee
+    careers_url: https://newzoo.recruitee.com
+    notes: "DGA directory · Amsterdam · ~93 · jobs: https://newzoo.bamboohr.com/careers"
+  - name: NHL Stenden
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Leeuwarden · ~2200"
+  - name: niel vredeveldt
+    country: NL
+    status: unresolved
+    careers_url: https://lunggames.com/
+    notes: "DGA directory · Nederweert-Eind · ~5"
+  - name: Nixxes Software
+    country: NL
+    status: unresolved
+    careers_url: https://nixxes.com/
+    notes: "DGA directory · Utrecht · ~50+ · jobs: https://www.nixxes.com/jobs/"
+  - name: No Pressure Studios
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Emmen · ~2"
+  - name: Nonline
+    country: NL
+    status: unresolved
+    careers_url: https://nonline.nl/
+    notes: "DGA directory · Tilburg · ~3"
+  - name: Nurt Studios
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Rotterdam · ~1"
+  - name: Off-Score
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: One Upped Games
+    country: NL
+    status: unresolved
+    careers_url: https://oneuppedgames.com/
+    notes: "DGA directory · Haarlem · ~1"
+  - name: OneTwoPlay
+    country: NL
+    status: unresolved
+    careers_url: https://onetwoplay.games/
+    notes: "DGA directory · Amersfoort · ~5"
+  - name: Onwijs
+    country: NL
+    status: unresolved
+    careers_url: https://onwijs.com/
+    notes: "DGA directory · Oude-Tonge · ~30+"
+  - name: Oogbaard Games
+    country: NL
+    status: unresolved
+    careers_url: https://oogbaard.com/
+    notes: "DGA directory · Utrecht · ~5"
+  - name: Orangepixel
+    country: NL
+    status: unresolved
+    careers_url: https://orangepixel.net/
+    notes: "DGA directory · Den Helder · ~1"
+  - name: Organiq
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Osarion
+    country: NL
+    status: unresolved
+    careers_url: https://osarion.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Papertechlab
+    country: NL
+    status: unresolved
+    careers_url: https://papertechlab.com/
+    notes: "DGA directory · Dieren · ~1"
+  - name: paulstaring
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Pedestal Games
+    country: NL
+    status: unresolved
+    careers_url: https://pedestalgames.com/
+    notes: "DGA directory · Almere · ~1"
+  - name: Pelican Party Studios
+    country: NL
+    status: unresolved
+    careers_url: https://pelicanparty.co/
+    notes: "DGA directory · Rotterdam · ~2"
+  - name: pestibug
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Den Haag · ~1"
+  - name: Peter Klijn Art
+    country: NL
+    status: unresolved
+    careers_url: https://peterklijnart.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Phantom Coast
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Pharos Interactive
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Phure Studios
+    country: NL
+    status: unresolved
+    careers_url: https://phurestudios.com/
+    notes: "DGA directory · Leeuwarden · ~2"
+  - name: Picomy B.V.
+    country: NL
+    status: unresolved
+    careers_url: https://picomy.com/
+    notes: "DGA directory · Rotterdam · ~5"
+  - name: PLAYERUNKNOWN Productions
+    country: NL
+    provider: teamtailor
+    careers_url: https://careers.playerunknownproductions.net
+    notes: "DGA directory · Amsterdam · ~50+"
+  - name: PlayGood Games
+    country: NL
+    status: unresolved
+    careers_url: https://playgood.games/
+    notes: "DGA directory · Riel · ~1"
+  - name: PlayJoy
+    country: NL
+    status: unresolved
+    careers_url: https://playjoy.eu/
+    notes: "DGA directory · Waalwijk · ~1"
+  - name: Plaza Challenge School
+    country: NL
+    status: unresolved
+    careers_url: https://plazachallengeschool.nl/
+    notes: "DGA directory · Zoetermeer · ~1"
+  - name: Plukit
+    country: NL
+    status: unresolved
+    careers_url: https://playstaxel.com/
+    notes: "DGA directory · Groningen · ~1"
+  - name: PowderStudios
+    country: NL
+    status: unresolved
+    careers_url: https://powder-studios.com/
+    notes: "DGA directory · Amsterdam · ~2"
+  - name: PRiME WORX
+    country: NL
+    status: unresolved
+    careers_url: https://primeworx.nl/
+    notes: "DGA directory · Zeist · ~1"
+  - name: Pro Mobile
+    country: NL
+    status: unresolved
+    careers_url: https://pro-mobile.nl/
+    notes: "DGA directory · Amsterdam · ~3"
+  - name: Prrrpl
+    country: NL
+    status: unresolved
+    careers_url: https://prrr.pl/
+    notes: "DGA directory · Haarlem · ~1"
+  - name: QuestBeat
+    country: NL
+    status: unresolved
+    careers_url: https://questbeat.com/
+    notes: "DGA directory · Amsterdam · ~4"
+  - name: RaafOritme
+    country: NL
+    status: unresolved
+    careers_url: https://raaforitme.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Radical Graphics Studios
+    country: NL
+    status: unresolved
+    careers_url: https://radicalgraphics.nl/
+    notes: "DGA directory · Amsterdam · ~3"
+  - name: RageSquid
+    country: NL
+    status: unresolved
+    careers_url: https://ragesquid.com/
+    notes: "DGA directory · Tilburg · ~8"
+  - name: Raidflux
+    country: NL
+    status: unresolved
+    careers_url: https://raidflux.com/
+    notes: "DGA directory · Breda · ~2"
+  - name: Rangatang
+    country: NL
+    status: unresolved
+    careers_url: https://rangatang.nl/
+    notes: "DGA directory · Utrecht · ~3"
+  - name: Ranja72. Video game writer
+    country: NL
+    status: unresolved
+    careers_url: https://ranja72.com/
+    notes: "DGA directory · Alkmaar · ~1"
+  - name: ReadSpeaker
+    country: NL
+    status: unresolved
+    careers_url: https://readspeaker.com/
+    notes: "DGA directory · Driebergen-Rijsenburg · ~200+"
+  - name: RedFlare
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: RedwaterOne
+    country: NL
+    status: unresolved
+    careers_url: https://redwaterone.com/
+    notes: "DGA directory · Oosterbeek · ~2"
+  - name: Reflection IT
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Asten · ~2"
+  - name: Rekall Games
+    country: NL
+    status: unresolved
+    careers_url: https://rekall.games/
+    notes: "DGA directory · Rotterdam · ~5"
+  - name: Rengin Tumer - Illustration & Concept Design
+    country: NL
+    status: unresolved
+    careers_url: https://rengintumer.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Representing Games
+    country: NL
+    status: unresolved
+    careers_url: https://representing.games/
+    notes: "DGA directory · Utrecht · ~9"
+  - name: Retrobright
+    country: NL
+    status: unresolved
+    careers_url: https://retrobright.org/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Richel Audio
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Richie de Wit
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Amsterdam Area · ~1"
+  - name: RoaringLuck
+    country: NL
+    status: unresolved
+    careers_url: https://roaringluck.games/
+    notes: "DGA directory · 's-Hertogenbosch · ~1"
+  - name: Robin Keijzer
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Breda · ~1"
+  - name: ROC Rivor
+    country: NL
+    status: unresolved
+    careers_url: https://rocrivor.nl/
+    notes: "DGA directory · Tiel · ~300"
+  - name: ROC Van Flevoland
+    country: NL
+    status: unresolved
+    careers_url: https://rocvanflevoland.nl/
+    notes: "DGA directory · Almere · ~800+"
+  - name: "Rockit: Playful Solutions"
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Roland Roos Music
+    country: NL
+    status: unresolved
+    careers_url: https://rolandroosmusic.com/
+    notes: "DGA directory · Hoorn · ~1"
+  - name: Roofkat
+    country: NL
+    status: unresolved
+    careers_url: https://roofkatgames.com/
+    notes: "DGA directory · Zaandam · ~1"
+  - name: Rooibos Games
+    country: NL
+    status: unresolved
+    careers_url: https://rooibosgames.com/
+    notes: "DGA directory · Gouda · ~1"
+  - name: Roost Games
+    country: NL
+    status: unresolved
+    careers_url: https://roost.games/
+    notes: "DGA directory · Utrecht · ~6"
+  - name: Roy Theunissen
+    country: NL
+    status: unresolved
+    careers_url: https://roytheunissen.com/
+    notes: "DGA directory · Den Haag · ~1"
+  - name: Runic Sounds
+    country: NL
+    status: unresolved
+    careers_url: https://runicsounds.com/
+    notes: "DGA directory · Utrecht · ~2+"
+  - name: Rusty Lake
+    country: NL
+    status: unresolved
+    careers_url: https://rustylake.com/
+    notes: "DGA directory · Amsterdam · ~3"
+  - name: Rutger van Dijk
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: SAE Creative Media Institute Amsterdam
+    country: NL
+    status: unresolved
+    careers_url: https://sae.edu/
+    notes: "DGA directory · Amsterdam · ~50"
+  - name: SanForge Studio
+    country: NL
+    status: unresolved
+    careers_url: https://sanforgestudio.com/
+    notes: "DGA directory · Almere · ~1 · jobs: https://www.sanforgestudio.com/career"
+  - name: Saskia de Klerk
+    country: NL
+    status: unresolved
+    careers_url: https://saskle.com/
+    notes: "DGA directory · Rotterdam · ~1"
+  - name: Sassybot
+    country: NL
+    status: unresolved
+    careers_url: https://sassybot.com/
+    notes: "DGA directory · Breda · ~3"
+  - name: Savanna Developments
+    country: NL
+    status: unresolved
+    careers_url: https://savannadevelopments.com/
+    notes: "DGA directory · Rotterdam · ~2"
+  - name: Save & Sound
+    country: NL
+    status: unresolved
+    careers_url: https://savensound.com/
+    notes: "DGA directory · Amsterdam · ~2"
+  - name: Saxion
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Enschede · ~3100"
+  - name: Scalda
+    country: NL
+    status: unresolved
+    careers_url: https://scalda.nl/
+    notes: "DGA directory · Vlissingen · ~850"
+  - name: Second Maze
+    country: NL
+    status: unresolved
+    careers_url: https://secondmaze.com/
+    notes: "DGA directory · Amsterdam · ~2"
+  - name: Second Stage Studio
+    country: NL
+    status: unresolved
+    careers_url: https://secondstage.studio/
+    notes: "DGA directory · Utrecht · ~8"
+  - name: Secret of Games
+    country: NL
+    status: unresolved
+    careers_url: https://secretofgames.com/
+    notes: "DGA directory · Eindhoven · ~1"
+  - name: Seductive Lemon
+    country: NL
+    status: unresolved
+    careers_url: https://seductivelemon.com/
+    notes: "DGA directory · Leiden · ~1"
+  - name: Seven Mages
+    country: NL
+    status: unresolved
+    careers_url: https://sevenmages.com/
+    notes: "DGA directory · Zoetermeer · ~2"
+  - name: Sfinx Games
+    country: NL
+    status: unresolved
+    careers_url: https://sfinxgames.com/
+    notes: "DGA directory · Groningen · ~2"
+  - name: ShadowBrain Games
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Capelle aan den IJssel · ~1"
+  - name: Shaman Garage
+    country: NL
+    status: unresolved
+    careers_url: https://shamangarage.com/
+    notes: "DGA directory · Enschede · ~4"
+  - name: Shapers
+    country: NL
+    status: unresolved
+    careers_url: https://shapers.nl/
+    notes: "DGA directory · Utrecht · ~5"
+  - name: Short Legs Art
+    country: NL
+    status: unresolved
+    careers_url: https://shortlegsart.com/
+    notes: "DGA directory · Groningen · ~1"
+  - name: Silver Monkey Studio
+    country: NL
+    status: unresolved
+    careers_url: https://silvermonkey.studio/
+    notes: "DGA directory · Amsterdam · ~7"
+  - name: Sint Lucas
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Eindhoven · ~460"
+  - name: Skunx Games
+    country: NL
+    status: unresolved
+    careers_url: https://skunxgames.com/
+    notes: "DGA directory · Houten · ~4"
+  - name: Skyburn Games
+    country: NL
+    status: unresolved
+    careers_url: https://skyburngames.com/
+    notes: "DGA directory · Rijssen · ~1+"
+  - name: Smart Puppies
+    country: NL
+    status: unresolved
+    careers_url: https://smartpuppies.app/
+    notes: "DGA directory · Haarlem · ~2"
+  - name: Snail Bite
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: snekflat
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Veenendaal · ~1"
+  - name: SOEDESCO
+    country: NL
+    status: unresolved
+    careers_url: https://soedesco.com/
+    notes: "DGA directory · Rotterdam · ~35 · jobs: https://www.soedesco.com/careers"
+  - name: Sokpop Collective
+    country: NL
+    status: unresolved
+    careers_url: https://sokpop.co/
+    notes: "DGA directory · Utrecht · ~4"
+  - name: Sonia Cailean
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: SonicPicnic
+    country: NL
+    status: unresolved
+    careers_url: https://sonicpicnic.nl/
+    notes: "DGA directory · Utrecht · ~4"
+  - name: Soops (Alessandra van Otterlo)
+    country: NL
+    status: unresolved
+    careers_url: https://soops.net/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Spark of Chaos
+    country: NL
+    status: unresolved
+    careers_url: https://sparkofchaos.com/
+    notes: "DGA directory · Nijmegen · ~2"
+  - name: Sparkling Society
+    country: NL
+    status: unresolved
+    careers_url: https://sparklingsociety.net/
+    notes: "DGA directory · Delft · ~26 · jobs: https://sparklingsociety.company/vacancies/"
+  - name: Sparrow Night
+    country: NL
+    status: unresolved
+    careers_url: https://sparrownight.com/
+    notes: "DGA directory · Rotterdam · ~5+"
+  - name: Special Character
+    country: NL
+    status: unresolved
+    careers_url: https://specialcharacter.games/
+    notes: "DGA directory · Utrecht · ~4 · jobs: https://www.specialcharacter.games/"
+  - name: Split Polygon
+    country: NL
+    status: unresolved
+    careers_url: https://split-polygon.com/
+    notes: "DGA directory · Breda · ~1"
+  - name: Spreadable Fruit Games
+    country: NL
+    status: unresolved
+    careers_url: https://spreadablefruitgames.com/
+    notes: "DGA directory · Utrecht · ~4"
+  - name: Springlab
+    country: NL
+    status: unresolved
+    careers_url: https://springlab.nl/
+    notes: "DGA directory · Utrecht · ~10+ · jobs: https://www.springlab.nl/werken-bij/"
+  - name: Square Glade Games
+    country: NL
+    status: unresolved
+    careers_url: https://squareglade.games/
+    notes: "DGA directory · Groningen · ~2"
+  - name: St. Joost School of Art & Design
+    country: NL
+    status: unresolved
+    careers_url: https://stjoost.nl/
+    notes: "DGA directory · Breda · ~150+"
+  - name: Staggart Creations
+    country: NL
+    status: unresolved
+    careers_url: https://staggart.xyz/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Starbrew Games
+    country: NL
+    status: unresolved
+    careers_url: https://starbrewgames.com/
+    notes: "DGA directory · Breda · ~6 · jobs: https://starbrewgames.com/jobs/"
+  - name: STARK Learning
+    country: NL
+    status: unresolved
+    careers_url: https://starklearning.nl/
+    notes: "DGA directory · Groningen · ~8"
+  - name: Steelpan Interactive
+    country: NL
+    status: unresolved
+    careers_url: https://steelpan.dev/
+    notes: "DGA directory · Beers · ~1"
+  - name: Stichting Gamelab Oost
+    country: NL
+    status: unresolved
+    careers_url: https://gamelaboost.nl/
+    notes: "DGA directory · Enschede · ~20"
+  - name: StickyLock
+    country: NL
+    status: unresolved
+    careers_url: https://stickylock.com/
+    notes: "DGA directory · Amsterdam · ~10+"
+  - name: Story Giant Games
+    country: NL
+    status: unresolved
+    careers_url: https://storygiantgames.com/
+    notes: "DGA directory · Weert · ~3"
+  - name: Story Specialist / Rémy van den Wijngaart
+    country: NL
+    status: unresolved
+    careers_url: https://storyspecialist.com/
+    notes: "DGA directory · s-Hertogenbosch · ~1"
+  - name: StrideQuest
+    country: NL
+    status: unresolved
+    careers_url: https://stridequest.com/
+    notes: "DGA directory · Den Haag · ~5 · jobs: https://stridequest.com/jobs"
+  - name: Studio ARRR
+    country: NL
+    status: unresolved
+    careers_url: https://studioarrr.nl/
+    notes: "DGA directory · The Hague · ~2"
+  - name: Studio Birthplace
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Studio Brain Muffin
+    country: NL
+    status: unresolved
+    careers_url: https://studiobrainmuffin.com/
+    notes: "DGA directory · Dordrecht · ~1"
+  - name: Studio Deloryan
+    country: NL
+    status: unresolved
+    careers_url: https://studiodeloryan.com/
+    notes: "DGA directory · Utrecht · ~14"
+  - name: Studio Floris Kaayk
+    country: NL
+    status: unresolved
+    careers_url: https://floriskaayk.com/
+    notes: "DGA directory · Den Haag · ~4"
+  - name: Studio Interlude
+    country: NL
+    status: unresolved
+    careers_url: https://studiointerlude.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Studio Koksiroj
+    country: NL
+    status: unresolved
+    careers_url: https://koksiroj.com/
+    notes: "DGA directory · Enschede · ~1"
+  - name: Studio Mantasaur
+    country: NL
+    status: unresolved
+    careers_url: https://studiomantasaur.nl/
+    notes: "DGA directory · Utrecht · ~4"
+  - name: Studio MX
+    country: NL
+    status: unresolved
+    careers_url: https://studio-mx.nl/
+    notes: "DGA directory · Nieuw-Vennep · ~3"
+  - name: Studio Rightside
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Sugar Rush Studios
+    country: NL
+    status: unresolved
+    careers_url: https://sugarrushstudios.com/
+    notes: "DGA directory · Eindhoven · ~1"
+  - name: Super Menno Monster
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Utrecht · ~1 · jobs: https://supermennomonster.nl/"
+  - name: Superbuff
+    country: NL
+    status: unresolved
+    careers_url: https://superbuff.nl/
+    notes: "DGA directory · Den Haag · ~7"
+  - name: sys2quad
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Nootdorp · ~1"
+  - name: Tamalaki Publishing
+    country: NL
+    status: unresolved
+    careers_url: https://tamalaki.com/
+    notes: "DGA directory · Lith · ~2"
+  - name: Tanuki Creative Studio
+    country: NL
+    status: unresolved
+    careers_url: https://tanukics.com/
+    notes: "DGA directory · Rotterdam · ~6"
+  - name: Target Gamers BV
+    country: NL
+    status: unresolved
+    careers_url: https://targetgamers.com/
+    notes: "DGA directory · Haarlem · ~1"
+  - name: Taylor Wessing
+    country: NL
+    status: unresolved
+    careers_url: https://taylorwessing.com/
+    notes: "DGA directory · Amsterdam · ~80+"
+  - name: Team Reptile
+    country: NL
+    status: unresolved
+    careers_url: https://team-reptile.com/
+    notes: "DGA directory · Hilversum · ~10+"
+  - name: Technova College
+    country: NL
+    status: unresolved
+    careers_url: https://technovacollege.nl/
+    notes: "DGA directory · Ede · ~130"
+  - name: teunu
+    country: NL
+    status: unresolved
+    careers_url: https://teunu.com/
+    notes: "DGA directory · Groningen · ~1"
+  - name: The 4 Winds Entertainment
+    country: NL
+    status: unresolved
+    careers_url: https://the4winds.com/
+    notes: "DGA directory · Amsterdam · ~50+"
+  - name: The Barn
+    country: NL
+    status: unresolved
+    careers_url: https://thebarngames.nl/
+    notes: "DGA directory · Delft · ~5"
+  - name: The Last Garage
+    country: NL
+    status: unresolved
+    careers_url: https://thelastgarage.com/
+    notes: "DGA directory · Huissen · ~1"
+  - name: The Moon - Software & Game Development
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Tilburg · ~1"
+  - name: The Naked Dev
+    country: NL
+    status: unresolved
+    careers_url: https://thenakeddev.com/
+    notes: "DGA directory · Zeist · ~1"
+  - name: The Shoebox Diorama
+    country: NL
+    status: unresolved
+    careers_url: https://theshoeboxdiorama.com/
+    notes: "DGA directory · Den Haag · ~1"
+  - name: The Smartphone Orchestra
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: The Sphere of Sound
+    country: NL
+    status: unresolved
+    careers_url: https://sphereofsound.com/
+    notes: "DGA directory · Groningen · ~1"
+  - name: THUAS GameLab
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Zoetermeer · ~3"
+  - name: Tidbits Play
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Ties Groen
+    country: NL
+    status: unresolved
+    careers_url: https://tiesgroen.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Timothy van der Hoeven
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: TimOvervliet.nl
+    country: NL
+    status: unresolved
+    careers_url: https://timovervliet.nl/
+    notes: "DGA directory · Haastrecht · ~1"
+  - name: tinyBuild
+    country: NL
+    status: unresolved
+    careers_url: https://tinybuild.com/
+    notes: "DGA directory · Hilversum · ~100+ · jobs: https://www.tinybuild.com/jobs"
+  - name: ToastieGames Studio
+    country: NL
+    status: unresolved
+    careers_url: https://toastiegames.com/
+    notes: "DGA directory · Utrecht · ~3"
+  - name: Tomas Sala
+    country: NL
+    status: unresolved
+    careers_url: https://thefalconeer.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Tomasz Kaye
+    country: NL
+    status: unresolved
+    careers_url: https://redshiftmedia.com/
+    notes: "DGA directory · Rijnsburg · ~1"
+  - name: Total Mayhem Games
+    country: NL
+    status: unresolved
+    careers_url: https://totalmayhemgames.com/
+    notes: "DGA directory · Rotterdam · ~40+"
+  - name: Tover Health Tech B.V.
+    country: NL
+    status: unresolved
+    careers_url: https://tover.care/
+    notes: "DGA directory · Utrecht · ~25+"
+  - name: Tradosoft
+    country: NL
+    status: unresolved
+    careers_url: https://tradosoft.com/
+    notes: "DGA directory · Nijkerk · ~2"
+  - name: TRAGsoft
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Traverse Research
+    country: NL
+    status: unresolved
+    careers_url: https://traverseresearch.nl/
+    notes: "DGA directory · Breda · ~15+ · jobs: https://careers.evolvebenchmark.com/jobs"
+  - name: Triangle Studios
+    country: NL
+    status: unresolved
+    careers_url: https://triangle-studios.com/
+    notes: "DGA directory · Leeuwarden · ~15"
+  - name: Triumph Studios
+    country: NL
+    status: unresolved
+    careers_url: https://triumph.net/
+    notes: "DGA directory · Delft · ~35+ · jobs: https://career.paradoxplaza.com/"
+  - name: Tsagoï Holding BV
+    country: NL
+    status: unresolved
+    careers_url: https://witan.nl/
+    notes: "DGA directory · Heemstede · ~5"
+  - name: TU Delft
+    country: NL
+    status: unresolved
+    careers_url: https://tudelft.nl/
+    notes: "DGA directory · Delft · ~7500"
+  - name: TU/Eindhoven
+    country: NL
+    status: unresolved
+    careers_url: https://tue.osiris-student.nl/
+    notes: "DGA directory · Eindhoven · ~4250+"
+  - name: TurtleBlaze
+    country: NL
+    status: unresolved
+    careers_url: https://turtleblaze.com/
+    notes: "DGA directory · Den Haag · ~3"
+  - name: Tweetal Studios
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Groningen · ~2"
+  - name: Twirlbound
+    country: NL
+    status: unresolved
+    careers_url: https://twirlbound.com/
+    notes: "DGA directory · Breda · ~15"
+  - name: Two Tribes
+    country: NL
+    status: unresolved
+    careers_url: https://twotribes.com/
+    notes: "DGA directory · Harderwijk · ~2"
+  - name: Undreamed Games
+    country: NL
+    status: unresolved
+    careers_url: https://undreamedgames.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: UniGames B.V.
+    country: NL
+    status: unresolved
+    careers_url: https://unigames.nl/
+    notes: "DGA directory · Eindhoven · ~5"
+  - name: University of Twente
+    country: NL
+    status: unresolved
+    careers_url: https://utwente.osiris-student.nl/
+    notes: "DGA directory · Enschede · ~4100+"
+  - name: Unmask
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Upgraded Studio
+    country: NL
+    status: unresolved
+    careers_url: https://upgradedstudio.com/
+    notes: "DGA directory · Riel · ~2"
+  - name: Vanilla
+    country: NL
+    status: unresolved
+    careers_url: https://vanilla.nl/
+    notes: "DGA directory · Eindhoven · ~3+"
+  - name: Vector Interactive
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Arnhem · ~1"
+  - name: Veelpoot
+    country: NL
+    status: unresolved
+    careers_url: https://veelpoot.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Verdant Games
+    country: NL
+    status: unresolved
+    careers_url: https://verdantgames.com/
+    notes: "DGA directory · Breda · ~10"
+  - name: Vertigo Games
+    country: NL
+    status: unresolved
+    careers_url: https://vertigo-games.com/
+    notes: "DGA directory · Rotterdam · ~150+"
+  - name: VFXlabs
+    country: NL
+    status: unresolved
+    careers_url: https://vfxlabs.net/
+    notes: "DGA directory · Eindhoven-Area · ~1"
+  - name: vievv
+    country: NL
+    status: unresolved
+    careers_url: https://vievv.net/
+    notes: "DGA directory · Rotterdam · ~2"
+  - name: Vincent Steentra Toussaint
+    country: NL
+    status: unresolved
+    careers_url: https://vsteenstratoussaint.com/
+    notes: "DGA directory · Velserbroek · ~1"
+  - name: Vincent van Geel
+    country: NL
+    status: unresolved
+    careers_url: https://vincentvangeel.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Virtual Play
+    country: NL
+    status: unresolved
+    careers_url: https://virtualplay.games/
+    notes: "DGA directory · Utrecht · ~9"
+  - name: Vlambeer
+    country: NL
+    status: unresolved
+    careers_url: https://vlambeer.com/
+    notes: "DGA directory · Utrecht · ~1"
+  - name: Voskip
+    country: NL
+    status: unresolved
+    careers_url: https://voskip.com/
+    notes: "DGA directory · 's-Hertogenbosch · ~1"
+  - name: VR-Innovations
+    country: NL
+    status: unresolved
+    careers_url: https://vr-innovations.nl/
+    notes: "DGA directory · Zwolle · ~5"
+  - name: VUURIG
+    country: NL
+    status: unresolved
+    careers_url: https://sonjavanvuure.com/
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Wanderlost
+    country: NL
+    status: unresolved
+    careers_url: https://wanderlost.games/
+    notes: "DGA directory · Utrecht · ~3"
+  - name: Wanted 5 Games B.V.
+    country: NL
+    status: unresolved
+    careers_url: https://wanted5games.com/
+    notes: "DGA directory · Haarlem · ~15+"
+  - name: Webble Games
+    country: NL
+    status: unresolved
+    careers_url: https://webble.net/
+    notes: "DGA directory · Amsterdam · ~4"
+  - name: WeirdBeard
+    country: NL
+    status: unresolved
+    careers_url: https://weirdbeard.nl/
+    notes: "DGA directory · Amsterdam · ~2"
+  - name: Wessel Stoop
+    country: NL
+    status: unresolved
+    careers_url: https://wesselstoop.ruhosting.nl/
+    notes: "DGA directory · Nijmegen · ~1"
+  - name: Westland Gaming
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Poeldijk · ~2"
+  - name: Wikkl Works
+    country: NL
+    status: unresolved
+    careers_url: https://wikkl.me/
+    notes: "DGA directory · Utrecht · ~4"
+  - name: Wild Card
+    country: NL
+    status: unresolved
+    careers_url: https://wildcard-games.com/
+    notes: "DGA directory · Den Haag · ~1"
+  - name: Wispfire
+    country: NL
+    status: unresolved
+    careers_url: https://wispfire.com/
+    notes: "DGA directory · Utrecht · ~3"
+  - name: Xform Games
+    country: NL
+    status: unresolved
+    careers_url: https://xformgames.com/
+    notes: "DGA directory · Utrecht · ~2"
+  - name: XR Academy
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Amsterdam · ~2018"
+  - name: XVR Simulation
+    country: NL
+    status: unresolved
+    careers_url: https://xvrsim.com/
+    notes: "DGA directory · Delft · ~50+"
+  - name: Yalp Interactive
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Yellow Riders
+    country: NL
+    status: unresolved
+    notes: "DGA directory"
+  - name: Yellowcake Games
+    country: NL
+    status: unresolved
+    careers_url: https://yellowcakegames.com/
+    notes: "DGA directory · Utrecht · ~2"
+  - name: YipYip
+    country: NL
+    status: unresolved
+    careers_url: https://yipyip.nl/
+    notes: "DGA directory · Rotterdam · ~15"
+  - name: YoAmb
+    country: NL
+    status: unresolved
+    careers_url: https://yoamb.com/
+    notes: "DGA directory · Amstelveen · ~7"
+  - name: Yvora Game Studio
+    country: NL
+    status: unresolved
+    careers_url: https://yvora.com/
+    notes: "DGA directory · Utrecht · ~7"
+  - name: Zakaria Marghich
+    country: NL
+    status: unresolved
+    notes: "DGA directory · Amsterdam · ~1"
+  - name: Zo-ii (Zuraida Buter)
+    country: NL
+    status: unresolved
+    careers_url: https://zo-ii.com/
+    notes: "DGA directory · Amsterdam · ~1"
+
+  # ── SGDA import (Swiss Game Developers Association members) ──────────
+  # Swiss active-studio directory, names-only (member site links are JS-only).
+  # status: unresolved → scan.mjs skips; `resolve` finds site + ATS.
+  - name: 5am Games GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Ateo
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Bits & Beasts
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Blindflug Studios AG
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Blobfish Games GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Castle Village Games GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Ceruleum, School of Visual Arts
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Dama Dama Games
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Digital Kingdom Sàrl
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Dunking Dog Games
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Enlightware GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: EverdreamSoft SA
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Fireworks Productions GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: FunPlus International AG
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Furinkazan AG
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Fusion.Robot GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: GameDAO
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: GangoGames GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Hermit Studios KlG
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Hidden Fields GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Hochschule Luzern - Design und Kunst / Digital Ideation
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: IceCrack Games GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: ImbachDEV GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Inlusio
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: KlugGen AG
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: "knit'n'purl game studio LLC"
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Koboldgames GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Les Maîtres du Monde
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Merkas Technologies GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Metaroot
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Michael Nyffenegger Digital Graphics
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: N-Dream
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: NOEZ TeCH GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Okomotive AG
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Phren Sarl
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Pintokyo Games
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Playables GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: SAE Institute Switzerland AG
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Snarp
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Sphaira Innovation AG
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Stelex Software Sagl
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Stray Fawn GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Sycoforge GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Ten Forward GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Tourmaline Studio
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Twokats
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Urban Games GmbH
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."
+  - name: Violet Saint Sàrl
+    country: CH
+    status: unresolved
+    notes: "SGDA member (Swiss Game Developers Association)."

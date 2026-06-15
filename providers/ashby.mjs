@@ -1,10 +1,22 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate, normalizeWorkMode } from './_util.mjs';
+import { toIsoDate, normalizeWorkMode, slugifyTitle } from './_util.mjs';
 
 // Ashby provider — hits the public posting-api endpoint.
 // Auto-detects from careers_url pattern `https://jobs.ashbyhq.com/<slug>`.
+//
+// Some tenants (e.g. Supercell) run Ashby for applications but DISABLE the
+// hosted jobs.ashbyhq.com board, surfacing each role on their own domain
+// instead. The posting-api still works, but j.jobUrl points at the dead board
+// (a 200 SPA shell that renders "Page not found"). For those, set
+// `job_url_template` on the studios.yml entry with {id} and {slug} tokens and we
+// rewrite each posting's URL to the live one. {slug} uses the host's observed
+// title-slug convention (see slugifyTitle in _util.mjs).
+//
+//   - name: Supercell
+//     careers_url: https://jobs.ashbyhq.com/supercell
+//     job_url_template: "https://supercell.com/en/careers/{slug}/{id}/"
 //
 // Ashby's public posting-api carries a ~10s+ server-side latency floor
 // (response time is independent of board size) and rate-limits repeated
@@ -28,6 +40,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** @type {import('./_types.js').Probe} */
 export const probe = {
   namesakeProne: true,
+  canary: 'ramp',      // known-live tenant — proves ashby isn't throttling/blocking us
   endpoints: [{
     kind: 'slug',
     url: (s) => `https://api.ashbyhq.com/posting-api/job-board/${s}`,
@@ -59,6 +72,7 @@ export default {
       try {
         const json = await ctx.fetchJson(apiUrl, { timeoutMs: ASHBY_TIMEOUT_MS });
         const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
+        const tpl = typeof entry.job_url_template === 'string' ? entry.job_url_template.trim() : '';
         return jobs.map((j) => {
           const postedDate = toIsoDate(j.publishedAt);
           const department = (j.department || j.team || '').trim();
@@ -68,9 +82,14 @@ export default {
           // signal available then).
           const workMode = normalizeWorkMode(j.workplaceType)
             || (typeof j.isRemote === 'boolean' ? (j.isRemote ? 'remote' : 'onsite') : '');
+          // job_url_template rewrites the dead-board jobUrl to the studio's own
+          // canonical page; needs both an id and a title, else fall back to jobUrl.
+          const url = (tpl && j.id && j.title)
+            ? tpl.replace(/\{id\}/g, j.id).replace(/\{slug\}/g, slugifyTitle(j.title))
+            : (j.jobUrl || '');
           return {
             title: j.title || '',
-            url: j.jobUrl || '',
+            url,
             company: entry.name,
             location: j.location || '',
             ...(postedDate ? { postedDate } : {}),

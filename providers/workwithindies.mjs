@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate } from './_util.mjs';
+
 // Work With Indies provider — an AGGREGATOR board (like Hitmarker), not a single
 // company. One tracked_companies entry yields jobs across many indie studios.
 // Work With Indies publishes a public RSS feed of every open posting at
@@ -45,6 +47,8 @@ export function parseWorkWithIndiesFeed(xml) {
     const url = decodeEntities(pickTag(block, 'link'));
     const rawTitle = decodeEntities(pickTag(block, 'title'));
     if (!url || !rawTitle) continue;
+    // RFC-2822 pubDate (e.g. "Sat, 13 Jun 2026 00:00:00 GMT") → ISO-8601.
+    const postedDate = toIsoDate(pickTag(block, 'pubDate'));
     const m = rawTitle.match(TITLE_RE);
     if (m) {
       const [, company, role, fromLoc, remote] = m;
@@ -55,11 +59,12 @@ export function parseWorkWithIndiesFeed(xml) {
         // Location stays place-only; remoteness goes to workMode, not the text.
         location: (fromLoc || '').trim(),
         ...(remote ? { workMode: 'remote' } : {}),
+        ...(postedDate ? { postedDate } : {}),
       });
     } else {
       // Fail-safe: keep the posting with the raw title so it can still match
       // the title filter and reach the pipeline.
-      jobs.push({ title: rawTitle, url, company: '', location: '' });
+      jobs.push({ title: rawTitle, url, company: '', location: '', ...(postedDate ? { postedDate } : {}) });
     }
   }
   return jobs;

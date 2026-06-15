@@ -40,6 +40,7 @@ function resolveApiUrl(entry) {
 /** @type {import('./_types.js').Probe} */
 export const probe = {
   namesakeProne: true, // single-word board slugs collide with non-game namesakes
+  canary: 'stripe',    // known-live tenant — proves greenhouse isn't throttling/blocking us
   endpoints: [{
     kind: 'slug',
     url: (s) => `https://boards-api.greenhouse.io/v1/boards/${s}/jobs`,

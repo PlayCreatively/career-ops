@@ -125,13 +125,16 @@
  * @property {('high'|'medium'|'verify')} [confidence]  base tier for a hit (default 'medium')
  * @property {boolean} [namesakeProne]                  downgrade short/generic slug hits to 'verify'
  * @property {(name: string) => string[]} [slugs]       override slug generation (default: name-derived)
- * @property {string} [canary]                          a KNOWN-LIVE slug for this ATS. The probe hits it
- *                                                      on the slug endpoint before each wave; if it stops
- *                                                      returning parseable data the ATS is deemed unhealthy
- *                                                      and ALL its misses are distrusted (treated uncertain,
- *                                                      not clean) — both 404/410s and parse-rejected 2xx
- *                                                      bodies, the disguised-throttle defense. Omit when no
- *                                                      stable live tenant is known (misses stay trusted).
+ * @property {string} [canary]                          a KNOWN-LIVE slug for this ATS, used as a NON-fatal
+ *                                                      preflight before each wave. If the canary returns a
+ *                                                      throttle/error (403/429/5xx/timeout) the ATS is
+ *                                                      disabled for the run (cheap early exit). If it returns
+ *                                                      a clean 404 / unparseable 2xx the canary is only
+ *                                                      flagged STALE (the company may have left the ATS) — it
+ *                                                      never disables, so a rotted canary can't kill a working
+ *                                                      ATS. The real disable trigger is the live 403/429
+ *                                                      signal from probe traffic; the canary just catches it
+ *                                                      earlier. Omit when no stable live tenant is known.
  */
 
 export {};

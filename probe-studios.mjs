@@ -162,7 +162,7 @@ function loadBacklog() {
     if (!c.name || isScannable(c)) continue;
     if (c.recipe?.kind === 'blocked' && !includeBlocked) continue;
     const domain = typeof c.careers_url === 'string' ? registrableDomain(c.careers_url) : '';
-    out.push({ name: c.name, domains: domain ? [domain] : [] });
+    out.push({ name: c.name, domains: domain ? [domain] : [], country: typeof c.country === 'string' ? c.country : '' });
   }
   return out;
 }
@@ -264,12 +264,44 @@ function domainGuesses(name, domains) {
 // runEndpoint via endpoint.kind), since the host we invented just doesn't exist.
 const GET_RETRIES = 2;                 // retry transient/uncertain results within one get()
 const RETRYABLE_STATUS = new Set([403, 429, 500, 502, 503, 504]);
-const throttleHosts = new Map();       // host -> 403/429 count (end-of-run warning)
+const throttleHosts = new Map();       // host -> 403/429 count (live throttle signal — drives auto-disable)
+const retryAfterHosts = new Map();     // host -> max Retry-After seconds seen (how long the ATS asked us to wait)
+const EMPTY_SET = new Set();           // shared immutable default for the `disabled` option
 const uncertainReasons = new Map();    // reason string -> count (aggregate, FINAL uncertain only)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } }
 function bump(map, k) { map.set(k, (map.get(k) || 0) + 1); }
 function sumMap(map) { let n = 0; for (const v of map.values()) n += v; return n; }
+// Retry-After is OPTIONAL (workable hands back ~4h on a 429; breezy's 403s carry
+// nothing) — so it can't be the throttle trigger, only enrichment. Accepts the two
+// HTTP forms: delta-seconds ("120") or an HTTP-date. Returns seconds, or null.
+function parseRetryAfter(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  const d = Date.parse(s);
+  return Number.isNaN(d) ? null : Math.max(0, Math.round((d - Date.now()) / 1000));
+}
+// The stable ATS base domain a provider's SLUG endpoints live on (greenhouse.io,
+// breezy.hr, lever.co, …). Domain endpoints hit the studio's own host, not the ATS,
+// so they're excluded. Lets us tell "this whole ATS is throttling us" apart from
+// "one guessed custom domain 403'd" — even for per-tenant-subdomain ATSes where the
+// host varies per studio ({slug}.breezy.hr).
+function atsDomainOf(p) {
+  for (const e of p.endpoints || []) {
+    if (e.kind !== 'slug') continue;
+    try { return hostOf(e.url('canary-probe')).split('.').slice(-2).join('.'); } catch { /* next */ }
+  }
+  return null;
+}
+// Has this provider's ATS thrown a 403/429 at us this run? PRIMARY, rot-proof
+// throttle signal (no canary needed): returns a sample throttled host, or null.
+function providerThrottled(p) {
+  const dom = atsDomainOf(p);
+  if (!dom) return null;
+  for (const h of throttleHosts.keys()) if (h.split('.').slice(-2).join('.') === dom) return h;
+  return null;
+}
 
 // ── per-host concurrency gate (burst-ban defense) ───────────────────
 // Global CONCURRENCY bounds TOTAL in-flight work, but it's host-blind: with N
@@ -302,7 +334,7 @@ async function withHostLimit(host, fn) {
 }
 
 // Pure: map one fetch outcome to a kind. Exported for testing/reasoning.
-//   { kind: 'notfound' }                    → certain miss (subject to canary distrust)
+//   { kind: 'notfound' }                    → certain miss (distrusted only while the ATS is actively throttling)
 //   { kind: 'data', body }                  → 2xx; let parse() decide hit vs miss
 //   { kind: 'uncertain', reason }           → throttle/5xx/odd-4xx/network/timeout
 //   { kind: 'dnsfail', reason }             → host didn't resolve (ENOTFOUND)
@@ -328,7 +360,11 @@ async function fetchOnce(url, json) {
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(url, { signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0', Accept: json ? 'application/json' : '*/*' } });
-    if (res.status === 403 || res.status === 429) bump(throttleHosts, hostOf(url));
+    if (res.status === 403 || res.status === 429) bump(throttleHosts, hostOf(url)); // clear rate-limit → disable trigger
+    if (res.status === 403 || res.status === 429 || res.status === 503) {           // capture the wait time when offered (any status)
+      const ra = parseRetryAfter(res.headers.get('retry-after'));
+      if (ra != null) { const h = hostOf(url); retryAfterHosts.set(h, Math.max(retryAfterHosts.get(h) || 0, ra)); }
+    }
     const c = classifyStatus(res.status);
     if (c.kind === 'data') {
       const text = await res.text();
@@ -360,7 +396,53 @@ async function get(url, json = true) {
   }
   return last;
 }
-const GENERIC = /^(the|game|games|studio|play|fun|echo|grin|ghost|mirage|upside|overflow|pathos|brimstone|foxglove|carbon|merge|linear|render|sun|moon|core|solid|focus|frontier|niantic)$/;
+// Common-word REVIEW GATE (not a filter): a lone slug that's an everyday English
+// word is high namesake risk — a different company likely owns it on the same ATS.
+// Matching here downgrades a slug hit from MEDIUM to VERIFY, so it surfaces in
+// "NEEDS REVIEW" and stays open instead of being auto-trusted. Fail-safe: a real
+// studio is still shown (one click to confirm), never silently dropped. Extend
+// freely — over-inclusion only adds a review step, it never hides a hit.
+const GENERIC = /^(the|game|games|studio|play|fun|echo|grin|ghost|mirage|upside|overflow|pathos|brimstone|foxglove|carbon|merge|linear|render|sun|moon|core|solid|focus|frontier|niantic|vanilla|vector|parity|radiant|walrus|spherical|evermore|breaker|architect|tiger|bloom|miso|foley|jumpgate|dutch|prism|vertex|nexus|apex|summit|pixel|atlas|orbit|forge|anvil|ember|nova|comet|matrix|cipher|phoenix|titan|aurora|zenith|horizon|catalyst|momentum|velocity|quantum|fusion|element|origin|legacy|vista|spark|pulse|flux|drift|haven|nomad|wander|odyssey|saga|legend|myth|oracle|sage|relic|prime|vital|lucid|prism)$/;
+
+// Rough country inference from a free-text job location. Returns an ISO-2 code or
+// '' when undeterminable (e.g. bare "Remote"). Conservative — fires only on clear
+// place signals — so it can DISPROVE a namesake (hit located in the wrong country)
+// but never falsely confirm one. Used to vet slug hits against the studio's known
+// country (see finalize): a "Vector Interactive" (NL) hit whose only role is in
+// Palo Alto is almost certainly a US namesake on the same ATS.
+const LOC_SIGNALS = [
+  ['US', /\b(usa|united states|u\.s\.|us[- ]?(only|based|remote)|remote\s*[-–,]\s*us|california|\bca\b|new york|\bny\b|texas|\btx\b|washington|seattle|san francisco|bay area|palo alto|oakland|san jose|los angeles|austin|boston|chicago|des moines|atlanta|denver|miami|portland|raleigh|nashville)\b/],
+  ['CA', /\b(canada|toronto|vancouver|montreal|ontario|quebec|alberta)\b/],
+  ['GB', /\b(united kingdom|\buk\b|england|scotland|london|manchester|brighton|guildford|edinburgh|leamington)\b/],
+  ['KR', /\b(korea|seoul)\b/],
+  ['JP', /\b(japan|tokyo|osaka|kyoto)\b/],
+  ['AU', /\b(australia|sydney|melbourne|brisbane)\b/],
+  ['IN', /\b(india|bangalore|bengaluru|mumbai|delhi|rohini|hyderabad|pune|gurgaon|noida)\b/],
+  ['SG', /\b(singapore)\b/],
+  ['BR', /\b(brazil|brasil|s[ãa]o paulo|rio de janeiro)\b/],
+  ['NL', /\b(netherlands|nederland|amsterdam|rotterdam|eindhoven|utrecht|the hague|den haag|hilversum|breda)\b/],
+  ['SE', /\b(sweden|sverige|stockholm|gothenburg|g[öo]teborg|malm[öo]|sk[öo]vde|ume[åa]|link[öo]ping|karlshamn)\b/],
+  ['CH', /\b(switzerland|schweiz|suisse|svizzera|z[üu]rich|geneva|gen[èe]ve|lausanne|bern|basel|lugano|zug)\b/],
+  ['IS', /\b(iceland|[íi]sland|reykjav[íi]k|kópavogur|akureyri)\b/],
+  ['DE', /\b(germany|deutschland|berlin|munich|m[üu]nchen|hamburg|cologne|k[öo]ln|frankfurt)\b/],
+  ['FR', /\b(france|paris|lyon|bordeaux|montpellier|toulouse)\b/],
+  ['FI', /\b(finland|helsinki|tampere|espoo)\b/],
+  ['NO', /\b(norway|norge|oslo|bergen)\b/],
+  ['DK', /\b(denmark|danmark|copenhagen|k[øo]benhavn|aarhus)\b/],
+  ['PL', /\b(poland|polska|warsaw|warszawa|krak[óo]w|wroc[łl]aw)\b/],
+];
+function inferCountry(loc) {
+  const l = String(loc || '').toLowerCase();
+  for (const [code, re] of LOC_SIGNALS) if (re.test(l)) return code;
+  return '';
+}
+// Does a hit's location CONTRADICT the studio's known country? Only true when both
+// are determinable and differ — "Remote"/unknown never contradicts (can't disprove).
+function locContradicts(country, loc) {
+  if (!country || !loc) return false;
+  const hitC = inferCountry(loc);
+  return !!hitC && hitC !== country.toUpperCase();
+}
 
 // ── Provider-driven probe descriptors ───────────────────────────────
 // The set of ATSes to probe is NOT hardcoded here — it is auto-loaded from
@@ -393,23 +475,45 @@ function tierFor(p, endpoint, key) {
   return p.confidence || 'medium';
 }
 
-// Canary check (404-as-throttle defense). For each provider that declares a
-// `canary` (a known-live slug), hit it on the provider's slug endpoint; if it
-// does NOT return parseable data, that ATS is currently unhealthy and its 404s
-// must be DISTRUSTED for this wave. Returns { untrusted:Set<id>, checked:[[id,state]] }.
+// Canary preflight (NON-fatal early-warning, not a kill switch). For each provider
+// that declares a `canary` (a known-live slug), hit it on the slug endpoint:
+//   • throttle/error status (403/429/5xx/timeout/network)  → DISABLE this ATS for
+//     the run. A live company still errors when the ATS rate-limits us, so this is
+//     a real throttle, never canary-rot.
+//   • valid 2xx (parseable body)                           → healthy ('ok').
+//   • clean 404, or a 2xx whose body won't parse (disguised) → the canary may be
+//     STALE: the company likely left this ATS. We do NOT disable on this — disabling
+//     is driven by the live 403/429 signal — we only WARN so the slug can be
+//     refreshed. This keeps a discontinued canary from silently killing a working ATS.
+// `data != null` (not parse()) is the liveness test, so a real tenant with 0 open
+// roles still reads as healthy (an empty board ≠ a stale canary).
+// Returns { disabled:Set<id>, stale:Map<id,reason>, checked:[[id,state]] }.
+//
+// Pure classifier (exported for testing) — the rot-safety lives HERE: only a
+// throttle/error disables; a clean 404 or unparseable 2xx is merely 'stale-*'.
+//   'ok'        live 2xx with a parseable body
+//   'stale-404' the canary slug 404'd — the company likely left this ATS → WARN only
+//   'stale-2xx' a 2xx whose body won't parse (disguised) → WARN only
+//   'disabled'  throttle/5xx/timeout/network/dnsfail → drop the ATS for the run
+export function classifyCanary(r) {
+  if (r.kind === 'data') return r.data != null ? 'ok' : 'stale-2xx';
+  if (r.kind === 'notfound') return 'stale-404';
+  return 'disabled';
+}
 async function checkCanaries(providers) {
-  const untrusted = new Set();
+  const disabled = new Set();
+  const stale = new Map();
   const checked = [];
   for (const p of providers) {
     if (!p.canary) continue;
     const ep = p.endpoints.find(e => e.kind === 'slug');
     if (!ep) continue;
-    const r = await get(ep.url(p.canary));
-    const live = r.kind === 'data' && !!ep.parse(r.data);
-    if (!live) untrusted.add(p.id);
-    checked.push([p.id, live ? 'ok' : (r.reason || r.kind)]);
+    const verdict = classifyCanary(await get(ep.url(p.canary)));
+    if (verdict === 'ok') checked.push([p.id, 'ok']);
+    else if (verdict === 'disabled') { disabled.add(p.id); checked.push([p.id, verdict]); }
+    else { stale.set(p.id, verdict); checked.push([p.id, verdict]); }   // stale-404 / stale-2xx → warn only
   }
-  return { untrusted, checked };
+  return { disabled, stale, checked };
 }
 
 // Returns one of:
@@ -417,20 +521,18 @@ async function checkCanaries(providers) {
 //   {type:'miss'}                      — CERTAIN miss (404/410 or parse-rejected 2xx;
 //                                        also a non-resolving guessed custom domain)
 //   {type:'uncertain', reason}         — couldn't confirm OR deny (throttle/5xx/network/
-//                                        or a distrusted 404 on a canary-down ATS)
-async function runEndpoint(p, endpoint, key, untrusted) {
+//                                        or a distrusted 404 while THIS ATS is actively throttling)
+async function runEndpoint(p, endpoint, key) {
   const r = await get(endpoint.url(key));
+  // Disguised-throttle defense, tied to the LIVE signal (not a canary): a 404 or a
+  // parse-rejected 2xx can't be trusted as a real "no tenant" while THIS ATS is
+  // actively throwing 403/429 at us — it may be a WAF challenge masquerading as a
+  // clean answer. Slug endpoints only; domain-sweep guesses stay a miss.
+  const distrust = endpoint.kind !== 'domain' && !!providerThrottled(p);
   if (r.kind === 'data') {
     const hit = endpoint.parse(r.data);
     if (!hit) {
-      // A 2xx body the ATS served that parse() rejects is normally a CERTAIN miss
-      // (dead tenant / empty board / totalFound:0). But if the canary says this ATS
-      // is unhealthy, that "2xx" may be a WAF challenge / interstitial page
-      // masquerading as content — distrust it like a disguised 404 (slug endpoints
-      // only; domain-sweep guesses stay a miss).
-      if (untrusted && untrusted.has(p.id) && endpoint.kind !== 'domain') {
-        return { type: 'uncertain', reason: 'maybe_throttled_2xx' };
-      }
+      if (distrust) return { type: 'uncertain', reason: 'maybe_throttled_2xx' };
       return { type: 'miss' };                    // 2xx the ATS served but no match → certain
     }
     return {
@@ -443,12 +545,7 @@ async function runEndpoint(p, endpoint, key, untrusted) {
     };
   }
   if (r.kind === 'notfound') {
-    // 404-as-throttle: if this ATS's canary is down, a 404 can't be trusted as a
-    // real "no tenant" — requeue it as uncertain. Only for slug endpoints; the
-    // domain sweep guesses hosts so a 404 there is genuinely "not our ATS".
-    if (untrusted && untrusted.has(p.id) && endpoint.kind !== 'domain') {
-      return { type: 'uncertain', reason: 'maybe_throttled_404' };
-    }
+    if (distrust) return { type: 'uncertain', reason: 'maybe_throttled_404' };
     return { type: 'miss' };
   }
   // dnsfail: a custom-domain GUESS that doesn't resolve is a clean miss; on a fixed
@@ -462,9 +559,11 @@ async function runEndpoint(p, endpoint, key, untrusted) {
 
 // Probe one studio. `restrict` (Set<providerId>|null) limits which ATSes to try —
 // used by later waves to re-probe ONLY the ATSes that left this studio uncertain,
-// so the well-behaved ATSes resolved in wave 1 are never re-hit. `untrusted`
-// (Set<providerId>) carries the canary verdict for the 404 distrust above.
-async function probe(entry, tracked, probeProviders, { restrict = null, untrusted = new Set() } = {}) {
+// so the well-behaved ATSes resolved in wave 1 are never re-hit. `disabled`
+// (Set<providerId>) lists ATSes dropped for the whole run (throttling us): we make
+// NO network call for them and leave their ledger cell OPEN (uncertain, never a
+// false miss) so the next run retries them — they're not re-probed this run.
+async function probe(entry, tracked, probeProviders, { restrict = null, disabled = EMPTY_SET } = {}) {
   if (tracked.names.has(norm(entry.name))) return { name: entry.name, skipped: 'already in studios.yml' };
   const providers = restrict ? probeProviders.filter(p => restrict.has(p.id)) : probeProviders;
   // Track ATSes we could NOT confirm/deny for THIS studio (throttle/5xx/network).
@@ -477,13 +576,17 @@ async function probe(entry, tracked, probeProviders, { restrict = null, untruste
   // 1) slug-based ATS. Each provider supplies its own slug set (default = name-
   //    derived) so case-sensitive ATSes (SmartRecruiters) work without special-casing.
   for (const p of providers) {
+    // ATS disabled for this run (throttling us) → leave it OPEN, don't touch the
+    // network. Marked uncertain (so the studio is honestly "unconfirmed") but NOT
+    // added to retryAts, so the wave loop won't re-probe it this run.
+    if (disabled.has(p.id)) { uncertainAts.add(`${p.id}:disabled_throttle`); continue; }
     const slugEndpoints = p.endpoints.filter(e => e.kind === 'slug');
     if (!slugEndpoints.length) continue;
     const slugs = p.slugs ? p.slugs(entry.name) : nameSlugs(entry.name);
     let pUncertain = false;
     for (const slug of slugs) {
       for (const endpoint of slugEndpoints) {
-        const r = await runEndpoint(p, endpoint, slug, untrusted);
+        const r = await runEndpoint(p, endpoint, slug);
         if (r.type === 'hit') return finalize(entry, r, tracked, missedAts);
         if (r.type === 'uncertain') { pUncertain = true; uncertainAts.add(`${endpoint.label || p.id}:${r.reason}`); }
       }
@@ -502,13 +605,13 @@ async function probe(entry, tracked, probeProviders, { restrict = null, untruste
   //    own host (skipped in --quick). When restricting (later waves), only sweep if
   //    a restricted provider actually has a domain endpoint.
   if (!QUICK) {
-    const domainProbes = providers.flatMap(p => p.endpoints.filter(e => e.kind === 'domain').map(e => [p, e]));
+    const domainProbes = providers.filter(p => !disabled.has(p.id)).flatMap(p => p.endpoints.filter(e => e.kind === 'domain').map(e => [p, e]));
     if (domainProbes.length) {
       for (const domain of domainGuesses(entry.name, entry.domains)) {
         for (const prefix of PREFIXES) {
           const host = `${prefix}.${domain}`;
           for (const [p, endpoint] of domainProbes) {
-            const r = await runEndpoint(p, endpoint, host, untrusted);
+            const r = await runEndpoint(p, endpoint, host);
             if (r.type === 'hit') return finalize(entry, r, tracked);
             // domain sweep never yields 'uncertain' (guesses → miss), so nothing to track
           }
@@ -528,6 +631,15 @@ async function probe(entry, tracked, probeProviders, { restrict = null, untruste
 function finalize(entry, hit, tracked, missedAts) {
   const { type, ...rest } = hit; // drop the internal control-flow tag
   if (tracked.hosts.has(hit.where.replace(/^www\./, '').split('/')[0])) return { name: entry.name, skipped: `host ${hit.where} already tracked` };
+  // Namesake vetting: a MEDIUM (name-slug) hit whose only role sits in a country
+  // OTHER than the studio's known country is almost certainly a different company
+  // on the same ATS — downgrade to VERIFY so it lands in NEEDS REVIEW (still shown,
+  // never dropped). Own-domain HIGH hits are exempt (a real studio can post remote
+  // roles abroad); VERIFY stays VERIFY.
+  if (rest.confidence === 'medium' && locContradicts(entry.country, rest.loc)) {
+    rest.confidence = 'verify';
+    rest.namesakeFlag = `loc '${rest.loc}' ≠ ${entry.country}`;
+  }
   return { name: entry.name, ...rest, missedAts: [...(missedAts || [])] };
 }
 
@@ -541,22 +653,52 @@ async function runWaves(pending, tracked, probeProviders, led) {
   const startedAt = Date.now();
   const terminal = [];
   const waveLog = [];
+  const disabled = new Set();       // provider ids dropped for THIS run (throttling/blocking us)
+  const staleCanaries = new Map();  // provider id -> reason (warned once; never disables)
+  // Disable a provider for the rest of the run, logging it once. Its open ledger
+  // cells are left untouched, so the NEXT run retries them — no `blocked_until`
+  // file needed (probing is infrequent; the limit has lifted by next time).
+  const disableProvider = (id, why) => {
+    if (disabled.has(id)) return;
+    disabled.add(id);
+    process.stderr.write(`  ⏭️  ${id}: ${why} — disabled for THIS run; its cells stay OPEN (next run retries them).\n`);
+  };
   let conc = CONCURRENCY;
   let pass = 0;
   while (pending.length) {
     pass++;
-    // Which providers are in play this wave (for the canary check)?
-    const inPlay = probeProviders.filter(p => pending.some(x => !x.restrict || x.restrict.has(p.id)));
-    const { untrusted, checked } = await checkCanaries(inPlay);
+    // Canary preflight on the providers still in play: a throttling canary disables
+    // its ATS early (cheap); a stale (404) canary only warns — it never disables, so
+    // a discontinued canary company can't silently kill a working ATS.
+    const inPlay = probeProviders.filter(p => !disabled.has(p.id) && pending.some(x => !x.restrict || x.restrict.has(p.id)));
+    const { disabled: canaryDown, stale, checked } = await checkCanaries(inPlay);
+    for (const id of canaryDown) disableProvider(id, `canary signals throttle/block (${checked.find(c => c[0] === id)?.[1]})`);
+    for (const [id, why] of stale) if (!staleCanaries.has(id)) {
+      staleCanaries.set(id, why);
+      const slug = probeProviders.find(p => p.id === id)?.canary;
+      process.stderr.write(`  ⚠️  ${id}: canary '${slug}' returned ${why} — may be discontinued. NOT disabling (live 403/429 still guards it); refresh its canary slug.\n`);
+    }
     const throttleBefore = sumMap(throttleHosts);
     const passResults = await runPool(pending,
-      x => probe(x.entry, tracked, probeProviders, { restrict: x.restrict, untrusted }), conc);
+      x => probe(x.entry, tracked, probeProviders, { restrict: x.restrict, disabled }), conc);
     const throttleDelta = sumMap(throttleHosts) - throttleBefore;
+    // PRIMARY, rot-proof auto-disable: any provider whose ATS host threw 403/429 this
+    // run is rate-limiting us → drop it for the remaining waves (no canary needed).
+    for (const p of probeProviders) {
+      if (disabled.has(p.id)) continue;
+      const h = providerThrottled(p);
+      if (h) { const ra = retryAfterHosts.get(h); disableProvider(p.id, `${h} returned 403/429${ra != null ? ` (Retry-After ~${ra}s)` : ''}`); }
+    }
     const next = [];
     for (let k = 0; k < passResults.length; k++) {
       const r = passResults[k];
-      if (r.ats || r.skipped || !r.uncertain) terminal.push(r); // hit / skip / clean miss = terminal
-      else next.push({ entry: pending[k].entry, restrict: new Set(r.retryAts), lastUncertain: r.uncertain });
+      if (r.ats || r.skipped) { terminal.push(r); continue; }   // hit / skip = terminal
+      // ATSes worth retrying = those uncertain this pass MINUS any now disabled. If
+      // nothing probeable is left, the studio is terminal: uncertain if anything was
+      // unconfirmed (incl. a disabled ATS), else a clean miss.
+      const retry = r.retryAts ? new Set(r.retryAts.filter(id => !disabled.has(id))) : new Set();
+      if (retry.size === 0) terminal.push(r);
+      else next.push({ entry: pending[k].entry, restrict: retry, lastUncertain: r.uncertain });
     }
     // Persist progress EVERY wave (not just at the end) so a long / no-timeout run
     // that's interrupted still keeps the ATSes it cleared. mergeLedger unions, so
@@ -569,16 +711,17 @@ async function runWaves(pending, tracked, probeProviders, led) {
       writeLedger(led);
     }
     const prevRemaining = pending.length;
-    waveLog.push({ pass, conc, in: prevRemaining, resolved: prevRemaining - next.length, remaining: next.length, throttleDelta, untrusted: [...untrusted], canaries: checked });
+    waveLog.push({ pass, conc, in: prevRemaining, resolved: prevRemaining - next.length, remaining: next.length, throttleDelta, disabled: [...disabled], canaries: checked });
     pending = next;
     if (!pending.length) break; // EXHAUSTIVELY finished — every studio reached a terminal state
 
     const elapsed = Date.now() - startedAt;
-    const stillStruggling = throttleDelta > 0 || untrusted.size > 0;
+    const stillStruggling = throttleDelta > 0;
     const noProgress = pending.length >= prevRemaining;
     // Stop conditions: pass/patience cap, OR genuinely stuck with no throttle in
-    // sight (persistent network failure — retrying won't help). A canary-down /
-    // throttling host keeps us looping (cooling) until a cap, per design.
+    // sight (persistent network failure — retrying won't help). A throttling ATS is
+    // now auto-disabled (above), so it no longer keeps us looping — the remaining
+    // uncertain are transient 5xx/network worth a cooldown.
     if (pass >= MAX_PASSES || elapsed >= PATIENCE_MS || (noProgress && !stillStruggling)) {
       for (const x of pending) {
         for (const u of x.lastUncertain) bump(uncertainReasons, u);
@@ -591,10 +734,10 @@ async function runWaves(pending, tracked, probeProviders, led) {
     }
     conc = Math.max(2, Math.floor(conc / 2));
     const cool = BASE_COOLDOWN_S * (stillStruggling ? pass : 1);
-    process.stderr.write(`  wave ${pass}: ${next.length} uncertain remain${stillStruggling ? ` (throttle/canary active)` : ''} — cooling ${cool}s, re-probing at concurrency ${conc}...\n`);
+    process.stderr.write(`  wave ${pass}: ${next.length} uncertain remain${stillStruggling ? ` (throttle active)` : ''} — cooling ${cool}s, re-probing at concurrency ${conc}...\n`);
     await sleep(cool * 1000);
   }
-  return { results: terminal, passes: pass, waveLog };
+  return { results: terminal, passes: pass, waveLog, disabled, staleCanaries };
 }
 
 // ── input loading ───────────────────────────────────────────────────
@@ -678,7 +821,7 @@ async function main() {
   const capNote = NO_TIMEOUT ? 'no-timeout (until exhaustive)' : `up to ${MAX_PASSES} waves, patience ${PATIENCE_MS / 60000}m`;
   process.stderr.write(`Probing ${pending.length} studios (${QUICK ? 'quick' : 'full'}) across ${probeProviders.length} ATS providers (${probeProviders.map(p => p.id).join(', ')}); ${tracked.names.size} scannable + ${ledgerSkipped} ledger-cleared, skipped. ${capNote}${canaryNote.length ? `, canary: ${canaryNote.join(',')}` : ''}.\n`);
 
-  const { results, passes, waveLog } = await runWaves(pending, tracked, probeProviders, led);
+  const { results, passes, waveLog, disabled, staleCanaries } = await runWaves(pending, tracked, probeProviders, led);
 
   const hits = results.filter(r => r.ats);
   const skipped = results.filter(r => r.skipped);
@@ -691,12 +834,15 @@ async function main() {
   // that carry namesake risk — the latter must be human-verified before they count.
   const trustedHits = hits.filter(h => h.confidence !== 'verify');
   const reviewHits = hits.filter(h => h.confidence === 'verify');
-  const fmtHit = (h) => `  [${h.confidence.toUpperCase().padEnd(6)}] ${h.name.padEnd(28)} ${h.ats.padEnd(15)} ${h.where}  (${h.count} jobs${h.loc ? ', e.g. ' + h.loc : ''})`;
+  const fmtHit = (h) => `  [${h.confidence.toUpperCase().padEnd(6)}] ${h.name.padEnd(28)} ${h.ats.padEnd(15)} ${h.where}  (${h.count} jobs${h.loc ? ', e.g. ' + h.loc : ''})${h.namesakeFlag ? `  ⚑ ${h.namesakeFlag}` : ''}`;
   const reasonAgg = [...uncertainReasons].sort((a, b) => b[1] - a[1]);
   if (JSON_OUT) {
     console.log(JSON.stringify({
       hits, trustedHits, reviewHits, uncertain,
       throttled: Object.fromEntries(throttleHosts),
+      retryAfter: Object.fromEntries(retryAfterHosts),
+      disabledProviders: [...disabled],
+      staleCanaries: Object.fromEntries(staleCanaries),
       uncertainReasons: Object.fromEntries(reasonAgg),
       skippedCount: skipped.length, ledgerSkipped, cleanMisses, total: names.length,
       passes, waves: waveLog, scanVersion: SCAN_VERSION,
@@ -710,7 +856,7 @@ async function main() {
     }
     console.log(`\nSkipped ${skipped.length} already-tracked · ${ledgerSkipped} ledger-cleared (scan v${SCAN_VERSION}) · ${cleanMisses} confirmed no-feed (404/empty) · ${passes} wave(s).`);
     if (uncertain.length) {
-      console.log(`\n⚠️  UNCERTAIN (${uncertain.length}) — could NOT confirm or deny after ${passes} adaptive wave(s) (throttle / 5xx / network / canary-distrusted 404 or 2xx). "No feed" is NOT proven here.`);
+      console.log(`\n⚠️  UNCERTAIN (${uncertain.length}) — could NOT confirm or deny after ${passes} adaptive wave(s) (throttle / 5xx / network / disabled ATS). "No feed" is NOT proven here.`);
       console.log(`   Re-probe just these ATSes slower:  node probe-studios.mjs --backlog --ats <id> --concurrency 2`);
       for (const u of uncertain.slice(0, 40)) console.log(`     ? ${u.name.padEnd(30)} (${u.uncertain.join(', ')})`);
       if (uncertain.length > 40) console.log(`     … and ${uncertain.length - 40} more`);
@@ -718,8 +864,14 @@ async function main() {
     if (reasonAgg.length) {
       console.log(`\n   Uncertainty by ATS:reason: ${reasonAgg.map(([r, n]) => `${r}=${n}`).join(', ')}`);
     }
+    if (disabled.size) {
+      console.log(`\n⏭️  ATSes auto-disabled this run (throttling/blocking us): ${[...disabled].join(', ')}. Their cells were left OPEN — re-run later (no flag needed) and they'll be retried.`);
+    }
+    if (staleCanaries.size) {
+      console.log(`   ⚠️  Stale canaries (refresh the slug in providers/<id>.mjs): ${[...staleCanaries].map(([id, why]) => `${id} (${why})`).join(', ')}`);
+    }
     if (throttleHosts.size) {
-      console.log(`   Throttle (403/429) by host: ${[...throttleHosts].map(([h, n]) => `${h}=${n}`).join(', ')}`);
+      console.log(`   Throttle (403/429) by host: ${[...throttleHosts].map(([h, n]) => `${h}=${n}${retryAfterHosts.has(h) ? ` ~${retryAfterHosts.get(h)}s` : ''}`).join(', ')}`);
     }
     console.log('\nHIGH = own-domain match (trust). MEDIUM = name-specific slug. VERIFY = generic slug (namesake risk — check the location).');
   }
@@ -729,5 +881,5 @@ const isMain = process.argv[1] && pathToFileURL(process.argv[1]).href === import
 if (isMain) await main();
 
 // Exported for unit tests (importing this module does NOT run the probe).
-export { classifyStatus as _classifyStatus, classifyError as _classifyError, runEndpoint, probe, checkCanaries, tierFor, nameSlugs, norm, SCAN_VERSION, withHostLimit as _withHostLimit };
+export { classifyStatus as _classifyStatus, classifyError as _classifyError, runEndpoint, probe, checkCanaries, tierFor, nameSlugs, norm, SCAN_VERSION, withHostLimit as _withHostLimit, inferCountry, locContradicts };
 // loadLedger / ledgerOpen / mergeLedger are exported at their definitions above.

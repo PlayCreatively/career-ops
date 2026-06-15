@@ -239,13 +239,34 @@ function filterRegexes(f) {
   return f._res;
 }
 
-/** True if any of a filter's keywords matches `text`. */
+// Compile a filter's `unless` guard into RegExps once, cached as `_unlessRes`.
+// `unless` is a condition that sits on TOP of every keyword in the filter: when
+// any guard keyword also hits the same field text, the whole filter is voided
+// (counts as no match). Same keyword syntax as `keywords` (word-stem or /regex/).
+// Lets a region exclude ("Poland", weight 0) NOT apply to a remote posting
+// ("Poland, Remote") via `unless: [Remote, Anywhere]` — no regex gymnastics.
+function unlessRegexes(f) {
+  if (!f._unlessRes) f._unlessRes = (f.unless || []).map(keyToRegExp).filter(Boolean);
+  return f._unlessRes;
+}
+
+/**
+ * True if any of a filter's keywords matches `text` AND no `unless` guard does.
+ * The guard is checked only after a keyword hit, so a filter without `unless`
+ * (the common case) behaves exactly as before.
+ */
 export function filterMatches(text, f) {
+  let hit = false;
   for (const re of filterRegexes(f)) {
     if (re.global) re.lastIndex = 0;
-    if (re.test(text)) return true;
+    if (re.test(text)) { hit = true; break; }
   }
-  return false;
+  if (!hit) return false;
+  for (const re of unlessRegexes(f)) {
+    if (re.global) re.lastIndex = 0;
+    if (re.test(text)) return false;
+  }
+  return true;
 }
 
 /**
