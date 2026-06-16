@@ -1610,6 +1610,89 @@ try {
   fail(`remote-game-jobs provider tests crashed: ${e.message}`);
 }
 
+// ── Provider — games-jobs-direct ────────────────────────────────
+
+console.log('\n17b. Provider — games-jobs-direct');
+
+try {
+  const gjd = (await import(pathToFileURL(join(ROOT, 'providers/gamesjobsdirect.mjs')).href)).default;
+  const { parseGamesJobsDirectPage } = await import(pathToFileURL(join(ROOT, 'providers/gamesjobsdirect.mjs')).href);
+
+  if (gjd.id === 'games-jobs-direct') pass('games-jobs-direct.id is "games-jobs-direct"');
+  else fail(`games-jobs-direct.id is ${JSON.stringify(gjd.id)}`);
+
+  const hit = gjd.detect({ careers_url: 'https://www.gamesjobsdirect.com/' });
+  if (hit && hit.url === 'https://www.gamesjobsdirect.com/all-jobs') {
+    pass('games-jobs-direct.detect() claims gamesjobsdirect.com careers URLs');
+  } else {
+    fail(`games-jobs-direct.detect() returned ${JSON.stringify(hit)}`);
+  }
+
+  if (
+    gjd.detect({ careers_url: 'https://boards.greenhouse.io/x' }) === null &&
+    gjd.detect({ careers_url: 'https://evil-gamesjobsdirect.com' }) === null &&
+    gjd.detect({ careers_url: 'https://evil.example/gamesjobsdirect.com/jobs' }) === null &&
+    gjd.detect({ careers_url: null }) === null
+  ) {
+    pass('games-jobs-direct.detect() rejects lookalike hosts, path-spoofs, and non-string URLs');
+  } else {
+    fail('games-jobs-direct.detect() must reject spoofed/invalid careers URLs');
+  }
+
+  // Two cards: one remote (globe tooltip) + sector/date, one onsite with a
+  // non-work-mode tooltip (la-user "Junior") that must NOT become a workMode,
+  // plus a malformed card with no job-title link that must be skipped.
+  const sampleHtml = `
+    <ul class="job-list-container">
+    <li class="list-group-item job-list featured"><div class="row"><div class="col-sm-9">
+      <p><a href="/job/keen-games/sales-and-ecommerce-manager/341414" class="job-title" title="Sales &amp; E-commerce Manager">Sales &amp; E-commerce Manager</a><span class="label job-status">New</span></p>
+      <p class="job-info"><span class="job-location">Frankfurt am Main</span><span class="job-salary">N/A</span><span class="job-company">Keen Games</span><span class="job-sector"> Marketing</span></p>
+      <p class="job-posteddate">Posted - 07 May 2026</p>
+      <div class="margin-t-2"><ul class="list-inline"><li><i class="la la-globe" title="" data-toggle="tooltip" data-original-title="Remote"></i></li></ul></div>
+    </div></li>
+    <li class="list-group-item job-list "><div class="row"><div class="col-sm-9">
+      <p><a href="/job/atra/3d-artist/342000" class="job-title" title="3D Artist">3D Artist</a></p>
+      <p class="job-info"><span class="job-location">Romania</span><span class="job-company">ATRA</span><span class="job-sector"> Art</span></p>
+      <p class="job-posteddate">Posted - 12 Jun 2026</p>
+      <div class="margin-t-2"><ul class="list-inline"><li><i class="la la-user" title="" data-toggle="tooltip" data-original-title="Junior"></i></li></ul></div>
+    </div></li>
+    <li class="list-group-item job-list "><div class="row"><div class="col-sm-9">
+      <p>No job-title link here</p>
+    </div></li>
+    </ul>`;
+  const jobs = parseGamesJobsDirectPage(sampleHtml);
+  if (jobs.length === 2) pass('parseGamesJobsDirectPage keeps cards with a job-title link, skips malformed');
+  else fail(`parseGamesJobsDirectPage returned ${jobs.length} jobs (expected 2)`);
+
+  if (
+    jobs[0]?.title === 'Sales & E-commerce Manager' &&
+    jobs[0]?.url === 'https://www.gamesjobsdirect.com/job/keen-games/sales-and-ecommerce-manager/341414' &&
+    jobs[0]?.company === 'Keen Games' &&
+    jobs[0]?.location === 'Frankfurt am Main' &&
+    jobs[0]?.department === 'Marketing' &&
+    jobs[0]?.workMode === 'remote' &&
+    jobs[0]?.postedDate === '2026-05-07T00:00:00.000Z'
+  ) {
+    pass('parseGamesJobsDirectPage extracts title/url/company/location/sector/date/workMode + decodes entities');
+  } else {
+    fail(`row 0 = ${JSON.stringify(jobs[0])}`);
+  }
+
+  if (jobs[1]?.workMode === undefined && jobs[1]?.title === '3D Artist') {
+    pass('parseGamesJobsDirectPage ignores non-globe tooltips (job-level icon ≠ workMode)');
+  } else {
+    fail(`row 1 = ${JSON.stringify(jobs[1])}`);
+  }
+
+  if (parseGamesJobsDirectPage(null).length === 0 && parseGamesJobsDirectPage('').length === 0) {
+    pass('parseGamesJobsDirectPage handles null/empty input without crashing');
+  } else {
+    fail('parseGamesJobsDirectPage should yield empty result for null/empty input');
+  }
+} catch (e) {
+  fail(`games-jobs-direct provider tests crashed: ${e.message}`);
+}
+
 // ── Provider `probe` descriptor contract (probe-studios auto-discovery) ──
 
 console.log('\n18. Provider probe descriptors');

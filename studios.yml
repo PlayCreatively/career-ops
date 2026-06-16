@@ -85,6 +85,13 @@ tracked_companies:
     notes: "Remote-only games board. All postings remote. RSS-backed. See providers/remotegamejobs.mjs."
     enabled: true
 
+  - name: Games Jobs Direct
+    provider: games-jobs-direct
+    # Server-rendered ASP.NET board (no feed/API) — we walk /all-jobs?page=N and
+    # parse the HTML cards. ~290 pages × 10 = ~2,900 postings; set `pages:` to cap.
+    notes: "Whole-industry games board (UK/EU-heavy). HTML-scraped. See providers/gamesjobsdirect.mjs."
+    enabled: true
+
   # ── Studios on Breezy HR ──────────────────────────────────────────
   # Per-company ATS (like greenhouse/lever): one entry per studio. Tenants live
   # at {slug}.breezy.hr and auto-detect from careers_url; the public feed is

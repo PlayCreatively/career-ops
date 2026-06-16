@@ -73,13 +73,15 @@
 #   2. Title/company/location, aggregator-gated — an aggregator row (Hitmarker /
 #      WorkWithIndies) is dropped ONLY when a direct (non-aggregator) posting for
 #      the same role also exists. Two distinct direct reqs are never merged.
-# Defaults: enabled, aggregators = ["hitmarker.net", "workwithindies.com"].
-# Personal pipeline unaffected.
+# Defaults: enabled, aggregators = ["hitmarker.net", "workwithindies.com",
+# "remotegamejobs.com", "gamesjobsdirect.com"]. Personal pipeline unaffected.
 # snapshot_dedup:
 #   enabled: true
 #   aggregators:
 #     - "hitmarker.net"
 #     - "workwithindies.com"
+#     - "remotegamejobs.com"
+#     - "gamesjobsdirect.com"
 
 # -- Title filter --
 # The scanner uses these keywords to decide if a title is relevant.
