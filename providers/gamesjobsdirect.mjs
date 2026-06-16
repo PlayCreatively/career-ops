@@ -33,6 +33,19 @@ const MAX_PAGES = 400;        // hard cap (~4000 jobs) so a layout change can't 
 
 function decodeEntities(s) {
   return String(s == null ? '' : s)
+    // Numeric character references first — this board emits CJK (and other
+    // non-Latin) text as decimal/hex entities, e.g. a bilingual title like
+    // "3D Environment Trainee&#19977;&#32500;…". Decode them to real characters
+    // so they don't leak through as raw `&#NNN;` codes. fromCodePoint can throw
+    // on out-of-range values, so guard and drop anything invalid.
+    .replace(/&#(\d+);/g, (m, dec) => {
+      const cp = Number(dec);
+      try { return String.fromCodePoint(cp); } catch { return ''; }
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, hex) => {
+      const cp = parseInt(hex, 16);
+      try { return String.fromCodePoint(cp); } catch { return ''; }
+    })
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
