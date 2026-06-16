@@ -83,13 +83,13 @@ jobs:
         run: node project-targeting.mjs targeting.default.yml site/data/targeting.json
 
       - name: Upload Pages artifact (only the board, not the repo)
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
       - name: Deploy to GitHub Pages
         id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       - name: Sync departed-ATS alert issue
         # Reflects the freshly-published health.json into a single GitHub issue:
