@@ -509,6 +509,37 @@ try {
 } catch (e) {
   fail(`always_allow tests crashed: ${e.message}`);
 }
+
+// ── 11b. Aggregator employer blocklist (buildCompanyBlocklist) ──────
+console.log('\n11b. Aggregator employer blocklist');
+try {
+  const { buildCompanyBlocklist } = await import(pathToFileURL(join(ROOT, 'scan.mjs')).href);
+
+  const isBlocked = buildCompanyBlocklist(['ByteDance', 'NVIDIA', 'JustPlay GmbH']);
+  // Exact, case-insensitive match
+  if (isBlocked('ByteDance') && isBlocked('bytedance') && isBlocked('  NVIDIA ')) {
+    pass('blocks listed employers case-insensitively (and trims)');
+  } else {
+    fail('listed employers should be blocked case-insensitively');
+  }
+  // Exact-only: must NOT stem/substring-match a real studio (Tencent, "ByteDance Games Studio")
+  if (!isBlocked('Tencent') && !isBlocked('ByteDance Games Studio') && !isBlocked('NVIDIA Lightspeed Studios')) {
+    pass('exact match only — never collateral-blocks a differently-named studio');
+  } else {
+    fail('blocklist must be exact, not a stem/substring match');
+  }
+  // Fail-safe: empty / invalid / absent list blocks nothing; empty company never blocked
+  const none = buildCompanyBlocklist(undefined);
+  const noneArr = buildCompanyBlocklist([null, 42, '  ', '']);
+  if (!none('ByteDance') && !noneArr('ByteDance') && !isBlocked('') && !isBlocked(null)) {
+    pass('fail-safe: empty/invalid list blocks nothing; empty company is never blocked');
+  } else {
+    fail('empty/invalid blocklist or empty company should block nothing');
+  }
+} catch (e) {
+  fail(`company blocklist tests crashed: ${e.message}`);
+}
+
 // ── 12. FOLLOW-UP CADENCE LOGIC ─────────────────────────────────
 
 console.log('\n12. Follow-up cadence logic');
@@ -1688,6 +1719,29 @@ try {
     pass('parseGamesJobsDirectPage handles null/empty input without crashing');
   } else {
     fail('parseGamesJobsDirectPage should yield empty result for null/empty input');
+  }
+
+  // exclude_sectors blocklist — whole-industry board sector filter.
+  const { buildSectorFilter } = await import(pathToFileURL(join(ROOT, 'providers/gamesjobsdirect.mjs')).href);
+
+  if (buildSectorFilter(undefined) === null && buildSectorFilter([]) === null && buildSectorFilter(['', '  ', 42]) === null) {
+    pass('buildSectorFilter returns null when nothing valid is configured (no filtering)');
+  } else {
+    fail('buildSectorFilter should return null for empty/invalid config');
+  }
+
+  const filt = buildSectorFilter(['Gambling', '  web development  ']);
+  if (
+    filt &&
+    filt({ department: 'Gambling' }) === false &&        // exact block
+    filt({ department: 'WEB DEVELOPMENT' }) === false && // case-insensitive + trimmed config
+    filt({ department: 'Programming' }) === true &&      // unblocked sector kept
+    filt({ department: '' }) === true &&                 // fail-safe: missing sector kept
+    filt({}) === true                                    // fail-safe: no department field kept
+  ) {
+    pass('buildSectorFilter blocks listed sectors case-insensitively and keeps cards with no parsed sector (fail-safe)');
+  } else {
+    fail('buildSectorFilter blocklist/fail-safe behavior is wrong');
   }
 } catch (e) {
   fail(`games-jobs-direct provider tests crashed: ${e.message}`);

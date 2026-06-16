@@ -18,6 +18,24 @@ import { toIsoDate, normalizeWorkMode } from './_util.mjs';
 //   - name: Games Jobs Direct
 //     provider: games-jobs-direct
 //     pages: 300        # optional — cap the pages walked (default: walk all)
+//     exclude_sectors:  # optional — drop these board sectors (case-insensitive)
+//       - Finance
+//       - HR
+//       - Legal
+//
+// Because this is a *whole-industry* board, its `/all-jobs` listing mixes
+// game-craft roles (Programming, Art, Animation, Design, Audio, Production, QA…)
+// with business/back-office functions (Finance, HR, Legal, Sales, Marketing, PR,
+// Administration, Operations, Customer Services) and the Gambling sector. Title
+// keyword filters in scan.mjs don't reliably catch these (a "Senior Finance
+// Manager" carries no negative keyword), so the board leaks non-craft postings.
+// `exclude_sectors` filters on the board's own sector taxonomy — the most
+// reliable signal — and is fail-safe: a card whose sector didn't parse is NEVER
+// dropped (we'd rather pass a stray than silently swallow a real role). The board
+// sectors are: Administration, Animation, Art, Audio, Customer Services, Design,
+// Education, eSports, Finance, Gambling, HR, Journalism & Copywriting, Legal,
+// Localisation, Marketing, Operations, PR, Production, Programming, QA, Sales,
+// VR and AI, Web Development.
 //
 // Each card is a `<li class="list-group-item job-list ...">` with a
 // `<a class="job-title">` (href + clean title attr) plus `.job-company`,
@@ -60,6 +78,27 @@ function pickField(block, tag, cls) {
   const m = block.match(new RegExp(`<${tag}[^>]*class="${cls}"[^>]*>([\\s\\S]*?)</${tag}>`));
   if (!m) return '';
   return decodeEntities(m[1].replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
+}
+
+// Build a case-insensitive sector-blocklist predicate from an entry's
+// `exclude_sectors` config. Returns null when nothing is configured (caller
+// skips filtering entirely). Non-string / empty entries are ignored so a stray
+// list item can't accidentally void the whole filter.
+export function buildSectorFilter(excludeSectors) {
+  if (!Array.isArray(excludeSectors)) return null;
+  const blocked = new Set(
+    excludeSectors
+      .filter((s) => typeof s === 'string')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  if (blocked.size === 0) return null;
+  // Fail-safe: a job with no parsed department is KEPT — we only drop a posting
+  // when its sector is present AND explicitly blocked.
+  return (job) => {
+    const dept = (job.department || '').trim().toLowerCase();
+    return dept === '' || !blocked.has(dept);
+  };
 }
 
 export function parseGamesJobsDirectPage(html) {
@@ -124,6 +163,9 @@ export default {
     const requested = Number.isInteger(entry.pages) && entry.pages > 0 ? entry.pages : MAX_PAGES;
     const pages = Math.min(requested, MAX_PAGES);
 
+    // Optional sector blocklist (whole-industry board → drop non-craft sectors).
+    const sectorFilter = buildSectorFilter(entry.exclude_sectors);
+
     const jobs = [];
     const seen = new Set();
     for (let page = 1; page <= pages; page++) {
@@ -135,9 +177,11 @@ export default {
       if (batch.length === 0) break;
       for (const job of batch) {
         // The sliding pagination can repeat a card across page boundaries; dedupe
-        // within the fetch so the snapshot doesn't double-count.
+        // within the fetch so the snapshot doesn't double-count. Dedup runs before
+        // the sector gate so a blocked card never silently masks a later keeper.
         if (seen.has(job.url)) continue;
         seen.add(job.url);
+        if (sectorFilter && !sectorFilter(job)) continue;
         jobs.push(job);
       }
     }

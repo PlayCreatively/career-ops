@@ -39,6 +39,31 @@
 #
 # Tokenless dedup before adding anything: `node track-check.mjs "Name" [--url domain]`.
 
+# ── Aggregator employer blocklist ─────────────────────────────────────
+# The aggregator boards below (Hitmarker, Work With Indies, Games Jobs Direct,
+# Remote Game Jobs) are whole-industry feeds, so a few non-game employers leak in
+# with hundreds of non-game corporate roles. scan.mjs drops these at ingest —
+# before the snapshot and independent of personal targeting, so it holds on the
+# public board too (which scans with --no-filter). Match is EXACT + case-
+# insensitive on the posting's company name, and only applies to aggregator-host
+# jobs (a curated studio feed is never affected).
+#
+# RULE: list a company here ONLY if ~100% of its postings are non-game. A mixed
+# employer that also posts real game roles (e.g. Tencent, Keywords Studios) must
+# NOT be listed — the title/role filter handles its noise instead. Each name
+# below was verified against its actual live postings.
+exclude_companies:
+  - ByteDance              # cloud infra / AI-LLM research / sales — 0 game roles
+  - Netflix Game Studio    # whole Netflix corporate careers (marketing/HR/post) leaking
+  - NVIDIA                 # silicon / chip verification / hardware — 0 game roles
+  - Aristocrat             # gambling / slot machines (casino), not video games
+  - Logitech               # gaming hardware / peripherals
+  - Corsair                # gaming hardware / peripherals
+  - Razer                  # gaming hardware / peripherals
+  - Skillz                 # cash-tournament / betting platform
+  - JustPlay GmbH          # reward-app (play-for-rewards), not a games studio
+  - War Child UK           # charity (gaming-fundraising partnerships)
+
 tracked_companies:
 
   # ── Hitmarker — aggregated games / esports board ──────────────────
@@ -91,6 +116,29 @@ tracked_companies:
     # parse the HTML cards. ~290 pages × 10 = ~2,900 postings; set `pages:` to cap.
     notes: "Whole-industry games board (UK/EU-heavy). HTML-scraped. See providers/gamesjobsdirect.mjs."
     enabled: true
+    # This is a WHOLE-INDUSTRY board, so its sectors mix game-craft roles with
+    # truly non-game ones. We drop the sectors that aren't games work at all.
+    # Fail-safe: a card whose sector didn't parse is never dropped. Full taxonomy
+    # is documented in providers/gamesjobsdirect.mjs.
+    exclude_sectors:
+      - Gambling                   # casino/slots (e.g. Aristocrat), not games
+      - Web Development            # general web work, not game dev
+      - VR and AI                  # generic AI/VR research roles
+      - Journalism & Copywriting   # games media, not making games
+      - eSports                    # competition/league ops, not dev
+      - Education                  # teaching/academia
+      # ── Business & back-office roles ───────────────────────────────────
+      # Kept ON by default: these ARE game-industry jobs (Finance/HR/etc. at
+      # game studios). Uncomment this block to drop them and keep only craft.
+      # - Finance
+      # - HR
+      # - Legal
+      # - Sales
+      # - Marketing
+      # - PR
+      # - Administration
+      # - Operations
+      # - Customer Services
 
   # ── Studios on Breezy HR ──────────────────────────────────────────
   # Per-company ATS (like greenhouse/lever): one entry per studio. Tenants live
@@ -1371,10 +1419,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Amplifier Boot Camp
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Amplifier Studios
     country: SE
     status: unresolved
@@ -1587,10 +1631,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Björkman Consulting Group
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Bjuret
     country: SE
     status: unresolved
@@ -1791,10 +1831,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Ciscal Holding
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ClayCastle
     country: SE
     status: unresolved
@@ -1887,10 +1923,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Creation Zero Point Holding
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Creative AI Nordic
     country: SE
     status: unresolved
@@ -1949,10 +1981,6 @@ tracked_companies:
     careers_url: https://careers.dashystudios.com
     last_probe: 2026-06-09
     notes: "GDI 2025. Teamtailor (probe HIGH — own domain, 3 jobs). Resolve pass #7."
-  - name: Datacraft Holding
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: David Marquardt Studios
     country: SE
     status: unresolved
@@ -2122,10 +2150,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: DVapps
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: E Games Invest Nordic
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -2369,10 +2393,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Frojo Investment
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Frostcore
     country: SE
     status: unresolved
@@ -2585,10 +2605,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Greyling Invest
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Gridly
     country: SE
     status: unresolved
@@ -2741,10 +2757,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: IG Consulting
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ilbiz Studio
     country: SE
     status: unresolved
@@ -2886,10 +2898,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jordi Creations
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: JPR Ventures
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -3145,10 +3153,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Majewski Holding
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Malformation
     country: SE
     status: unresolved
@@ -3202,10 +3206,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Mibi Games
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Microcuts Holding
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -3397,10 +3397,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Neogon Holding
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Neon Artery
     country: SE
     status: unresolved
@@ -3450,10 +3446,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ninmark Soundworks
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Nisshagen Advisory
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -3825,10 +3817,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: ProCloud Media Invest
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Proga Games
     country: SE
     status: unresolved
@@ -4026,10 +4014,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Roden Games
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Romeo Invest
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -4439,10 +4423,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Swiss Peak Ventures
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Sydow Production
     country: SE
     status: unresolved
@@ -4547,19 +4527,11 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Thriving Ventures
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: ThunderAy
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Tiger
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Tinto Consulting
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -4776,10 +4748,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Vreski
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: VZ Holding
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -5216,11 +5184,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://auris-media.com/
     notes: "DGA directory · Soest · ~2"
-  - name: Avans
-    country: NL
-    status: unresolved
-    careers_url: https://avans.nl/
-    notes: "DGA directory · Den Bosch · ~3600"
   - name: Aventus
     country: NL
     status: unresolved
@@ -5236,11 +5199,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://bartdelissen.com/
     notes: "DGA directory · Utrecht · ~2"
-  - name: BDO Accountancy, Tax & Legal
-    country: NL
-    status: unresolved
-    careers_url: https://bdo.nl/
-    notes: "DGA directory · Rotterdam · ~3000"
   - name: Behaviour Rotterdam (formerly Codeglue)
     country: NL
     status: unresolved
@@ -5296,11 +5254,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://boterjan.com/
     notes: "DGA directory · Groningen · ~1"
-  - name: Breda University of Applied Sciences
-    country: NL
-    status: unresolved
-    careers_url: https://buas.nl/
-    notes: "DGA directory · Breda · ~800+"
   - name: Brenda van Vugt art
     country: NL
     status: unresolved
@@ -5364,11 +5317,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://codenamered.nl/
     notes: "DGA directory · The Hague · ~6"
-  - name: Control Magazine
-    country: NL
-    status: unresolved
-    careers_url: https://control-online.nl/
-    notes: "DGA directory · Amsterdam · ~1"
   - name: Convoy Games
     country: NL
     status: unresolved
@@ -5402,11 +5350,6 @@ tracked_companies:
     country: NL
     status: unresolved
     notes: "DGA directory"
-  - name: De Haagse Hogeschool
-    country: NL
-    status: unresolved
-    careers_url: https://hhs.nl/
-    notes: "DGA directory · The Hague · ~2000"
   - name: degoma
     country: NL
     status: unresolved
@@ -5422,11 +5365,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://denda-corporate.com/
     notes: "DGA directory · Hengelo · ~20+"
-  - name: Deviant Legal
-    country: NL
-    status: unresolved
-    careers_url: https://deviantlegal.com/
-    notes: "DGA directory · Bergen op Zoom · ~3"
   - name: DialogueTrainer
     country: NL
     status: unresolved
@@ -5494,11 +5432,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://dutchgamestudio.com/
     notes: "DGA directory · Woerden · ~50+ · jobs: https://dutchgamestudio.com/gaming-industry-careers/"
-  - name: Dutch Games Association
-    country: NL
-    status: unresolved
-    careers_url: https://dutchgamesassociation.nl/
-    notes: "DGA directory · Zoetermeer · ~3+ · jobs: https://dutchgamesassociation.nl/vacancies/"
   - name: Dylan Nagel
     country: NL
     status: unresolved
@@ -5621,15 +5554,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://flapboxstudios.com/
     notes: "DGA directory · Emmen · ~1"
-  - name: Fontys
-    country: NL
-    status: unresolved
-    notes: "DGA directory · Eindhoven · ~350"
-  - name: Force Field Entertainment(closed/acquired)
-    country: NL
-    status: unresolved
-    careers_url: https://forcefieldxr.com/
-    notes: "DGA directory · Amsterdam · ~60+"
   - name: Four Horsemen Games
     country: NL
     status: unresolved
@@ -5811,11 +5735,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://goudvisie.nl/
     notes: "DGA directory · Amsterdam · ~20 · jobs: https://goudvisie.nl/over-ons/werken-bij/"
-  - name: Grafisch Lyceum Utrecht
-    country: NL
-    status: unresolved
-    careers_url: https://glu.nl/
-    notes: "DGA directory · Utrecht · ~240"
   - name: Grendel
     country: NL
     status: unresolved
@@ -5836,15 +5755,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://nl.joinhackshield.com/
     notes: "DGA directory · Utrecht · ~35 · jobs: https://www.flavour.nl/vacatures/"
-  - name: HAN
-    country: NL
-    status: unresolved
-    notes: "DGA directory · Arnhem · ~4000+"
-  - name: Hanze UAS Groningen
-    country: NL
-    status: unresolved
-    careers_url: https://hanze.nl/
-    notes: "DGA directory · Groningen · ~45+"
   - name: heartcase
     country: NL
     status: unresolved
@@ -5874,25 +5784,6 @@ tracked_companies:
     country: NL
     status: unresolved
     notes: "DGA directory"
-  - name: HKU
-    country: NL
-    status: unresolved
-    careers_url: https://hku.nl/
-    notes: "DGA directory · Utrecht · ~680"
-  - name: Hogeschool Leiden
-    country: NL
-    status: unresolved
-    careers_url: https://hsleiden.nl/
-    notes: "DGA directory · Leiden · ~1500+"
-  - name: Hogeschool Rotterdam
-    country: NL
-    status: unresolved
-    notes: "DGA directory · Rotterdam · ~4200"
-  - name: Hogeschool van Amsterdam
-    country: NL
-    status: unresolved
-    careers_url: https://hva.nl/
-    notes: "DGA directory · Amsterdam · ~4800+"
   - name: HoloMoves
     country: NL
     status: unresolved
@@ -5917,11 +5808,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://hydra-games.com/
     notes: "DGA directory · Haarlem · ~3"
-  - name: Hypersome Games (Closed)
-    country: NL
-    status: unresolved
-    careers_url: https://hypersome.com/
-    notes: "DGA directory · Den Bosch · ~2"
   - name: i3D.net
     country: NL
     status: unresolved
@@ -5942,10 +5828,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://improvive.com/
     notes: "DGA directory · Amersfoort · ~8"
-  - name: InContext Consultancy Group
-    country: NL
-    status: unresolved
-    notes: "DGA directory"
   - name: Jacobs Development
     country: NL
     status: unresolved
@@ -6039,11 +5921,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://konafagames.com/
     notes: "DGA directory · Amsterdam · ~2"
-  - name: Koning Willem I College
-    country: NL
-    status: unresolved
-    careers_url: https://kw1c.nl/
-    notes: "DGA directory · Den Bosch · ~1550"
   - name: Kucheza B.V.
     country: NL
     status: unresolved
@@ -6185,11 +6062,6 @@ tracked_companies:
     country: NL
     status: unresolved
     notes: "DGA directory"
-  - name: MeetToMatch
-    country: NL
-    status: unresolved
-    careers_url: https://meettomatch.com/
-    notes: "DGA directory · Utrecht · ~10"
   - name: MelonadeFX
     country: NL
     status: unresolved
@@ -6293,15 +6165,6 @@ tracked_companies:
     country: NL
     status: unresolved
     notes: "DGA directory"
-  - name: Newzoo
-    country: NL
-    provider: recruitee
-    careers_url: https://newzoo.recruitee.com
-    notes: "DGA directory · Amsterdam · ~93 · jobs: https://newzoo.bamboohr.com/careers"
-  - name: NHL Stenden
-    country: NL
-    status: unresolved
-    notes: "DGA directory · Leeuwarden · ~2200"
   - name: niel vredeveldt
     country: NL
     status: unresolved
@@ -6424,11 +6287,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://playjoy.eu/
     notes: "DGA directory · Waalwijk · ~1"
-  - name: Plaza Challenge School
-    country: NL
-    status: unresolved
-    careers_url: https://plazachallengeschool.nl/
-    notes: "DGA directory · Zoetermeer · ~1"
   - name: Plukit
     country: NL
     status: unresolved
@@ -6489,11 +6347,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://ranja72.com/
     notes: "DGA directory · Alkmaar · ~1"
-  - name: ReadSpeaker
-    country: NL
-    status: unresolved
-    careers_url: https://readspeaker.com/
-    notes: "DGA directory · Driebergen-Rijsenburg · ~200+"
   - name: RedFlare
     country: NL
     status: unresolved
@@ -6503,10 +6356,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://redwaterone.com/
     notes: "DGA directory · Oosterbeek · ~2"
-  - name: Reflection IT
-    country: NL
-    status: unresolved
-    notes: "DGA directory · Asten · ~2"
   - name: Rekall Games
     country: NL
     status: unresolved
@@ -6517,11 +6366,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://rengintumer.com/
     notes: "DGA directory · Utrecht · ~1"
-  - name: Representing Games
-    country: NL
-    status: unresolved
-    careers_url: https://representing.games/
-    notes: "DGA directory · Utrecht · ~9"
   - name: Retrobright
     country: NL
     status: unresolved
@@ -6544,16 +6388,6 @@ tracked_companies:
     country: NL
     status: unresolved
     notes: "DGA directory · Breda · ~1"
-  - name: ROC Rivor
-    country: NL
-    status: unresolved
-    careers_url: https://rocrivor.nl/
-    notes: "DGA directory · Tiel · ~300"
-  - name: ROC Van Flevoland
-    country: NL
-    status: unresolved
-    careers_url: https://rocvanflevoland.nl/
-    notes: "DGA directory · Almere · ~800+"
   - name: "Rockit: Playful Solutions"
     country: NL
     status: unresolved
@@ -6597,11 +6431,6 @@ tracked_companies:
     country: NL
     status: unresolved
     notes: "DGA directory"
-  - name: SAE Creative Media Institute Amsterdam
-    country: NL
-    status: unresolved
-    careers_url: https://sae.edu/
-    notes: "DGA directory · Amsterdam · ~50"
   - name: SanForge Studio
     country: NL
     status: unresolved
@@ -6627,15 +6456,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://savensound.com/
     notes: "DGA directory · Amsterdam · ~2"
-  - name: Saxion
-    country: NL
-    status: unresolved
-    notes: "DGA directory · Enschede · ~3100"
-  - name: Scalda
-    country: NL
-    status: unresolved
-    careers_url: https://scalda.nl/
-    notes: "DGA directory · Vlissingen · ~850"
   - name: Second Maze
     country: NL
     status: unresolved
@@ -6690,10 +6510,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://silvermonkey.studio/
     notes: "DGA directory · Amsterdam · ~7"
-  - name: Sint Lucas
-    country: NL
-    status: unresolved
-    notes: "DGA directory · Eindhoven · ~460"
   - name: Skunx Games
     country: NL
     status: unresolved
@@ -6781,11 +6597,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://squareglade.games/
     notes: "DGA directory · Groningen · ~2"
-  - name: St. Joost School of Art & Design
-    country: NL
-    status: unresolved
-    careers_url: https://stjoost.nl/
-    notes: "DGA directory · Breda · ~150+"
   - name: Staggart Creations
     country: NL
     status: unresolved
@@ -6796,11 +6607,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://starbrewgames.com/
     notes: "DGA directory · Breda · ~6 · jobs: https://starbrewgames.com/jobs/"
-  - name: STARK Learning
-    country: NL
-    status: unresolved
-    careers_url: https://starklearning.nl/
-    notes: "DGA directory · Groningen · ~8"
   - name: Steelpan Interactive
     country: NL
     status: unresolved
@@ -6912,21 +6718,11 @@ tracked_companies:
     status: unresolved
     careers_url: https://targetgamers.com/
     notes: "DGA directory · Haarlem · ~1"
-  - name: Taylor Wessing
-    country: NL
-    status: unresolved
-    careers_url: https://taylorwessing.com/
-    notes: "DGA directory · Amsterdam · ~80+"
   - name: Team Reptile
     country: NL
     status: unresolved
     careers_url: https://team-reptile.com/
     notes: "DGA directory · Hilversum · ~10+"
-  - name: Technova College
-    country: NL
-    status: unresolved
-    careers_url: https://technovacollege.nl/
-    notes: "DGA directory · Ede · ~130"
   - name: teunu
     country: NL
     status: unresolved
@@ -7022,11 +6818,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://tover.care/
     notes: "DGA directory · Utrecht · ~25+"
-  - name: Tradosoft
-    country: NL
-    status: unresolved
-    careers_url: https://tradosoft.com/
-    notes: "DGA directory · Nijkerk · ~2"
   - name: TRAGsoft
     country: NL
     status: unresolved
@@ -7046,21 +6837,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://triumph.net/
     notes: "DGA directory · Delft · ~35+ · jobs: https://career.paradoxplaza.com/"
-  - name: Tsagoï Holding BV
-    country: NL
-    status: unresolved
-    careers_url: https://witan.nl/
-    notes: "DGA directory · Heemstede · ~5"
-  - name: TU Delft
-    country: NL
-    status: unresolved
-    careers_url: https://tudelft.nl/
-    notes: "DGA directory · Delft · ~7500"
-  - name: TU/Eindhoven
-    country: NL
-    status: unresolved
-    careers_url: https://tue.osiris-student.nl/
-    notes: "DGA directory · Eindhoven · ~4250+"
   - name: TurtleBlaze
     country: NL
     status: unresolved
@@ -7090,11 +6866,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://unigames.nl/
     notes: "DGA directory · Eindhoven · ~5"
-  - name: University of Twente
-    country: NL
-    status: unresolved
-    careers_url: https://utwente.osiris-student.nl/
-    notes: "DGA directory · Enschede · ~4100+"
   - name: Unmask
     country: NL
     status: unresolved
@@ -7222,10 +6993,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://xformgames.com/
     notes: "DGA directory · Utrecht · ~2"
-  - name: XR Academy
-    country: NL
-    status: unresolved
-    notes: "DGA directory · Amsterdam · ~2018"
   - name: XVR Simulation
     country: NL
     status: unresolved
@@ -7296,10 +7063,6 @@ tracked_companies:
     country: CH
     status: unresolved
     notes: "SGDA member (Swiss Game Developers Association)."
-  - name: Ceruleum, School of Visual Arts
-    country: CH
-    status: unresolved
-    notes: "SGDA member (Swiss Game Developers Association)."
   - name: Dama Dama Games
     country: CH
     status: unresolved
@@ -7349,10 +7112,6 @@ tracked_companies:
     status: unresolved
     notes: "SGDA member (Swiss Game Developers Association)."
   - name: Hidden Fields GmbH
-    country: CH
-    status: unresolved
-    notes: "SGDA member (Swiss Game Developers Association)."
-  - name: Hochschule Luzern - Design und Kunst / Digital Ideation
     country: CH
     status: unresolved
     notes: "SGDA member (Swiss Game Developers Association)."
@@ -7417,10 +7176,6 @@ tracked_companies:
     status: unresolved
     notes: "SGDA member (Swiss Game Developers Association)."
   - name: Playables GmbH
-    country: CH
-    status: unresolved
-    notes: "SGDA member (Swiss Game Developers Association)."
-  - name: SAE Institute Switzerland AG
     country: CH
     status: unresolved
     notes: "SGDA member (Swiss Game Developers Association)."

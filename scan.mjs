@@ -174,6 +174,26 @@ export function buildTargetingFilter(targeting) {
   };
 }
 
+// Source-level employer blocklist for aggregator leakage. Returns a predicate
+// `(company) => true` when that company is blocked. Exact, case-insensitive name
+// match (no stemming — a slot/casino "Aristocrat" must not also nuke a studio
+// whose name merely starts the same). Fail-safe: an empty/invalid/absent list
+// blocks nothing, and a job with no company name is never blocked. The caller
+// gates this to aggregator hosts so it can't touch a curated single-studio feed.
+export function buildCompanyBlocklist(excludeCompanies) {
+  const blocked = new Set(
+    (Array.isArray(excludeCompanies) ? excludeCompanies : [])
+      .filter((s) => typeof s === 'string')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return (company) => {
+    if (blocked.size === 0) return false;
+    const key = (company || '').trim().toLowerCase();
+    return key !== '' && blocked.has(key);
+  };
+}
+
 // ── Group-model targeting filter ────────────────────────────────────
 // The unified `targeting.groups` schema (same one the board uses) gates the scan
 // by EXCLUDES: a job is dropped iff it matches an active filter weighted exactly
@@ -619,12 +639,27 @@ async function main() {
   // Companies come from studios.yml (tracked, shared). Back-compat: if there's
   // no studios.yml, read tracked_companies from the targeting config instead.
   let companies;
+  let excludeCompanies;
   if (existsSync(STUDIOS_PATH)) {
     const studios = parseYaml(readFileSync(STUDIOS_PATH, 'utf-8')) || {};
     companies = studios.tracked_companies || [];
+    excludeCompanies = studios.exclude_companies;
   } else {
     companies = config.tracked_companies || [];
+    excludeCompanies = config.exclude_companies;
   }
+  // Source-level employer blocklist. The aggregator boards (Hitmarker, Work With
+  // Indies, Games Jobs Direct, Remote Game Jobs) are whole-industry feeds, so a
+  // handful of non-game employers (ByteDance, NVIDIA, Aristocrat…) leak through
+  // with hundreds of non-game corporate roles that no title filter reliably
+  // catches. `exclude_companies` (studios.yml) drops them at ingest — before the
+  // snapshot, and independent of the personal targeting filter, so it holds even
+  // under --no-filter (the board's mode). Tracked + shared so collaborators get
+  // the same clean feed. Exact, case-insensitive name match only (fail-safe: a
+  // mixed employer with some real game roles, e.g. Tencent, must NOT be listed —
+  // let the title filter sort those). Gated to aggregator hosts so it can never
+  // touch a curated single-studio feed.
+  const isBlockedCompany = buildCompanyBlocklist(excludeCompanies);
   if (!companies.length) {
     console.error(`Error: no studios found. Add tracked_companies to ${STUDIOS_PATH} (or run onboarding).`);
     process.exit(1);
@@ -736,6 +771,7 @@ async function main() {
   let totalFilteredTitle = 0;
   let totalFilteredLocation = 0;
   let totalFilteredCompany = 0;
+  let totalBlockedCompany = 0;
   let totalDupes = 0;
   const newOffers = [];
   // Full current snapshot for --json: every job that passes the filters,
@@ -790,6 +826,15 @@ async function main() {
       totalFound += jobs.length;
 
       for (const job of jobs) {
+        // Source-level employer blocklist (aggregator leakage). Runs first, and
+        // independent of the targeting filter, so it holds even under --no-filter.
+        // Gated to aggregator hosts: a curated studio feed's company IS the studio,
+        // so it can never be collateral here.
+        if (isBlockedCompany(job.company)) {
+          let host = '';
+          try { host = new URL(job.url || '').hostname.replace(/^www\./, ''); } catch { /* keep '' */ }
+          if (AGG_HOSTS.includes(host)) { totalBlockedCompany++; continue; }
+        }
         const drop = dropTargeting(job);
         if (drop === 'title') { totalFilteredTitle++; continue; }
         if (drop === 'location') { totalFilteredLocation++; continue; }
@@ -957,6 +1002,9 @@ async function main() {
   console.log(`Filtered by location:  ${totalFilteredLocation} removed`);
   if (totalFilteredCompany > 0) {
     console.log(`Filtered by company:   ${totalFilteredCompany} removed`);
+  }
+  if (totalBlockedCompany > 0) {
+    console.log(`Blocked (non-game):    ${totalBlockedCompany} removed`);
   }
   console.log(`Duplicates:            ${totalDupes} skipped`);
   if (verify) {
