@@ -7219,3 +7219,118 @@ tracked_companies:
     country: CH
     status: unresolved
     notes: "SGDA member (Swiss Game Developers Association)."
+
+  # Probe backlog merge (bamboohr)
+  - name: "Acino"
+    provider: bamboohr
+    careers_url: https://acino.bamboohr.com
+  - name: "Heirloom Interactive"
+    provider: bamboohr
+    careers_url: https://heirloom.bamboohr.com
+  - name: "Magnetic Games"
+    provider: bamboohr
+    careers_url: https://magnetic.bamboohr.com
+  - name: "Neighbourly Games"
+    provider: bamboohr
+    careers_url: https://neighbourly.bamboohr.com
+  - name: "Playstack"
+    provider: bamboohr
+    careers_url: https://playstack.bamboohr.com
+  - name: "QDE Studio"
+    provider: bamboohr
+    careers_url: https://qdestudio.bamboohr.com
+  - name: "TTK Games"
+    provider: bamboohr
+    careers_url: https://ttkgames.bamboohr.com
+  - name: "Wayfinder Studios"
+    provider: bamboohr
+    careers_url: https://wayfinder.bamboohr.com
+  - name: "Build it Games"
+    provider: bamboohr
+    careers_url: https://buildit.bamboohr.com
+  - name: "Doyle"
+    provider: bamboohr
+    careers_url: https://doyle.bamboohr.com
+  - name: "Firda"
+    provider: bamboohr
+    careers_url: https://firda.bamboohr.com
+  - name: "GamePoint"
+    provider: bamboohr
+    careers_url: https://gamepoint.bamboohr.com
+  - name: "tinyBuild"
+    provider: bamboohr
+    careers_url: https://tinybuild.bamboohr.com
+
+  # Probe backlog merge (breezy)
+  - name: "Broadside Games"
+    provider: breezy
+    careers_url: https://broadside.breezy.hr
+  - name: "Iterative Studios"
+    provider: breezy
+    careers_url: https://iterative.breezy.hr
+  - name: "Refold"
+    provider: breezy
+    careers_url: https://refold.breezy.hr
+  - name: "Abstraction Games"
+    provider: breezy
+    careers_url: https://abstraction-games.breezy.hr
+  - name: "Roost Games"
+    provider: breezy
+    careers_url: https://roost.breezy.hr
+
+  # Probe backlog merge (smartrecruiters)
+  - name: "RoRo"
+    provider: smartrecruiters
+    careers_url: https://roroinc.smartrecruiters.com
+
+  # Probe backlog merge wave 2
+  - name: "Triumph Studios"
+    provider: bamboohr
+    careers_url: https://triumph.bamboohr.com
+
+  # Verified slug-match merge (ashby)
+  - name: "Breaker Interactive"
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/breaker
+  - name: "Brimstone Games"
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/brimstone
+  - name: "Echo Entertainment"
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/echo
+  - name: "Pathos Interactive"
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/pathos
+  - name: "Tiger"
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/tiger
+  - name: "Walrus Game Studios"
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/walrus
+  - name: "Parity"
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/parity
+  - name: "Pharos Interactive"
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/pharos
+  - name: "Vector Interactive"
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/vector
+
+  # Verified slug-match merge (breezy)
+  - name: "Bitwave"
+    provider: breezy
+    careers_url: https://bitwave.breezy.hr
+  - name: "Bloom"
+    provider: breezy
+    careers_url: https://bloom.breezy.hr
+
+  # Verified slug-match merge (smartrecruiters)
+  - name: "Jumpgate"
+    provider: smartrecruiters
+    careers_url: https://jumpgategames.smartrecruiters.com
+
+  # Verified slug-match merge (lever)
+  - name: "Dutch Game Studio"
+    provider: lever
+    careers_url: https://dutchgamestudio.lever.co

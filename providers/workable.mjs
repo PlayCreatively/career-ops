@@ -8,6 +8,12 @@ import { toIsoDate } from './_util.mjs';
 // is the only no-auth public surface. Auto-detects from careers_url pattern
 // `https://apply.workable.com/<slug>`. A tracked_companies entry can also
 // set `provider: workable` explicitly to bypass detection.
+//
+// Empty-shell accounts: some studios (e.g. Side, Keywords Studios) publish via
+// an embedded widget and leave the markdown export at /<slug>/jobs.md empty,
+// even though the account carries hundreds of live roles. The keyless widget
+// JSON at /api/v1/widget/accounts/<slug>?details=true still returns the full
+// list, so when the markdown feed parses to zero rows we fall back to it.
 
 const ALLOWED_WORKABLE_HOSTS = new Set(['apply.workable.com']);
 
@@ -25,7 +31,7 @@ function assertWorkableUrl(url) {
   return url;
 }
 
-function resolveFeedUrl(entry) {
+function resolveSlug(entry) {
   const raw = typeof entry.careers_url === 'string' ? entry.careers_url : '';
   if (!raw) return null;
   let parsed;
@@ -37,8 +43,16 @@ function resolveFeedUrl(entry) {
   if (parsed.protocol !== 'https:') return null;
   if (parsed.hostname !== 'apply.workable.com') return null;
   const slug = parsed.pathname.split('/').filter(Boolean)[0];
-  if (!slug) return null;
-  return `https://apply.workable.com/${slug}/jobs.md`;
+  return slug || null;
+}
+
+function resolveFeedUrl(entry) {
+  const slug = resolveSlug(entry);
+  return slug ? `https://apply.workable.com/${slug}/jobs.md` : null;
+}
+
+function widgetUrl(slug) {
+  return `https://apply.workable.com/api/v1/widget/accounts/${slug}?details=true`;
 }
 
 /** @type {import('./_types.js').Probe} */
@@ -63,15 +77,68 @@ export default {
   },
 
   async fetch(entry, ctx) {
-    const feedUrl = resolveFeedUrl(entry);
-    if (!feedUrl) throw new Error(`workable: cannot derive feed URL for ${entry.name}`);
+    const slug = resolveSlug(entry);
+    if (!slug) throw new Error(`workable: cannot derive feed URL for ${entry.name}`);
+    const feedUrl = `https://apply.workable.com/${slug}/jobs.md`;
     assertWorkableUrl(feedUrl);
     // redirect:'error' prevents SSRF via server-side redirects; combined with
     // assertWorkableUrl above it guarantees the final hostname stays in the allowlist.
     const text = await ctx.fetchText(feedUrl, { redirect: 'error' });
-    return parseWorkableMarkdown(text, entry.name);
+    const jobs = parseWorkableMarkdown(text, entry.name);
+    if (jobs.length > 0) return jobs;
+
+    // Empty markdown export — the account may publish via an embedded widget.
+    // Fall back to the keyless widget JSON, which carries the full live list.
+    const wUrl = widgetUrl(slug);
+    assertWorkableUrl(wUrl);
+    const data = await ctx.fetchJson(wUrl, { redirect: 'error' });
+    return parseWorkableWidget(data, entry.name);
   },
 };
+
+/**
+ * Parse Workable's keyless widget JSON
+ * (/api/v1/widget/accounts/<slug>?details=true). Used as a fallback when the
+ * markdown export is empty. Each job carries title, shortcode, url, location
+ * fields (city/state/country), department, and published_on. URLs are
+ * validated against `https://apply.workable.com/` like the markdown path.
+ *
+ * @param {unknown} data — parsed widget JSON
+ * @param {string} companyName — value to write into job.company
+ * @returns {Array<{title: string, url: string, company: string, location: string}>}
+ */
+export function parseWorkableWidget(data, companyName) {
+  const jobs = [];
+  const list = (data && typeof data === 'object' && Array.isArray(/** @type {any} */ (data).jobs))
+    ? /** @type {any} */ (data).jobs : [];
+  for (const j of list) {
+    if (!j || typeof j !== 'object') continue;
+    const title = typeof j.title === 'string' ? j.title.trim() : '';
+    if (!title) continue;
+    let url = typeof j.url === 'string' ? j.url
+      : (j.shortcode ? `https://apply.workable.com/j/${j.shortcode}` : '');
+    if (!url) continue;
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.protocol !== 'https:' || parsedUrl.hostname !== 'apply.workable.com') continue;
+      url = parsedUrl.href;
+    } catch {
+      continue;
+    }
+    const location = [j.city, j.state, j.country].filter(s => typeof s === 'string' && s.trim()).join(', ');
+    const postedDate = toIsoDate(typeof j.published_on === 'string' ? j.published_on : '');
+    const department = typeof j.department === 'string' ? j.department.trim() : '';
+    jobs.push({
+      title,
+      url,
+      location,
+      company: companyName,
+      ...(postedDate ? { postedDate } : {}),
+      ...(department ? { department } : {}),
+    });
+  }
+  return jobs;
+}
 
 /**
  * Parse Workable's public markdown feed. Exported as a named export for unit

@@ -675,6 +675,7 @@ try {
   else fail('null input should yield empty result without crashing');
 
   // fetch() reaches the http context on the happy path (allowed hostname).
+  // The markdown carries a job row, so the widget fallback must NOT fire.
   await workable.fetch(
     { name: 'Smoke', careers_url: 'https://apply.workable.com/optimile' },
     {
@@ -683,12 +684,62 @@ try {
         if (!url.startsWith('https://apply.workable.com/')) {
           throw new Error('fetchText called with unexpected URL');
         }
-        return '| Title | Department | Location | Type | Salary | Posted | Details |\n|---|---|---|---|---|---|---|\n';
+        return [
+          '| Title | Department | Location | Type | Salary | Posted | Details |',
+          '|---|---|---|---|---|---|---|',
+          '| Smoke Role | Eng | Remote | Full-time | — | 2026-04-01 | [View](https://apply.workable.com/optimile/jobs/view/SMOKE.md) |',
+        ].join('\n');
       },
-      fetchJson: async () => { throw new Error('fetchJson should not be called'); },
+      fetchJson: async () => { throw new Error('fetchJson should not be called when markdown has rows'); },
     },
   );
   pass('workable.fetch() reaches fetchText on the happy path (allowed hostname)');
+
+  // Empty markdown export → widget JSON fallback (embedded-board accounts like
+  // Side / Keywords Studios leave jobs.md empty but the widget API is full).
+  const { parseWorkableWidget } = await import(pathToFileURL(join(ROOT, 'providers/workable.mjs')).href);
+  let widgetCalledWith = null;
+  const fallbackJobs = await workable.fetch(
+    { name: 'Embedded', careers_url: 'https://apply.workable.com/embedded-co' },
+    {
+      transport: 'http',
+      fetchText: async () =>
+        '| Title | Department | Location | Type | Salary | Posted | Details |\n|---|---|---|---|---|---|---|\n',
+      fetchJson: async (url) => {
+        widgetCalledWith = url;
+        return {
+          name: 'Embedded Co', description: '',
+          jobs: [
+            { title: 'Live Role', shortcode: 'ZZZ999', url: 'https://apply.workable.com/j/ZZZ999',
+              city: 'Reykjavik', state: '', country: 'Iceland', department: 'Art', published_on: '2026-05-01' },
+            { title: '', shortcode: 'EMPTY1', url: 'https://apply.workable.com/j/EMPTY1' }, // no title → dropped
+          ],
+        };
+      },
+    },
+  );
+  if (widgetCalledWith === 'https://apply.workable.com/api/v1/widget/accounts/embedded-co?details=true'
+      && fallbackJobs.length === 1 && fallbackJobs[0].title === 'Live Role'
+      && fallbackJobs[0].location === 'Reykjavik, Iceland'
+      && fallbackJobs[0].url === 'https://apply.workable.com/j/ZZZ999') {
+    pass('workable.fetch() falls back to widget JSON when markdown export is empty');
+  } else {
+    fail(`widget fallback wrong: url=${widgetCalledWith} jobs=${JSON.stringify(fallbackJobs)}`);
+  }
+
+  // parseWorkableWidget drops off-domain / non-https job URLs like the markdown path.
+  const widgetFiltered = parseWorkableWidget({
+    jobs: [
+      { title: 'Good', url: 'https://apply.workable.com/j/OK1', city: 'Remote' },
+      { title: 'Evil', url: 'https://evil.example/j/X' },
+      { title: 'Insecure', url: 'http://apply.workable.com/j/Y' },
+    ],
+  }, 'X');
+  if (widgetFiltered.length === 1 && widgetFiltered[0].title === 'Good') {
+    pass('parseWorkableWidget drops off-domain and non-https job URLs');
+  } else {
+    fail(`parseWorkableWidget filter wrong: ${JSON.stringify(widgetFiltered.map(j => j.title))}`);
+  }
 
   // fetch() rejects an unresolvable careers_url (no apply.workable.com match in URL).
   let rejected = false;
@@ -756,6 +807,250 @@ try {
 
 } catch (e) {
   fail(`workable provider tests crashed: ${e.message}`);
+}
+
+// ── 12b. PROVIDERS — Avature ────────────────────────────────────────
+
+console.log('\n12b. Provider — avature');
+
+try {
+  const avature = (await import(pathToFileURL(join(ROOT, 'providers/avature.mjs')).href)).default;
+  const { parseAvatureHtml, resolveAvature } = await import(pathToFileURL(join(ROOT, 'providers/avature.mjs')).href);
+
+  if (avature.id === 'avature') pass('avature.id is "avature"');
+  else fail(`avature.id is ${JSON.stringify(avature.id)}`);
+
+  // detect() — bare tenant origins need explicit provider; SearchJobs/JobDetail paths auto-claim.
+  if (avature.detect({ name: 'EA', careers_url: 'https://jobs.ea.com' }) === null) {
+    pass('avature.detect() returns null for a bare tenant origin (needs explicit provider)');
+  } else {
+    fail('avature.detect() should NOT auto-claim a bare origin');
+  }
+  const dHit = avature.detect({ name: 'EA', careers_url: 'https://jobs.ea.com/en_US/careers/SearchJobs/' });
+  if (dHit && dHit.url === 'https://jobs.ea.com/en_US/careers/SearchJobs/?jobRecordsPerPage=20&jobOffset=0') {
+    pass('avature.detect() auto-claims a /careers/SearchJobs path');
+  } else {
+    fail(`avature.detect(SearchJobs) returned ${JSON.stringify(dHit)}`);
+  }
+  if (avature.detect({ name: 'X', careers_url: 'https://example.com/careers' }) === null) {
+    pass('avature.detect() returns null for non-Avature career paths');
+  } else {
+    fail('avature.detect() should return null for unrelated /careers paths');
+  }
+  if (avature.detect({ name: 'X', careers_url: 42 }) === null) {
+    pass('avature.detect() returns null for non-string careers_url (42)');
+  } else {
+    fail('avature.detect() should treat non-string careers_url as missing');
+  }
+
+  // resolveAvature() — origin + locale (default en_US, honour an explicit locale segment).
+  const r1 = resolveAvature({ careers_url: 'https://jobs.ea.com' });
+  if (r1 && r1.origin === 'https://jobs.ea.com' && r1.host === 'jobs.ea.com' && r1.locale === 'en_US') {
+    pass('resolveAvature() defaults locale to en_US for a bare origin');
+  } else {
+    fail(`resolveAvature(bare) = ${JSON.stringify(r1)}`);
+  }
+  const r2 = resolveAvature({ careers_url: 'https://jobs.ea.com/fr_FR/careers/SearchJobs/' });
+  if (r2 && r2.locale === 'fr_FR') pass('resolveAvature() keeps an explicit locale segment');
+  else fail(`resolveAvature(locale) = ${JSON.stringify(r2)}`);
+
+  // parseAvatureHtml() — card extraction, entity decode, same-origin filtering.
+  const sampleHtml = [
+    '<a class="link link_result" href="https://jobs.ea.com/en_US/careers/JobDetail/UI-Artist-II/214826" data-au="ag-a-10">',
+    'UI Artist II', '</a>',
+    '<div class="article__header__text__subtitle">',
+    '<span class="list-item-location">Hyderabad, India</span>',
+    '<span class="list-item-department">EA Mobile &amp; Slingshot</span>',
+    '</div>',
+    '<a class="link link_result" href="https://jobs.ea.com/en_US/careers/JobDetail/Lighting-Artist/213912">',
+    'Concepteur.trice d&#8217;&#xe9;clairage', '</a>',
+    '<span class="list-item-location">Montreal, Canada</span>',
+    '<span class="list-item-department">Motive</span>',
+    // off-host card must be dropped
+    '<a class="link link_result" href="https://evil.example/en_US/careers/JobDetail/X/1">Evil</a>',
+    '<span class="list-item-location">Nowhere</span>',
+  ].join('\n');
+  const aJobs = parseAvatureHtml(sampleHtml, 'Electronic Arts', 'jobs.ea.com');
+  if (aJobs.length === 2) pass('parseAvatureHtml extracts 2 same-host cards (drops off-host)');
+  else fail(`parseAvatureHtml returned ${aJobs.length} jobs, expected 2`);
+
+  if (aJobs[0]?.title === 'UI Artist II' && aJobs[0]?.location === 'Hyderabad, India'
+      && aJobs[0]?.department === 'EA Mobile & Slingshot' && aJobs[0]?.company === 'Electronic Arts') {
+    pass('parseAvatureHtml extracts title/location/department/company and decodes &amp;');
+  } else {
+    fail(`parseAvatureHtml card 0 = ${JSON.stringify(aJobs[0])}`);
+  }
+  if (aJobs[1]?.title === 'Concepteur.trice d’éclairage') {
+    pass('parseAvatureHtml decodes numeric/hex entities (’ and é)');
+  } else {
+    fail(`parseAvatureHtml entity decode wrong: ${JSON.stringify(aJobs[1]?.title)}`);
+  }
+  if (!aJobs.some(j => j.url.includes('evil.example'))) {
+    pass('parseAvatureHtml drops off-host JobDetail links');
+  } else {
+    fail('parseAvatureHtml must drop off-host cards');
+  }
+
+  // Dedup: the same JobDetail URL appearing twice yields one job.
+  const dupHtml = [
+    '<a class="link link_result" href="https://jobs.ea.com/c/JobDetail/A/1">A</a>',
+    '<a class="link link_result" href="https://jobs.ea.com/c/JobDetail/A/1">A again</a>',
+  ].join('\n');
+  if (parseAvatureHtml(dupHtml, 'EA', 'jobs.ea.com').length === 1) {
+    pass('parseAvatureHtml dedupes repeated job URLs');
+  } else {
+    fail('parseAvatureHtml should dedupe identical job URLs');
+  }
+
+  // Robustness
+  if (parseAvatureHtml('', 'X', 'jobs.ea.com').length === 0) pass('parseAvatureHtml empty input → empty result');
+  else fail('parseAvatureHtml empty input should yield empty result');
+  if (parseAvatureHtml(null, 'X', 'jobs.ea.com').length === 0) pass('parseAvatureHtml null input → empty (no crash)');
+  else fail('parseAvatureHtml null input should yield empty without crashing');
+
+  // fetch() pagination: walks jobOffset until an empty page, dedupes, stays same-origin.
+  const pages = {
+    0: '<a class="link link_result" href="https://jobs.ea.com/c/JobDetail/R0/1">R0</a>'
+      + Array.from({ length: 19 }, (_, i) => `<a class="link link_result" href="https://jobs.ea.com/c/JobDetail/P0-${i}/${100 + i}">P0-${i}</a>`).join(''),
+    20: Array.from({ length: 20 }, (_, i) => `<a class="link link_result" href="https://jobs.ea.com/c/JobDetail/P1-${i}/${200 + i}">P1-${i}</a>`).join(''),
+    40: '', // empty page → stop
+  };
+  const seenOffsets = [];
+  const fetched = await avature.fetch(
+    { name: 'EA', careers_url: 'https://jobs.ea.com' },
+    {
+      transport: 'http',
+      fetchText: async (url) => {
+        if (!url.startsWith('https://jobs.ea.com/')) throw new Error(`off-origin fetch: ${url}`);
+        const off = Number(new URL(url).searchParams.get('jobOffset'));
+        seenOffsets.push(off);
+        return pages[off] ?? '';
+      },
+    },
+  );
+  if (fetched.length === 40 && seenOffsets.join(',') === '0,20,40') {
+    pass('avature.fetch() paginates jobOffset 0→20→40 and stops on the empty page');
+  } else {
+    fail(`avature.fetch() pagination wrong: jobs=${fetched.length} offsets=${seenOffsets.join(',')}`);
+  }
+
+} catch (e) {
+  fail(`avature provider tests crashed: ${e.message}`);
+}
+
+// ── 12c. PROVIDERS — BambooHR ───────────────────────────────────────
+
+console.log('\n12c. Provider — bamboohr');
+
+try {
+  const bamboo = (await import(pathToFileURL(join(ROOT, 'providers/bamboohr.mjs')).href)).default;
+  const { parseBambooList, probe: bambooProbe } = await import(pathToFileURL(join(ROOT, 'providers/bamboohr.mjs')).href);
+
+  if (bamboo.id === 'bamboohr') pass('bamboohr.id is "bamboohr"');
+  else fail(`bamboohr.id is ${JSON.stringify(bamboo.id)}`);
+
+  // detect() — claims *.bamboohr.com tenant hosts, ignores everything else.
+  const bHit = bamboo.detect({ name: 'Offworld Industries', careers_url: 'https://owi.bamboohr.com' });
+  if (bHit && bHit.url === 'https://owi.bamboohr.com/careers/list') {
+    pass('bamboohr.detect() resolves a *.bamboohr.com host → /careers/list');
+  } else {
+    fail(`bamboohr.detect(tenant) returned ${JSON.stringify(bHit)}`);
+  }
+  if (bamboo.detect({ name: 'X', careers_url: 'https://example.com/careers' }) === null) {
+    pass('bamboohr.detect() returns null for non-bamboohr hosts');
+  } else {
+    fail('bamboohr.detect() must ignore non-bamboohr hosts');
+  }
+  if (bamboo.detect({ name: 'X' }) === null && bamboo.detect(null) === null) {
+    pass('bamboohr.detect() null for missing/null entry (no crash)');
+  } else {
+    fail('bamboohr.detect() should return null for missing careers_url');
+  }
+
+  // probe — slug-discoverable.
+  if (bambooProbe && bambooProbe.endpoints[0].kind === 'slug'
+      && bambooProbe.endpoints[0].url('owi') === 'https://owi.bamboohr.com/careers/list'
+      && typeof bambooProbe.canary === 'string' && bambooProbe.canary) {
+    pass('bamboohr.probe exposes a slug endpoint + canary');
+  } else {
+    fail(`bamboohr.probe malformed: ${JSON.stringify(bambooProbe)}`);
+  }
+
+  // parseBambooList() — URL construction, location compose, fields, fallback.
+  const sample = {
+    meta: { totalCount: 3 },
+    result: [
+      { id: '164', jobOpeningName: 'Build Engineer', departmentLabel: 'DevOps',
+        location: { city: 'New Westminster', state: 'British Columbia' },
+        atsLocation: { country: 'Canada', state: 'British Columbia', city: null }, isRemote: null },
+      { id: 108, jobOpeningName: 'Camera Animator',
+        location: { city: null, state: null },
+        atsLocation: { country: 'United Kingdom', state: 'Warwickshire', city: 'Royal Leamington Spa, England, United Kingdom' }, isRemote: true },
+      { id: '', jobOpeningName: 'No ID — dropped' }, // no id → skipped
+    ],
+  };
+  const bJobs = parseBambooList(sample, 'https://owi.bamboohr.com', 'Offworld');
+  if (bJobs.length === 2) pass('parseBambooList drops id-less rows, keeps the rest');
+  else fail(`parseBambooList returned ${bJobs.length} jobs, expected 2`);
+
+  if (bJobs[0] && bJobs[0].url === 'https://owi.bamboohr.com/careers/164'
+      && bJobs[0].title === 'Build Engineer' && bJobs[0].department === 'DevOps'
+      && bJobs[0].company === 'Offworld'
+      && bJobs[0].location === 'New Westminster, British Columbia, Canada') {
+    pass('parseBambooList builds /careers/{id} URL + composes deduped location with country');
+  } else {
+    fail(`parseBambooList card 0 = ${JSON.stringify(bJobs[0])}`);
+  }
+
+  // Numeric id coerces; messy atsLocation.city → first segment; isRemote → workMode.
+  if (bJobs[1] && bJobs[1].url === 'https://owi.bamboohr.com/careers/108'
+      && bJobs[1].location === 'Royal Leamington Spa, Warwickshire, United Kingdom'
+      && bJobs[1].workMode === 'remote') {
+    pass('parseBambooList coerces numeric id, trims messy city, maps isRemote→remote');
+  } else {
+    fail(`parseBambooList card 1 = ${JSON.stringify(bJobs[1])}`);
+  }
+
+  // dedup on identical built URL.
+  const dup = { result: [
+    { id: '5', jobOpeningName: 'A' }, { id: '5', jobOpeningName: 'A again' },
+  ] };
+  if (parseBambooList(dup, 'https://x.bamboohr.com', 'X').length === 1) {
+    pass('parseBambooList dedupes rows that map to the same URL');
+  } else {
+    fail('parseBambooList should dedupe identical job URLs');
+  }
+
+  // robustness.
+  if (parseBambooList({ result: [] }, 'https://x.bamboohr.com', 'X').length === 0
+      && parseBambooList(null, 'https://x.bamboohr.com', 'X').length === 0
+      && parseBambooList({}, 'https://x.bamboohr.com', 'X').length === 0) {
+    pass('parseBambooList empty/null/shapeless input → empty (no crash)');
+  } else {
+    fail('parseBambooList must handle empty/null/shapeless input');
+  }
+
+  // fetch() — pulls the list via fetchJson (single request) and parses it.
+  let bFetchUrl = '';
+  const bFetched = await bamboo.fetch(
+    { name: 'Offworld', careers_url: 'https://owi.bamboohr.com' },
+    {
+      transport: 'http',
+      fetchJson: async (url) => {
+        bFetchUrl = url;
+        if (!url.startsWith('https://owi.bamboohr.com/')) throw new Error(`off-origin: ${url}`);
+        return sample;
+      },
+    },
+  );
+  if (bFetchUrl === 'https://owi.bamboohr.com/careers/list' && bFetched.length === 2) {
+    pass('bamboohr.fetch() requests /careers/list once and returns parsed jobs');
+  } else {
+    fail(`bamboohr.fetch() wrong: url=${bFetchUrl} jobs=${bFetched.length}`);
+  }
+
+} catch (e) {
+  fail(`bamboohr provider tests crashed: ${e.message}`);
 }
 
 // ── 13. PROVIDERS — SmartRecruiters ─────────────────────────────────
