@@ -110,9 +110,10 @@ const bhrParse = (d) =>
 
 /** @type {import('./_types.js').Probe} */
 export const probe = {
+  namesakeProne: true, // {tenant}.bamboohr.com subdomain slugs collide with non-game namesakes (pharma/construction/etc.)
   canary: 'owi', // Offworld Industries — known-live tenant; proves bamboohr isn't blocking us
   endpoints: [
-    { kind: 'slug', url: (s) => `https://${s}.bamboohr.com/careers/list`, where: (s) => `${s}.bamboohr.com`, parse: bhrParse },
+    { kind: 'slug', url: (s) => `https://${s}.bamboohr.com/careers/list`, where: (s) => `${s}.bamboohr.com`, careersUrl: (s) => `https://${s}.bamboohr.com/careers`, parse: bhrParse },
   ],
 };
 

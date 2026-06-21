@@ -80,11 +80,12 @@ const ttParse = (d) =>
 
 /** @type {import('./_types.js').Probe} */
 export const probe = {
+  namesakeProne: true, // {tenant}.teamtailor.com subdomain slugs collide with non-game namesakes (own-domain endpoint below stays HIGH)
   canary: 'polestar',  // known-live tenant — proves teamtailor isn't throttling/blocking us
   endpoints: [
-    { kind: 'slug', url: (s) => `https://${s}.teamtailor.com/jobs.json`, where: (s) => `${s}.teamtailor.com`, parse: ttParse },
+    { kind: 'slug', url: (s) => `https://${s}.teamtailor.com/jobs.json`, where: (s) => `${s}.teamtailor.com`, careersUrl: (s) => `https://${s}.teamtailor.com`, parse: ttParse },
     // Many TT studios run on a custom domain — sweep the studio's own host too.
-    { kind: 'domain', confidence: 'high', url: (host) => `https://${host}/jobs.json`, where: (host) => host, parse: ttParse },
+    { kind: 'domain', confidence: 'high', url: (host) => `https://${host}/jobs.json`, where: (host) => host, careersUrl: (host) => `https://${host}`, parse: ttParse },
   ],
 };
 

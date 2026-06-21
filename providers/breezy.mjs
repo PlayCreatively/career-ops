@@ -95,6 +95,7 @@ export function parseBreezyFeed(json, fallbackCompany) {
 
 /** @type {import('./_types.js').Probe} */
 export const probe = {
+  namesakeProne: true, // {tenant}.breezy.hr subdomain slugs collide with non-game namesakes
   // Breezy IP-throttles with 403 (not 404), but it CAN regress to 404-style
   // hiding under a WAF — so a known-live tenant guards the probe's 404 trust.
   // pine-creek-games is a confirmed real Breezy tenant (Winter Burrow devs); if
@@ -106,6 +107,7 @@ export const probe = {
     // array proves a real tenant — even an empty [] means they use Breezy.
     url: (s) => `https://${s}.breezy.hr/json`,
     where: (s) => `${s}.breezy.hr`,
+    careersUrl: (s) => `https://${s}.breezy.hr`,
     parse: (d) => Array.isArray(d) ? { count: d.length, loc: d[0]?.location?.name || '' } : null,
   }],
 };

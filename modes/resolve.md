@@ -44,7 +44,7 @@ Spend the cheapest tool that works, but **never let a CLI failure end the probe.
 A studio is only a confirmed dead-end after the web tools have also been tried.
 For each studio, escalate in this order and stop at the first that answers:
 
-1. **Tokenless CLI** — `node track-check.mjs` (dedup), `node probe-studios.mjs
+1. **Tokenless CLI** — `node track-check.mjs` (dedup), `node probe/probe-studios.mjs
    --backlog` (ATS-guess the whole backlog in one shot; tag-aware, so it probes
    unresolved/browser entries instead of skipping them; add `--include-blocked`
    to re-probe dead-ends), `node scan.mjs --company "Name"` (validate a recipe).

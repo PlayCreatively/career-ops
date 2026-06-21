@@ -30,6 +30,7 @@ function assertSmartRecruitersUrl(url) {
 
 /** @type {import('./_types.js').Probe} */
 export const probe = {
+  namesakeProne: true, // company-id slugs collide with non-game namesakes on the same ATS
   canary: 'Visa',      // known-live tenant — proves SmartRecruiters isn't throttling us
   // SR slugs are case-sensitive; try the verbatim and upper-cased forms.
   slugs: (name) => {
@@ -40,6 +41,7 @@ export const probe = {
     kind: 'slug',
     url: (s) => `https://api.smartrecruiters.com/v1/companies/${s}/postings?limit=10`,
     where: (s) => s,
+    careersUrl: (s) => `https://careers.smartrecruiters.com/${s}`,
     // SR returns 200 {totalFound:0, content:[]} for ANY slug (no 404), so only a
     // count>0 result proves the company exists — a 0 result is indistinguishable
     // from a fake and is treated as a miss.

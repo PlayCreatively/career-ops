@@ -45,6 +45,7 @@ export const probe = {
     kind: 'slug',
     url: (s) => `https://api.ashbyhq.com/posting-api/job-board/${s}`,
     where: (s) => s,
+    careersUrl: (s) => `https://jobs.ashbyhq.com/${s}`,
     parse: (d) => (d && Array.isArray(d.jobs)) ? { count: d.jobs.length, loc: d.jobs[0]?.location || '' } : null,
   }],
 };

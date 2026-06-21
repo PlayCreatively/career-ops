@@ -2093,7 +2093,7 @@ console.log('\n19. Adaptive probe runner (waves / canary / restrict)');
 try {
   const dir = join(ROOT, 'providers');
   // Importing probe-studios.mjs must NOT run the probe (guarded by run-as-main).
-  const ps = await import(pathToFileURL(join(ROOT, 'probe-studios.mjs')).href);
+  const ps = await import(pathToFileURL(join(ROOT, 'probe', 'probe-studios.mjs')).href);
   if (typeof ps.probe === 'function' && typeof ps.runEndpoint === 'function' && typeof ps.checkCanaries === 'function') {
     pass('probe-studios.mjs imports side-effect-free and exports probe/runEndpoint/checkCanaries');
   } else {
@@ -2259,7 +2259,7 @@ try {
   // with --quick in argv (cache-busted) since QUICK is read at module load.
   const savedArgv = process.argv;
   process.argv = [...savedArgv, '--quick'];
-  const psQ = await import(pathToFileURL(join(ROOT, 'probe-studios.mjs')).href + '?quick=1');
+  const psQ = await import(pathToFileURL(join(ROOT, 'probe', 'probe-studios.mjs')).href + '?quick=1');
   process.argv = savedArgv;
   // A tiny local server that 200s with an empty body, so parse()→null is a CLEAN
   // miss (not a network/uncertain). Both providers point at it.

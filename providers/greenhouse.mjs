@@ -45,6 +45,7 @@ export const probe = {
     kind: 'slug',
     url: (s) => `https://boards-api.greenhouse.io/v1/boards/${s}/jobs`,
     where: (s) => s,
+    careersUrl: (s) => `https://job-boards.greenhouse.io/${s}`,
     parse: (d) => (d && Array.isArray(d.jobs)) ? { count: d.jobs.length, loc: d.jobs[0]?.location?.name || '' } : null,
   }],
 };

@@ -33,9 +33,11 @@ export const probe = {
   canary: 'lever',     // Lever's own board (won't leave its own ATS) — throttle check
   endpoints: [
     { kind: 'slug', url: (s) => `https://api.lever.co/v0/postings/${s}?mode=json`, where: (s) => s,
+      careersUrl: (s) => `https://jobs.lever.co/${s}`,
       parse: (d) => Array.isArray(d) ? { count: d.length, loc: d[0]?.categories?.location || '' } : null },
     // EU data-residency boards live on a separate host; probe both regions.
     { kind: 'slug', label: 'lever-eu', url: (s) => `https://api.eu.lever.co/v0/postings/${s}?mode=json`, where: (s) => `${s} (eu)`,
+      careersUrl: (s) => `https://jobs.eu.lever.co/${s}`,
       parse: (d) => Array.isArray(d) ? { count: d.length, loc: d[0]?.categories?.location || '' } : null },
   ],
 };

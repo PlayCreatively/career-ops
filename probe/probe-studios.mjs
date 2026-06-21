@@ -13,16 +13,31 @@
 //
 // Usage:
 //   node probe-studios.mjs --names file.txt      # one "Name" or "Name|domain.com" per line
-//   node probe-studios.mjs --backlog             # probe studios.yml's own backlog
+//   node probe-studios.mjs --backlog             # probe studios.yml's own backlog (appends to probe-backlog.out)
 //                                                #   (status: unresolved + recipe kind browser/unresolved)
 //   node probe-studios.mjs --backlog --include-blocked  # also re-probe kind: blocked
 //   node probe-studios.mjs --wikipedia-sweden     # pull the Wikipedia SE list
 //   node probe-studios.mjs --names f.txt --json   # machine-readable
+//   node probe-studios.mjs --backlog --ats breezy,bamboohr --no-timeout  # slow drain known-throttle ATSes
+//                                                 #   (auto-applies concurrency 1 + 300ms delay)
+//   ... --append-results file.txt                 # accumulate results to file (default: probe-backlog.out)
+//   ... --request-delay 500                       # ms delay between consecutive requests to same host
+//                                                 #   (auto-enabled for known-throttle ATSes)
+//   ... --status-file path.json                   # write a live JSON progress/throttle snapshot
+//                                                 #   every wave (for probe-dashboard.mjs)
+//   ... --ledger path.tsv                         # use this probe-state ledger instead of the
+//                                                 #   default data/probe-state.tsv. Lets the
+//                                                 #   dashboard run one instance PER ATS into its
+//                                                 #   own shard (no concurrent-writer clobber),
+//                                                 #   then merge the shards back into the main one.
 //   ... --quick                                   # slug-only ATS (skip custom-domain sweep).
 //                                                 #   Won't close domain-capable providers
 //                                                 #   (teamtailor/recruitee) in the ledger, so a
 //                                                 #   later full run still sweeps their domains.
 //   ... --ats breezy[,lever]                      # probe only these provider id(s)
+//                                                 #   (auto-detects throttle-prone ATSes: bamboohr,
+//                                                 #   breezy, workable, workday; applies concurrency 1
+//                                                 #   + 300ms request-delay unless overridden)
 //   ... --skip-ats breezy                         # probe all EXCEPT these
 //   ... --concurrency 4                           # starting concurrency (auto-halves when throttled)
 //   ... --per-host 4                              # max simultaneous requests to ONE host (burst-ban
@@ -75,24 +90,80 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import path from 'node:path';
 import yaml from 'js-yaml';
 
+// Path anchoring: this script lives in probe/, so the repo root is its parent.
+// All config/data paths anchor to REPO_ROOT (not cwd) so the tool runs correctly
+// no matter where it's invoked from; run logs default into the probe/ folder.
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
+const STUDIOS_PATH = path.join(REPO_ROOT, 'studios.yml');
+
 const TIMEOUT_MS = 7000;
+// Known throttle-prone ATSes (observed rate-limiting behavior)
+const KNOWN_THROTTLE_ATES = new Set(['bamboohr', 'breezy', 'workable', 'workday']);
+
 // Numeric CLI flag reader (returns the default when absent or non-positive).
 function numFlag(name, dflt) {
   const i = process.argv.indexOf(name);
   return i !== -1 && Number(process.argv[i + 1]) > 0 ? Number(process.argv[i + 1]) : dflt;
 }
+
+// Detect if we're targeting known-throttle ATSes; auto-apply protective defaults
+function getProbeAtses() {
+  const aIdxA = process.argv.indexOf('--ats');
+  const aIdxS = process.argv.indexOf('--skip-ats');
+  if (aIdxA === -1 && aIdxS === -1) return null; // No restriction: probe all
+  if (aIdxA !== -1) {
+    // --ats specified: only these
+    const listed = process.argv[aIdxA + 1].split(',').map(s => s.trim());
+    return new Set(listed);
+  }
+  // --skip-ats: all except these
+  return null;
+}
+
+// Auto-apply throttle defense to known-problem ATSes
+const probeTargets = getProbeAtses();
+const probingThrottleAtes = probeTargets && [...probeTargets].some(id => KNOWN_THROTTLE_ATES.has(id));
+const DEFAULT_CONCURRENCY = probingThrottleAtes ? 1 : 16;
+const DEFAULT_REQUEST_DELAY = probingThrottleAtes ? 300 : 0;
+
 // Starting concurrency; auto-halves each wave once a host throttles.
-const CONCURRENCY = numFlag('--concurrency', 16);
+const CONCURRENCY = numFlag('--concurrency', DEFAULT_CONCURRENCY);
 // --no-timeout: run until the backlog is EXHAUSTIVELY resolved (no pass/patience
 // cap). Safe because the ledger is flushed every wave, so an interrupted run loses
 // nothing. Use for the final slow drain passes once a throttler's IP block clears.
 const NO_TIMEOUT = process.argv.includes('--no-timeout');
 const MAX_PASSES = NO_TIMEOUT ? Infinity : numFlag('--max-passes', 6);     // adaptive wave cap
 const BASE_COOLDOWN_S = numFlag('--cooldown', 60); // base seconds between throttled waves
+// Mid-wave auto-stop: once EVERY in-play ATS has thrown this many 403/429s, the
+// current pool bails instead of grinding the rest of the backlog against a
+// throttling host (wave 1 drains the whole backlog in one pool, so without this a
+// rate-limited single-ATS instance would 403 its way through thousands of studios
+// before the wave-boundary auto-disable ever fires). Unprobed studios stay OPEN
+// for the next run. --no-abort disables it (e.g. a deliberate slow --no-timeout drain).
+const THROTTLE_ABORT_HITS = numFlag('--abort-after', 8);
+const NO_ABORT = process.argv.includes('--no-abort');
 const PATIENCE_MS = NO_TIMEOUT ? Infinity : numFlag('--patience', 20) * 60_000; // hard wall-clock cap
 const QUICK = process.argv.includes('--quick');
 const JSON_OUT = process.argv.includes('--json');
 const REPROBE_ALL = process.argv.includes('--reprobe-all'); // ignore the ledger, fresh full probe
+
+// Default result accumulation file (use --append-results <file> to override)
+const resultsAppendFile = (() => {
+  const idx = process.argv.indexOf('--append-results');
+  if (idx !== -1) return process.argv[idx + 1];
+  // Default: append to probe-backlog.out (in the probe/ folder)
+  return path.join(SCRIPT_DIR, 'probe-backlog.out');
+})();
+
+// Optional live-status sidecar (used by probe-dashboard.mjs). When --status-file
+// <path> is given, a JSON snapshot of the run is (over)written every wave and once
+// at the end, so a UI can poll progress + per-ATS throttle/Retry-After without
+// parsing stderr. Absent flag = no file written (zero overhead, default behavior).
+const STATUS_FILE = (() => {
+  const idx = process.argv.indexOf('--status-file');
+  return idx !== -1 ? process.argv[idx + 1] : null;
+})();
 
 // Probe-state ledger version. Bump ONLY when the discovery logic for an EXISTING
 // ATS materially improves (slug generation, a parse() that now matches more) —
@@ -137,8 +208,8 @@ function registrableDomain(url) {
 function norm(s) { return (s || '').toLowerCase().replace(/\b(ab|inc|ltd|llc|studios?|games?|interactive|entertainment|group|the)\b/g, '').replace(/[^a-z0-9]+/g, ''); }
 function loadTracked() {
   const names = new Set(), hosts = new Set();
-  if (!existsSync('studios.yml')) return { names, hosts };
-  const doc = yaml.load(readFileSync('studios.yml', 'utf8'));
+  if (!existsSync(STUDIOS_PATH)) return { names, hosts };
+  const doc = yaml.load(readFileSync(STUDIOS_PATH, 'utf8'));
   for (const c of doc.tracked_companies || []) {
     if (!isScannable(c)) continue; // backlog entries stay probeable
     if (c.name) names.add(norm(c.name));
@@ -154,9 +225,9 @@ function loadTracked() {
 // any careers_url as a domain hint. blocked entries are excluded unless
 // --include-blocked (they were judged dead; only re-probe on request).
 function loadBacklog() {
-  if (!existsSync('studios.yml')) return [];
+  if (!existsSync(STUDIOS_PATH)) return [];
   const includeBlocked = process.argv.includes('--include-blocked');
-  const doc = yaml.load(readFileSync('studios.yml', 'utf8'));
+  const doc = yaml.load(readFileSync(STUDIOS_PATH, 'utf8'));
   const out = [];
   for (const c of doc.tracked_companies || []) {
     if (!c.name || isScannable(c)) continue;
@@ -173,7 +244,11 @@ function loadBacklog() {
 // only each studio's still-OPEN ATSes — the mechanism that drains a throttled
 // backlog progressively. Sidecar TSV (mirrors scan-history.tsv) so studios.yml's
 // hand-curated comments/order are never touched.
-const LEDGER_PATH = path.join('data', 'probe-state.tsv');
+// --ledger <path> overrides the default ledger file. The dashboard's per-ATS
+// parallel mode points each instance at its own shard (data/.probe-ledger-<ats>.tsv)
+// so concurrent processes never clobber one shared file; it merges them back after.
+const LEDGER_OVERRIDE = (() => { const i = process.argv.indexOf('--ledger'); return i !== -1 ? process.argv[i + 1] : null; })();
+const LEDGER_PATH = LEDGER_OVERRIDE || path.join(REPO_ROOT, 'data', 'probe-state.tsv');
 const today = () => new Date().toISOString().slice(0, 10);
 
 // Confidence tiers a slug/domain hit can carry (see tierFor). HIGH = own-domain
@@ -265,11 +340,13 @@ function domainGuesses(name, domains) {
 const GET_RETRIES = 2;                 // retry transient/uncertain results within one get()
 const RETRYABLE_STATUS = new Set([403, 429, 500, 502, 503, 504]);
 const throttleHosts = new Map();       // host -> 403/429 count (live throttle signal — drives auto-disable)
+const throttledDomains = new Set();    // registrable ATS domains that have thrown 403/429 (tightens the per-ATS gate)
 const retryAfterHosts = new Map();     // host -> max Retry-After seconds seen (how long the ATS asked us to wait)
 const EMPTY_SET = new Set();           // shared immutable default for the `disabled` option
 const uncertainReasons = new Map();    // reason string -> count (aggregate, FINAL uncertain only)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } }
+function regDomainOf(h) { return String(h).split('.').slice(-2).join('.'); }  // last two labels (breezy.hr, greenhouse.io)
 function bump(map, k) { map.set(k, (map.get(k) || 0) + 1); }
 function sumMap(map) { let n = 0; for (const v of map.values()) n += v; return n; }
 // Retry-After is OPTIONAL (workable hands back ~4h on a 429; breezy's 403s carry
@@ -302,6 +379,38 @@ function providerThrottled(p) {
   for (const h of throttleHosts.keys()) if (h.split('.').slice(-2).join('.') === dom) return h;
   return null;
 }
+// How many 403/429s this provider's ATS has thrown this run (summed across its
+// tenant hosts). Drives the mid-wave auto-stop: one stray 403 is noise, but a
+// sustained count means the ATS is rate-limiting us and grinding the rest of the
+// backlog at it is pointless (every request just 403s).
+function providerThrottleCount(p) {
+  const dom = atsDomainOf(p);
+  if (!dom) return 0;
+  let n = 0;
+  for (const [h, c] of throttleHosts) if (h.split('.').slice(-2).join('.') === dom) n += c;
+  return n;
+}
+
+// Write a live JSON snapshot of the current run for the dashboard to poll. No-op
+// unless --status-file was passed. Per-provider it reports the live throttle host
+// (if any) and the longest Retry-After that host handed back, so a UI can show
+// "how long a wait this ATS gave" and count down "time since check".
+function writeStatusSnapshot(probeProviders, disabled, progress, phase) {
+  if (!STATUS_FILE) return;
+  const providers = {};
+  for (const p of probeProviders) {
+    const host = providerThrottled(p);
+    providers[p.id] = {
+      domain: atsDomainOf(p),
+      disabled: disabled.has(p.id),
+      throttled: !!host,
+      sampleHost: host || null,
+      retryAfterSec: host && retryAfterHosts.has(host) ? retryAfterHosts.get(host) : null,
+    };
+  }
+  const snap = { ts: new Date().toISOString(), phase, progress, providers };
+  try { writeFileSync(STATUS_FILE, JSON.stringify(snap, null, 2)); } catch { /* best-effort */ }
+}
 
 // ── per-host concurrency gate (burst-ban defense) ───────────────────
 // Global CONCURRENCY bounds TOTAL in-flight work, but it's host-blind: with N
@@ -316,15 +425,34 @@ function providerThrottled(p) {
 // the burst that earns the ban in the first place (cheaper than reactive cooldowns).
 const PER_HOST_MAX = numFlag('--per-host', 4);
 const PER_HOST_THROTTLED = Math.min(numFlag('--per-host-throttled', 2), PER_HOST_MAX);
-const hostGates = new Map();           // host -> { active, queue:[] }
-function hostCap(host) { return throttleHosts.has(host) ? PER_HOST_THROTTLED : PER_HOST_MAX; }
+const REQUEST_DELAY_MS = numFlag('--request-delay', DEFAULT_REQUEST_DELAY); // ms delay between requests to same host (throttle defense)
+const hostGates = new Map();           // gate key -> { active, queue:[], lastRequest }
+// A gate tightens if its exact key throttled OR its registrable ATS domain did —
+// so one tenant of an ATS throwing 403 squeezes the WHOLE ATS's shared budget.
+function hostCap(key) { return (throttleHosts.has(key) || throttledDomains.has(regDomainOf(key))) ? PER_HOST_THROTTLED : PER_HOST_MAX; }
 // Run fn() while holding a slot for `host`; waiters re-check the (possibly
 // tightened) cap on wake, so a host that throttles mid-run squeezes immediately.
+// Optional inter-request delay (REQUEST_DELAY_MS) enforces minimum time between
+// successive requests to the same host as throttle defense.
 async function withHostLimit(host, fn) {
   let g = hostGates.get(host);
-  if (!g) { g = { active: 0, queue: [] }; hostGates.set(host, g); }
+  if (!g) { g = { active: 0, queue: [], lastRequest: 0 }; hostGates.set(host, g); }
   while (g.active >= hostCap(host)) await new Promise((r) => g.queue.push(r));
+
+  // Apply inter-request delay if configured, with random jitter so the cadence
+  // isn't a metronome — a perfectly even 300ms beat is itself a bot fingerprint a
+  // WAF can rate-shape on. Each gap is the base delay ±40% (0.6×–1.4×), so the
+  // stream looks organic while preserving the same average pacing.
+  if (REQUEST_DELAY_MS > 0) {
+    const target = Math.round(REQUEST_DELAY_MS * (0.6 + Math.random() * 0.8));
+    const elapsed = Date.now() - g.lastRequest;
+    if (elapsed < target) {
+      await sleep(target - elapsed);
+    }
+  }
+
   g.active++;
+  g.lastRequest = Date.now();
   try { return await fn(); }
   finally {
     g.active--;
@@ -359,8 +487,32 @@ async function fetchOnce(url, json) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(url, { signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0', Accept: json ? 'application/json' : '*/*' } });
-    if (res.status === 403 || res.status === 429) bump(throttleHosts, hostOf(url)); // clear rate-limit → disable trigger
+    // Manual redirect handling (NOT redirect:'follow'). A live tenant feed is
+    // served at the tenant's OWN host with a 200. A DEAD tenant typically 302s to
+    // the ATS marketing root (e.g. a missing {slug}.breezy.hr → https://breezy.hr/),
+    // which then 403s our bot User-Agent. Following that blindly mis-reads the
+    // marketing 403 as a *tenant rate-limit* and latches a phantom throttle across
+    // the WHOLE ATS off the very first dead slug — poisoning every later probe into
+    // "uncertain". The tell is a redirect OFF the tenant's own host (e.g. the
+    // subdomain {slug}.breezy.hr → the bare apex breezy.hr): the feed lives at the
+    // tenant host, so a cross-HOST bounce = "no tenant here" = clean miss. A
+    // same-host redirect (trailing slash / scheme bump) is followed (bounded).
+    // hostOf() strips a leading `www.`, so a legit apex↔www redirect still follows.
+    const originHost = hostOf(url);
+    let current = url;
+    let res;
+    for (let hop = 0; ; hop++) {
+      res = await fetch(current, { signal: ctrl.signal, redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0', Accept: json ? 'application/json' : '*/*' } });
+      if (res.status < 300 || res.status >= 400) break;        // not a redirect → classify below
+      const loc = res.headers.get('location');
+      let next = null;
+      try { next = loc ? new URL(loc, current).href : null; } catch { next = null; }
+      // No target, a bounce to a DIFFERENT host (marketing/app root), or too many
+      // hops → this host has no tenant feed for us. Clean miss, NOT a throttle.
+      if (!next || hop >= 3 || hostOf(next) !== originHost) return { kind: 'notfound' };
+      current = next;                                          // same-host redirect: follow once more
+    }
+    if (res.status === 403 || res.status === 429) { const h = hostOf(url); bump(throttleHosts, h); throttledDomains.add(regDomainOf(h)); } // clear rate-limit → disable + per-ATS gate trigger
     if (res.status === 403 || res.status === 429 || res.status === 503) {           // capture the wait time when offered (any status)
       const ra = parseRetryAfter(res.headers.get('retry-after'));
       if (ra != null) { const h = hostOf(url); retryAfterHosts.set(h, Math.max(retryAfterHosts.get(h) || 0, ra)); }
@@ -384,8 +536,8 @@ async function fetchOnce(url, json) {
 // Returns a classified result: { kind:'notfound' } | { kind:'data', data } |
 // { kind:'uncertain', reason } | { kind:'dnsfail', reason }. Routes every attempt
 // through the per-host gate so bursts can't trip a host's WAF.
-async function get(url, json = true) {
-  const host = hostOf(url);
+async function get(url, json = true, gateKey = null) {
+  const host = gateKey || hostOf(url);   // gateKey lets slug probes share ONE per-ATS budget (see runEndpoint)
   let last = { kind: 'uncertain', reason: 'network' };
   for (let attempt = 0; attempt <= GET_RETRIES; attempt++) {
     if (attempt > 0) await sleep(500 * 2 ** (attempt - 1) + Math.floor(Math.random() * 400));
@@ -444,13 +596,52 @@ function locContradicts(country, loc) {
   return !!hitC && hitC !== country.toUpperCase();
 }
 
+// Game-industry content signal — a fail-safe REVIEW gate, twin of GENERIC and
+// locContradicts. A subdomain/board slug can be a NAMESAKE: a pharma, construction
+// or insurance company squatting the same single word on the same ATS (the class
+// that produced ~35 false "trusted" hits in the namesake audit — acino=pharma,
+// triumph=construction, etc.). The length/GENERIC heuristic in tierFor can't catch
+// a 6+ char non-generic word like "acino" or "triumph". The decisive disproof is
+// the board itself: a real game studio posts game-shaped roles. So a MEDIUM slug
+// hit whose visible job titles are ALL non-game is almost certainly a namesake —
+// downgrade to VERIFY (surfaced in NEEDS REVIEW, one click to confirm, never
+// dropped). Keep tokens game-SPECIFIC so generic cross-industry titles (a bare QA /
+// Producer / Designer / Artist, which pharma & construction also post) don't
+// falsely CONFIRM a namesake. Extend freely: over-inclusion only keeps a borderline
+// hit trusted, it never hides one.
+const GAME_SIGNAL = /\b(game(s|play|dev)?|unity|unreal|godot|cryengine|game ?engine|engine (programmer|developer|engineer)|level design(er)?|technical artist|character artist|environment artist|concept artist|3d artist|vfx artist|gameplay (programmer|engineer|designer)|graphics (programmer|engineer)|tools (programmer|engineer)|narrative design(er)?|game (design(er)?|artist|producer|writer|programmer|developer)|animator|esports|playtest)\b/i;
+
+// Extract a flat list of job titles from any probed ATS payload (jobs/result/
+// content/items arrays, or a bare array) across each ATS's title field. Used ONLY
+// to vet game-relevance at hit time — never persisted.
+function probeTitles(data) {
+  const arr = Array.isArray(data) ? data
+    : Array.isArray(data?.jobs) ? data.jobs
+    : Array.isArray(data?.result) ? data.result
+    : Array.isArray(data?.content) ? data.content
+    : Array.isArray(data?.items) ? data.items
+    : [];
+  return arr.map(j => String(
+    j?.title || j?.name || j?.text || j?.jobOpeningName || j?.jobTitle || j?.attributes?.title || ''
+  ).trim()).filter(Boolean);
+}
+
+// True ONLY when there are titles to judge AND none carries a game signal — i.e.
+// positive contrary evidence this tenant isn't a game studio. No titles → false
+// (no evidence can't disprove — mirrors how bare "Remote" never contradicts a
+// country in locContradicts).
+function gameContentContradicts(titles) {
+  if (!titles || titles.length === 0) return false;
+  return !titles.some(t => GAME_SIGNAL.test(t));
+}
+
 // ── Provider-driven probe descriptors ───────────────────────────────
 // The set of ATSes to probe is NOT hardcoded here — it is auto-loaded from
 // providers/*.mjs. Any provider that exports a `probe` descriptor (see the Probe
 // typedef in providers/_types.js) is picked up; aggregators and recipe/parser
 // providers omit it and are skipped. Adding a discoverable ATS = drop in one
 // provider file, no edit here. Mirrors how scan.mjs auto-loads providers.
-const PROVIDERS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'providers');
+const PROVIDERS_DIR = path.join(REPO_ROOT, 'providers');
 
 async function loadProbeProviders(dir) {
   const out = [];
@@ -523,7 +714,15 @@ async function checkCanaries(providers) {
 //   {type:'uncertain', reason}         — couldn't confirm OR deny (throttle/5xx/network/
 //                                        or a distrusted 404 while THIS ATS is actively throttling)
 async function runEndpoint(p, endpoint, key) {
-  const r = await get(endpoint.url(key));
+  // Per-ATS concurrency gate: slug endpoints on per-tenant subdomains
+  // ({slug}.breezy.hr) would otherwise each get their OWN per-host budget, so an
+  // ATS with N tenants gets hit N-wide at once and trips its account-level WAF.
+  // Gate slug probes by the ATS's registrable domain (breezy.hr) so ALL of one
+  // ATS's tenant requests share a single budget — throttle-control is genuinely
+  // per-ATS. Fixed-host ATSes (greenhouse.io) are unaffected (one host already).
+  // Domain-sweep guesses hit the studio's OWN host, so they stay per-host (null).
+  const gateKey = endpoint.kind === 'slug' ? (atsDomainOf(p) || null) : null;
+  const r = await get(endpoint.url(key), true, gateKey);
   // Disguised-throttle defense, tied to the LIVE signal (not a canary): a 404 or a
   // parse-rejected 2xx can't be trusted as a real "no tenant" while THIS ATS is
   // actively throwing 403/429 at us — it may be a WAF challenge masquerading as a
@@ -538,10 +737,13 @@ async function runEndpoint(p, endpoint, key) {
     return {
       type: 'hit',
       ats: endpoint.label || p.id,
+      provider: p.id,                                       // real provider id (label-agnostic) for studios.yml `provider:`
       where: endpoint.where(key),
+      careersUrl: endpoint.careersUrl ? endpoint.careersUrl(key) : null, // canonical scan-ready URL (one-click add)
       count: hit.count,
       loc: hit.loc || '',
       confidence: tierFor(p, endpoint, key),
+      sampleTitles: probeTitles(r.data), // vetting-only (game-relevance); stripped in finalize, never persisted
     };
   }
   if (r.kind === 'notfound') {
@@ -565,7 +767,13 @@ async function runEndpoint(p, endpoint, key) {
 // false miss) so the next run retries them — they're not re-probed this run.
 async function probe(entry, tracked, probeProviders, { restrict = null, disabled = EMPTY_SET } = {}) {
   if (tracked.names.has(norm(entry.name))) return { name: entry.name, skipped: 'already in studios.yml' };
-  const providers = restrict ? probeProviders.filter(p => restrict.has(p.id)) : probeProviders;
+  const selected = restrict ? probeProviders.filter(p => restrict.has(p.id)) : probeProviders;
+  // Probe throttle-prone ATSes LAST. A studio that hits on a reliable fixed-host
+  // ATS (greenhouse/lever/ashby/…) short-circuits and returns before we ever touch
+  // a rate-limited one — so the per-ATS gate's bounded slow lanes (breezy/bamboohr)
+  // never hold up the common path. Stable sort: same-class order is preserved.
+  const providers = [...selected].sort((a, b) =>
+    (KNOWN_THROTTLE_ATES.has(a.id) ? 1 : 0) - (KNOWN_THROTTLE_ATES.has(b.id) ? 1 : 0));
   // Track ATSes we could NOT confirm/deny for THIS studio (throttle/5xx/network).
   // If the studio ends with no hit, these make it "uncertain" (a real feed may be
   // hiding behind the error), not a clean miss. uncertainAts = "ats:reason" for the
@@ -640,6 +848,17 @@ function finalize(entry, hit, tracked, missedAts) {
     rest.confidence = 'verify';
     rest.namesakeFlag = `loc '${rest.loc}' ≠ ${entry.country}`;
   }
+  // Game-content vetting (twin of the loc check above): a MEDIUM slug hit whose
+  // visible job titles are ALL non-game is almost certainly a namesake squatting the
+  // slug (the acino-pharma / triumph-construction false-positive class) — downgrade
+  // to VERIFY so it lands in NEEDS REVIEW. Own-domain HIGH hits never reach here as
+  // medium, so they're exempt; an empty/untitled board isn't judged (can't disprove).
+  if (rest.confidence === 'medium' && gameContentContradicts(rest.sampleTitles)) {
+    rest.confidence = 'verify';
+    const reason = `no game signal in ${rest.sampleTitles.length} title(s)`;
+    rest.namesakeFlag = rest.namesakeFlag ? `${rest.namesakeFlag}; ${reason}` : reason;
+  }
+  delete rest.sampleTitles; // vetting-only — never persisted to ledger / studios.yml
   return { name: entry.name, ...rest, missedAts: [...(missedAts || [])] };
 }
 
@@ -679,8 +898,41 @@ async function runWaves(pending, tracked, probeProviders, led) {
       process.stderr.write(`  ⚠️  ${id}: canary '${slug}' returned ${why} — may be discontinued. NOT disabling (live 403/429 still guards it); refresh its canary slug.\n`);
     }
     const throttleBefore = sumMap(throttleHosts);
+    // Live within-wave progress: wave 1 drains the whole backlog in one pool, so
+    // without this the dashboard's numbers sit frozen until the wave ends. Emit a
+    // snapshot as each studio resolves (throttled to ~1/s so we don't thrash the
+    // status file), counting resolved/hits against what prior waves already banked.
+    const baseResolved = terminal.length;
+    const baseHits = terminal.filter(t => t.ats).length;
+    const waveTotal = pending.length;
+    let hitsThisWave = 0, lastTick = 0;
+    const onDone = (doneCount, r) => {
+      if (r && r.ats) hitsThisWave++;
+      // Fold EVERY completed studio into the ledger as it resolves (mergeLedger
+      // unions, so the end-of-wave merge below stays a safe no-op). Wave 1 drains
+      // the whole backlog in one pool, so without this the ledger — and the
+      // dashboard's per-ATS coverage bars that read it — wouldn't move until the
+      // wave ended, and an interrupt mid-wave-1 would lose ALL the cleared work.
+      if (led && r && !r.skipped) mergeLedger(led, norm(r.name), r.name, r);
+      const now = Date.now();
+      if (now - lastTick < 1000 && doneCount < waveTotal) return;
+      lastTick = now;
+      if (led) writeLedger(led);   // throttled (~1/s) flush so coverage bars climb live + interrupts keep progress
+      writeStatusSnapshot(probeProviders, disabled,
+        { pass, concurrency: conc, pending: waveTotal - doneCount, resolved: baseResolved + doneCount, hits: baseHits + hitsThisWave, elapsedMs: Date.now() - startedAt },
+        'running');
+    };
+    // Mid-wave auto-stop: bail the pool once EVERY ATS still in play is throttling
+    // us (for a single-ATS dashboard instance that's just "this ATS is throttling").
+    // The tail of `pending` is left unprobed — its cells stay OPEN for next run.
+    const throttledOut = () => {
+      if (NO_ABORT) return false;
+      const live = probeProviders.filter(p => !disabled.has(p.id));
+      return live.length > 0 && live.every(p => providerThrottleCount(p) >= THROTTLE_ABORT_HITS);
+    };
     const passResults = await runPool(pending,
-      x => probe(x.entry, tracked, probeProviders, { restrict: x.restrict, disabled }), conc);
+      x => probe(x.entry, tracked, probeProviders, { restrict: x.restrict, disabled }), conc, onDone, throttledOut);
+    const aborted = throttledOut();
     const throttleDelta = sumMap(throttleHosts) - throttleBefore;
     // PRIMARY, rot-proof auto-disable: any provider whose ATS host threw 403/429 this
     // run is rate-limiting us → drop it for the remaining waves (no canary needed).
@@ -692,6 +944,7 @@ async function runWaves(pending, tracked, probeProviders, led) {
     const next = [];
     for (let k = 0; k < passResults.length; k++) {
       const r = passResults[k];
+      if (!r) continue;   // unprobed (pool aborted on throttle) — leave OPEN for next run
       if (r.ats || r.skipped) { terminal.push(r); continue; }   // hit / skip = terminal
       // ATSes worth retrying = those uncertain this pass MINUS any now disabled. If
       // nothing probeable is left, the studio is terminal: uncertain if anything was
@@ -705,14 +958,25 @@ async function runWaves(pending, tracked, probeProviders, led) {
     // folding a still-uncertain studio's partial misses repeatedly is idempotent.
     if (led) {
       for (const r of passResults) {
-        if (r.skipped) continue;
+        if (!r || r.skipped) continue;
         mergeLedger(led, norm(r.name), r.name, r);
       }
       writeLedger(led);
     }
     const prevRemaining = pending.length;
     waveLog.push({ pass, conc, in: prevRemaining, resolved: prevRemaining - next.length, remaining: next.length, throttleDelta, disabled: [...disabled], canaries: checked });
+    const resolvedTotal = terminal.length;
+    writeStatusSnapshot(probeProviders, disabled,
+      { pass, concurrency: conc, pending: next.length, resolved: resolvedTotal, hits: terminal.filter(t => t.ats).length, elapsedMs: Date.now() - startedAt },
+      'running');
     pending = next;
+    // Auto-stopped mid-wave: every in-play ATS is throttling. Bail now (the
+    // unprobed tail stays OPEN) instead of grinding the backlog against a 403 wall.
+    if (aborted) {
+      const who = probeProviders.filter(p => providerThrottleCount(p) >= THROTTLE_ABORT_HITS).map(p => p.id).join(', ');
+      process.stderr.write(`  ⛔ auto-stopped: ${who || 'all in-play ATSes'} throttling (≥${THROTTLE_ABORT_HITS} × 403/429) — left ${next.length} studio(s) OPEN for next run.\n`);
+      break;
+    }
     if (!pending.length) break; // EXHAUSTIVELY finished — every studio reached a terminal state
 
     const elapsed = Date.now() - startedAt;
@@ -733,10 +997,17 @@ async function runWaves(pending, tracked, probeProviders, led) {
       break;
     }
     conc = Math.max(2, Math.floor(conc / 2));
-    const cool = BASE_COOLDOWN_S * (stillStruggling ? pass : 1);
+    // Inter-wave cooldown: base cooldown + extra delay if request-delay is set
+    let cool = BASE_COOLDOWN_S * (stillStruggling ? pass : 1);
+    if (REQUEST_DELAY_MS > 0 && stillStruggling) {
+      cool += REQUEST_DELAY_MS / 1000; // add request-delay to wave cooldown when throttle active
+    }
     process.stderr.write(`  wave ${pass}: ${next.length} uncertain remain${stillStruggling ? ` (throttle active)` : ''} — cooling ${cool}s, re-probing at concurrency ${conc}...\n`);
     await sleep(cool * 1000);
   }
+  writeStatusSnapshot(probeProviders, disabled,
+    { pass, concurrency: conc, pending: 0, resolved: terminal.length, hits: terminal.filter(t => t.ats).length, elapsedMs: Date.now() - startedAt },
+    'done');
   return { results: terminal, passes: pass, waveLog, disabled, staleCanaries };
 }
 
@@ -775,9 +1046,18 @@ async function loadNames() {
   return [...new Map(out.map(e => [e.name.toLowerCase(), e])).values()];
 }
 
-async function runPool(items, worker, limit) {
-  const out = []; let i = 0;
-  async function next() { while (i < items.length) { const idx = i++; out[idx] = await worker(items[idx]); } }
+// shouldAbort (optional): polled before each pull — when it returns true the pool
+// stops dispatching new work (in-flight workers finish), leaving the tail of
+// `items` unprobed (their `out[idx]` stays undefined). Callers must treat holes as
+// "not probed" (left OPEN), never as a miss.
+async function runPool(items, worker, limit, onDone, shouldAbort) {
+  const out = []; let i = 0; let done = 0;
+  async function next() {
+    while (i < items.length) {
+      if (shouldAbort && shouldAbort()) { i = items.length; break; }
+      const idx = i++; out[idx] = await worker(items[idx]); done++; if (onDone) onDone(done, out[idx]);
+    }
+  }
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, next));
   return out;
 }
@@ -848,32 +1128,46 @@ async function main() {
       passes, waves: waveLog, scanVersion: SCAN_VERSION,
     }, null, 2));
   } else {
-    console.log(`\n=== NEW HITS (${trustedHits.length}) — trusted, not already in studios.yml ===`);
-    for (const h of trustedHits) console.log(fmtHit(h));
+    const lines = [];
+    lines.push(`\n=== NEW HITS (${trustedHits.length}) — trusted, not already in studios.yml ===`);
+    for (const h of trustedHits) lines.push(fmtHit(h));
     if (reviewHits.length) {
-      console.log(`\n⚠️  NEEDS REVIEW (${reviewHits.length}) — generic-slug matches, NAMESAKE RISK. A different company may own this slug; confirm before adding to studios.yml (these stay open and re-surface here until resolved):`);
-      for (const h of reviewHits) console.log(fmtHit(h));
+      lines.push(`\n⚠️  NEEDS REVIEW (${reviewHits.length}) — generic-slug matches, NAMESAKE RISK. A different company may own this slug; confirm before adding to studios.yml (these stay open and re-surface here until resolved):`);
+      for (const h of reviewHits) lines.push(fmtHit(h));
     }
-    console.log(`\nSkipped ${skipped.length} already-tracked · ${ledgerSkipped} ledger-cleared (scan v${SCAN_VERSION}) · ${cleanMisses} confirmed no-feed (404/empty) · ${passes} wave(s).`);
+    lines.push(`\nSkipped ${skipped.length} already-tracked · ${ledgerSkipped} ledger-cleared (scan v${SCAN_VERSION}) · ${cleanMisses} confirmed no-feed (404/empty) · ${passes} wave(s).`);
     if (uncertain.length) {
-      console.log(`\n⚠️  UNCERTAIN (${uncertain.length}) — could NOT confirm or deny after ${passes} adaptive wave(s) (throttle / 5xx / network / disabled ATS). "No feed" is NOT proven here.`);
-      console.log(`   Re-probe just these ATSes slower:  node probe-studios.mjs --backlog --ats <id> --concurrency 2`);
-      for (const u of uncertain.slice(0, 40)) console.log(`     ? ${u.name.padEnd(30)} (${u.uncertain.join(', ')})`);
-      if (uncertain.length > 40) console.log(`     … and ${uncertain.length - 40} more`);
+      lines.push(`\n⚠️  UNCERTAIN (${uncertain.length}) — could NOT confirm or deny after ${passes} adaptive wave(s) (throttle / 5xx / network / disabled ATS). "No feed" is NOT proven here.`);
+      lines.push(`   Re-probe just these ATSes slower:  node probe-studios.mjs --backlog --ats <id> --concurrency 2`);
+      for (const u of uncertain.slice(0, 40)) lines.push(`     ? ${u.name.padEnd(30)} (${u.uncertain.join(', ')})`);
+      if (uncertain.length > 40) lines.push(`     … and ${uncertain.length - 40} more`);
     }
     if (reasonAgg.length) {
-      console.log(`\n   Uncertainty by ATS:reason: ${reasonAgg.map(([r, n]) => `${r}=${n}`).join(', ')}`);
+      lines.push(`\n   Uncertainty by ATS:reason: ${reasonAgg.map(([r, n]) => `${r}=${n}`).join(', ')}`);
     }
     if (disabled.size) {
-      console.log(`\n⏭️  ATSes auto-disabled this run (throttling/blocking us): ${[...disabled].join(', ')}. Their cells were left OPEN — re-run later (no flag needed) and they'll be retried.`);
+      lines.push(`\n⏭️  ATSes auto-disabled this run (throttling/blocking us): ${[...disabled].join(', ')}. Their cells were left OPEN — re-run later (no flag needed) and they'll be retried.`);
     }
     if (staleCanaries.size) {
-      console.log(`   ⚠️  Stale canaries (refresh the slug in providers/<id>.mjs): ${[...staleCanaries].map(([id, why]) => `${id} (${why})`).join(', ')}`);
+      lines.push(`   ⚠️  Stale canaries (refresh the slug in providers/<id>.mjs): ${[...staleCanaries].map(([id, why]) => `${id} (${why})`).join(', ')}`);
     }
     if (throttleHosts.size) {
-      console.log(`   Throttle (403/429) by host: ${[...throttleHosts].map(([h, n]) => `${h}=${n}${retryAfterHosts.has(h) ? ` ~${retryAfterHosts.get(h)}s` : ''}`).join(', ')}`);
+      lines.push(`   Throttle (403/429) by host: ${[...throttleHosts].map(([h, n]) => `${h}=${n}${retryAfterHosts.has(h) ? ` ~${retryAfterHosts.get(h)}s` : ''}`).join(', ')}`);
     }
-    console.log('\nHIGH = own-domain match (trust). MEDIUM = name-specific slug. VERIFY = generic slug (namesake risk — check the location).');
+    lines.push('\nHIGH = own-domain match (trust). MEDIUM = name-specific slug. VERIFY = generic slug (namesake risk — check the location).');
+
+    const output = lines.join('\n');
+
+    // Append to file if requested, or print to console
+    if (resultsAppendFile) {
+      const timestamp = new Date().toISOString();
+      const separator = `\n${'='.repeat(80)}\n[${timestamp}]\n`;
+      const existing = existsSync(resultsAppendFile) ? readFileSync(resultsAppendFile, 'utf-8') : '';
+      writeFileSync(resultsAppendFile, existing + separator + output);
+      console.log(`✅ Results appended to ${resultsAppendFile}`);
+    } else {
+      console.log(output);
+    }
   }
 }
 

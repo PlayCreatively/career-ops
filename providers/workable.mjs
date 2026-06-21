@@ -57,12 +57,17 @@ function widgetUrl(slug) {
 
 /** @type {import('./_types.js').Probe} */
 export const probe = {
+  // DocPlanner is a long-lived Workable tenant; the widget API returns its
+  // account metadata ({name, jobs:[]}) — a clean 200 there proves the host
+  // isn't throttling/banning us (a soft-block returns 403/429, not valid JSON).
+  canary: 'docplanner',
   endpoints: [{
     kind: 'slug',
     // The widget account API is the keyless discovery surface (the provider
     // itself reads the markdown feed; the widget API is better for slug probing).
     url: (s) => `https://apply.workable.com/api/v1/widget/accounts/${s}?details=true`,
     where: (s) => `apply.workable.com/${s}`,
+    careersUrl: (s) => `https://apply.workable.com/${s}`,
     parse: (d) => (d && Array.isArray(d.jobs)) ? { count: d.jobs.length, loc: d.jobs[0]?.location?.location_str || '' } : null,
   }],
 };

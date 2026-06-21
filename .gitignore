@@ -50,6 +50,11 @@ node_modules/
 bun.lock
 # probe-studios.mjs run logs (transient diagnostic output, never source)
 *.out
+probe/*.log
+data/probe-status.json
+data/.probe-live.json
+data/probe-history.json
+data/probe-schedules.json
 
 # OS
 .DS_Store
@@ -63,6 +68,8 @@ career-dashboard
 package-lock.json
 /data
 asgc-jobs.json
+# Studio-mining scratch workspace (jobs.jsonl, sitemap, cursor state — regenerable)
+.mining/
 
 # Board: generated public data — never committed. main carries no daily job
 # data; CI rebuilds these fresh into the Pages artifact on every deploy, and
