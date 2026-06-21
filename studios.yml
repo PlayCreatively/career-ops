@@ -63,6 +63,14 @@ exclude_companies:
   - Skillz                 # cash-tournament / betting platform
   - JustPlay GmbH          # reward-app (play-for-rewards), not a games studio
   - War Child UK           # charity (gaming-fundraising partnerships)
+  - Playtech               # iGaming / online-casino software (payroll/CRM/algos)
+  - Rush Street Interactive # online casino + sportsbook (BetRivers)
+  - Yggdrasil              # iGaming slots provider (Yggdrasil Gaming)
+  - Evolution              # live online-casino games (Evolution Gaming)
+  - Aristocrat             # slot machines / casino gaming (Aristocrat Gaming)
+  - Aristocrat Gaming      # ASGC name variant of the above
+  - Light & Wonder         # casino / lottery / social-casino (ex-Scientific Games)
+  - High 5 Games           # social casino / slot-game maker (iGaming), not video games
 
 tracked_companies:
 
@@ -440,6 +448,15 @@ tracked_companies:
     careers_url: https://spinmaster.wd3.myworkdayjobs.com/TocaBoca_Careers
     notes: "Stockholm / SF / Toronto. Toca Boca, Sago Mini."
     enabled: true
+  - name: SEGA
+    careers_url: https://sega.wd3.myworkdayjobs.com/SEGA_Careers
+    notes: "ASGC-mined; Workday-confirmed live (27 jobs, 2026-06-21). Shared tenant covers SEGA, Creative Assembly, Sports Interactive, Two Point — all games. Hand-added (shared multi-brand Workday tenant, not auto-addable)."
+    enabled: true
+  - name: Tencent (LightSpeed Studios)
+    provider: workday
+    careers_url: https://tencent.wd1.myworkdayjobs.com/Lightspeed
+    notes: "ASGC-mined; Workday-confirmed live (46 jobs, 2026-06-21). LightSpeed Studios = Tencent's AAA game studio (the Lightspeed site only — not all of Tencent global). Hand-added (shared tenant)."
+    enabled: true
 
   # ── Studios on Hailey HR ──────────────────────────────────────────
   # Hailey HR career pages SSR their job list into the page; the provider
@@ -560,11 +577,6 @@ tracked_companies:
     careers_url: https://job-boards.greenhouse.io/mobilityware
     api: https://boards-api.greenhouse.io/v1/boards/mobilityware/jobs
     notes: "Irvine CA + remote. Mobile (Solitaire, Spider)."
-    enabled: true
-  - name: 2K Madrid
-    careers_url: https://job-boards.greenhouse.io/2kmadrid
-    api: https://boards-api.greenhouse.io/v1/boards/2kmadrid/jobs
-    notes: "Madrid. 2K studio."
     enabled: true
   - name: Firaxis (2K)
     careers_url: https://job-boards.greenhouse.io/firaxis
@@ -1130,8 +1142,10 @@ tracked_companies:
     notes: "Alkmaar, Netherlands. ~8 roles (ASGC mining pass #4)."
     enabled: true
   - name: Scorewarrior
-    careers_url: https://scorewarrior.recruitee.com
-    notes: "Limassol, Cyprus. ~26 roles (ASGC mining pass #4)."
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/scorewarrior
+    last_probe: 2026-06-21
+    notes: "Limassol, Cyprus. Moved Recruitee→Ashby (tokenless re-resolve 2026-06-21; feed live, jobs present)."
     enabled: true
   - name: Old Skull Games
     careers_url: https://careers.smartrecruiters.com/OldSkullGames1
@@ -1267,8 +1281,8 @@ tracked_companies:
   - name: Ringtail Interactive
     provider: teamtailor
     careers_url: https://jobs.ringtailinteractive.com
-    last_probe: 2026-06-09
-    notes: "Stockholm, 51-200. Teamtailor (search-confirmed: jobs.ringtailinteractive.com/jobs). Resolve pass #7."
+    last_probe: 2026-06-21
+    notes: "Stockholm, 51-200. Teamtailor. Domain unreachable on 2026-06-21 probe — kept enabled; audit re-checks each run."
   - name: Midjiwan
     careers_url: https://midjiwan.com/career/
     recipe: { kind: blocked, reason: "custom contact-form application (portfolio+CV), no ATS/feed; 'currently not looking'" }
@@ -1294,8 +1308,8 @@ tracked_companies:
   - name: Turborilla
     provider: teamtailor
     careers_url: https://jobs.turborilla.com
-    last_probe: 2026-06-09
-    notes: "Umeå (Mad Skills). Teamtailor (job URLs jobs.turborilla.com/jobs/{id}-slug = TT fingerprint). Resolve pass #7."
+    last_probe: 2026-06-21
+    notes: "Umeå (Mad Skills). Teamtailor (jobs.turborilla.com). Board empty/unpublished on 2026-06-21 probe — returns when they post; careers page also has jobs@turborilla.com fallback. Kept enabled."
   - name: Hello There Games
     careers_url: https://hellothere.se
     recipe: { kind: browser, reason: "site unreachable from this env (timeout via fetch + WebFetch); verify careers/ATS in browser" }
@@ -1311,18 +1325,25 @@ tracked_companies:
   - name: Fall Damage
     provider: teamtailor
     careers_url: https://www.falldamagestudio.com
-    last_probe: 2026-06-09
-    notes: "Stockholm (5 open roles). Teamtailor (job URLs www.falldamagestudio.com/jobs/{id}-slug = TT fingerprint). Resolve pass #7."
+    last_probe: 2026-06-21
+    notes: "Stockholm. Teamtailor (custom domain). falldamagestudio.com unreachable on 2026-06-21; studio may have moved to falldamage.com (board not yet located). Kept enabled; audit re-checks."
   - name: nDreams
     careers_url: https://ndreams.com/careers
     recipe: { kind: browser, reason: "Gatsby+DatoCMS site; job list rendered client-side by a DatoCmsCareersArchive block — careers page-data.json carries NO inline vacancies and HTML references no ATS host. Open the browser Network tab on /careers#careers-archive to capture the jobs XHR, then make a recipe: json." }
     last_probe: 2026-06-09
     notes: "Farnborough, UK — VR."
   - name: Cloud Imperium Games
-    provider: breezy
-    careers_url: https://cloud-imperium-games.breezy.hr
-    last_probe: 2026-06-14
-    notes: "Manchester/LA — Star Citizen. ⭐ Breezy tenant (exact-name slug; feed empty at wire time — CONFIRM identity from first posting). Reachable path around the Workday cxs-422 block (cloudimperiumgames.wd1.myworkdayjobs.com/CIG_Global_Careers)."
+    provider: workday
+    careers_url: https://cloudimperiumgames.wd503.myworkdayjobs.com/CIG_Global_Careers
+    last_probe: 2026-06-21
+    notes: "Manchester/LA/Frankfurt — Star Citizen. Re-wired from a suspect empty Breezy exact-name slug to the live Workday feed (wd503, not the wd1 the old prober got cxs-422'd on). 64 open at wire time."
+    resolve:
+      at: 2026-06-21
+      outcome: ats          # ats | recipe-json | recipe-html | email-only | none | browser
+      provider: workday
+      method: manual        # manual | haiku | heuristic
+      jobs_at_wire: 64
+      note: "host from web search; tokenless cxs POST returned 64 jobs; supersedes empty breezy slug"
 
   # ── GDI 2025 import (Dataspelsbranschen Game Developer Index) ──────
   # Swedish-industry directory, bulk-imported tokenlessly (import-gdi.mjs).
@@ -1544,9 +1565,9 @@ tracked_companies:
   - name: Axolot Games
     country: SE
     provider: teamtailor
-    careers_url: https://axolotgames.teamtailor.com
-    last_probe: 2026-06-09
-    notes: "GDI 2025. Teamtailor (probe MEDIUM, 5 jobs). Scrap Mechanic devs. Resolve pass #7."
+    careers_url: https://axolotgamesab.teamtailor.com
+    last_probe: 2026-06-21
+    notes: "GDI 2025. Scrap Mechanic devs. Teamtailor slug corrected axolotgames→axolotgamesab (old was a DEMO/trial board; tokenless re-resolve 2026-06-21, feed live)."
   - name: Baldheads Creative
     country: SE
     status: unresolved
@@ -2501,8 +2522,8 @@ tracked_companies:
     country: SE
     provider: teamtailor
     careers_url: https://geoguessr.teamtailor.com
-    last_probe: 2026-06-09
-    notes: "GDI 2025. Teamtailor (probe MEDIUM, 5 jobs). Resolve pass #7."
+    last_probe: 2026-06-21
+    notes: "GDI 2025. Teamtailor. Board empty/unpublished on 2026-06-21 probe (404) — returns when they post. Kept enabled."
   - name: Ghetto Blaster
     country: SE
     status: unresolved
@@ -7223,3 +7244,176 @@ tracked_companies:
     status: unresolved
     notes: "SGDA member (Swiss Game Developers Association)."
 
+  # ── ASGC-mined BambooHR studios (2026-06-21) ──────────────────────────────
+  # mine-asgc.mjs detect() now parses *.bamboohr.com; each slug came from a real
+  # ASGC job link and was live-validated via {slug}.bamboohr.com/careers/list.
+  # VFX/animation houses (Image Engine, Cinesite, Finvfx, Icon Creative, Guru,
+  # DMFX, Felix & Paul) and iGaming (Hacksaw, High 5) were excluded as off-theme.
+  - name: Final Strike Games
+    country: CA
+    provider: bamboohr
+    careers_url: https://finalstrikegames.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (3 jobs, 2026-06-21)."
+  - name: Endless Studios
+    country: US
+    provider: bamboohr
+    careers_url: https://endlessstudios.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (2 jobs, 2026-06-21)."
+  - name: Wolcen Studio
+    country: FR
+    provider: bamboohr
+    careers_url: https://wolcenstudio.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (1 job, 2026-06-21). Wolcen: Lords of Mayhem."
+  - name: Beamdog
+    country: CA
+    provider: bamboohr
+    careers_url: https://beamdog.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (1 job, 2026-06-21). Baldur's Gate: Enhanced Edition."
+  - name: Seismic Squirrel
+    provider: bamboohr
+    careers_url: https://seismicsquirrel.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (2 jobs, 2026-06-21)."
+  - name: Infinity Plus Two
+    provider: bamboohr
+    careers_url: https://infinityplustwo.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (1 job, 2026-06-21). Marvel Puzzle Quest."
+  - name: Torn Banner Studios
+    country: CA
+    provider: bamboohr
+    careers_url: https://tornbanner.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (4 jobs, 2026-06-21). Chivalry 2."
+  - name: Pixel Toys
+    country: GB
+    provider: bamboohr
+    careers_url: https://pixeltoysltd.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (9 jobs, 2026-06-21). Warhammer Age of Sigmar: Realm War."
+  - name: Hundred Star Games
+    country: GB
+    provider: bamboohr
+    careers_url: https://hundredstar.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (4 jobs, 2026-06-21)."
+  - name: Streamline Studios
+    provider: bamboohr
+    careers_url: https://streamlinestudios.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (13 jobs, 2026-06-21)."
+  - name: Budge Studios
+    country: CA
+    provider: bamboohr
+    careers_url: https://budge.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (6 jobs, 2026-06-21). Kids mobile games."
+  - name: Arvore
+    country: BR
+    provider: bamboohr
+    careers_url: https://arvore.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (16 jobs, 2026-06-21). VR/immersive (Pixel Ripped)."
+  - name: Red Barrels
+    country: CA
+    provider: bamboohr
+    careers_url: https://redbarrels.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (2 jobs, 2026-06-21). Outlast."
+  - name: MYTONA
+    provider: bamboohr
+    careers_url: https://mytona.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (2 jobs, 2026-06-21). Seekers Notes / Cooking Diary."
+  - name: Fuse Games
+    country: GB
+    provider: bamboohr
+    careers_url: https://fusegames.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (2 jobs, 2026-06-21)."
+  - name: Blazing Griffin
+    country: GB
+    provider: bamboohr
+    careers_url: https://blazinggriffin.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (5 jobs, 2026-06-21). Glasgow; games + film."
+  - name: Stardock
+    country: US
+    provider: bamboohr
+    careers_url: https://stardock.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (4 jobs, 2026-06-21). Galactic Civilizations."
+  - name: Stormind Games
+    country: IT
+    provider: bamboohr
+    careers_url: https://stormindgames.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (1 job, 2026-06-21). Remothered."
+  - name: Bitwise Alchemy
+    country: US
+    provider: bamboohr
+    careers_url: https://bitwisealchemy.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (4 jobs, 2026-06-21). Game engineering/porting services."
+  - name: Ludia
+    country: CA
+    provider: bamboohr
+    careers_url: https://ludia.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (8 jobs, 2026-06-21). Jurassic World Alive."
+
+
+  # --- ASGC auto-added (2026-06-21, high-confidence, live-validated) ---
+  - name: Playground Games
+    provider: jobvite
+    careers_url: https://jobs.jobvite.com/playground-games
+    status: resolved
+    notes: "ASGC-mined; jobvite-confirmed live (11 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Probably Monsters
+    provider: jobvite
+    careers_url: https://jobs.jobvite.com/probablymonsters
+    status: resolved
+    notes: "ASGC-mined; jobvite-confirmed live (8 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: 1010games
+    provider: bamboohr
+    careers_url: https://1010games.bamboohr.com
+    status: resolved
+    notes: "ASGC-mined; bamboohr-confirmed live (5 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Gameloft
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/Gameloft
+    status: resolved
+    notes: "ASGC-mined; smartrecruiters-confirmed live (71 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Ubisoft
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/Ubisoft2
+    status: resolved
+    notes: "ASGC-mined; smartrecruiters-confirmed live (207 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Nex
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/nex
+    status: resolved
+    notes: "ASGC-mined; greenhouse-confirmed live (36 jobs, 2026-06-21). Auto-added (high-confidence)."
+
+  # --- ASGC auto-added (2026-06-21, high-confidence, live-validated) ---
+  - name: Tactical Adventures
+    provider: teamtailor
+    careers_url: https://tacticaladventures.teamtailor.com
+    status: resolved
+    notes: "ASGC-mined; teamtailor-confirmed live (2 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Cinnamon
+    provider: teamtailor
+    careers_url: https://cinnamonsoftware.teamtailor.com
+    status: resolved
+    notes: "ASGC-mined; teamtailor-confirmed live (2 jobs, 2026-06-21). Auto-added (high-confidence)."
+
+  # --- ASGC auto-added (2026-06-21, high-confidence, live-validated) ---
+  - name: Companion Group
+    provider: recruitee
+    careers_url: https://companiongroupltd.recruitee.com
+    status: resolved
+    notes: "ASGC-mined; recruitee-confirmed live (12 jobs, 2026-06-21). Auto-added (high-confidence)."
