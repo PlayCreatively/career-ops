@@ -59,6 +59,14 @@ export default {
     return apiUrl ? { url: apiUrl } : null;
   },
 
+  // url→identity (inverse of probe): mine a jobs.ashbyhq.com/{slug} link to { slug, careers_url }.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    if (!/(^|\.)ashbyhq\.com$/.test(u.hostname.toLowerCase())) return null;
+    const slug = u.pathname.split('/').filter(Boolean)[0];
+    return slug ? { slug, careers_url: `https://jobs.ashbyhq.com/${slug}` } : null;
+  },
+
   async fetch(entry, ctx) {
     const apiUrl = resolveApiUrl(entry);
     if (!apiUrl) throw new Error(`ashby: cannot derive API URL for ${entry.name}`);

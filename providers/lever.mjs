@@ -51,6 +51,16 @@ export default {
     return apiUrl ? { url: apiUrl } : null;
   },
 
+  // url→identity (inverse of probe): mine jobs.lever.co / jobs.eu.lever.co links to
+  // { slug, careers_url }, preserving the EU region, or null if not lever.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const m = u.hostname.toLowerCase().match(/^jobs\.(eu\.)?lever\.co$/);
+    if (!m) return null;
+    const slug = u.pathname.split('/').filter(Boolean)[0];
+    return slug ? { slug, careers_url: `https://jobs.${m[1] ? 'eu.' : ''}lever.co/${slug}` } : null;
+  },
+
   async fetch(entry, ctx) {
     const apiUrl = resolveApiUrl(entry);
     if (!apiUrl) throw new Error(`lever: cannot derive API URL for ${entry.name}`);

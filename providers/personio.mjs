@@ -88,6 +88,15 @@ export default {
     return feedUrl ? { url: feedUrl } : null;
   },
 
+  // url→identity (inverse of probe): mine a {slug}.jobs.personio.{tld} link to
+  // { slug, careers_url }; careers_url is the site origin (tld preserved).
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    if (!/\.jobs\.personio\.[a-z]+$/.test(u.hostname.toLowerCase())) return null;
+    const slug = u.hostname.split('.')[0];
+    return slug ? { slug, careers_url: u.origin } : null;
+  },
+
   async fetch(entry, ctx) {
     const feedUrl = resolveFeedUrl(entry);
     if (!feedUrl) throw new Error(`personio: cannot derive feed URL for ${entry.name} — set careers_url (https) or feed_url`);

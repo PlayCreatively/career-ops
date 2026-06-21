@@ -102,6 +102,13 @@ export default {
     return id ? { url: embedUrl(id) } : null;
   },
 
+  // url→identity (inverse of probe): mine an emp.jobylon.com/companies/{id}-{slug} link
+  // to { slug, careers_url } (slug = numeric company id), reusing resolveCompanyId.
+  mineUrl(jobUrl) {
+    const id = resolveCompanyId({ careers_url: jobUrl });
+    return id ? { slug: id, careers_url: `https://emp.jobylon.com/companies/${id}/` } : null;
+  },
+
   async fetch(entry, ctx) {
     const id = resolveCompanyId(entry);
     if (!id) throw new Error(`jobylon: cannot resolve company id for ${entry.name} — set company_id or an emp.jobylon.com/companies/<id>-... careers_url`);

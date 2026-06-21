@@ -132,6 +132,16 @@ export default {
     return feedUrl ? { url: feedUrl } : null;
   },
 
+  // url→identity (inverse of probe): mine a {slug}.breezy.hr link to { slug, careers_url };
+  // careers_url is the tenant origin. Bare/reserved hosts aren't tenants → null.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const h = u.hostname.toLowerCase();
+    if (h === 'breezy.hr' || !h.endsWith('.breezy.hr')) return null;
+    const sub = h.split('.')[0];
+    return (sub && !RESERVED_SUBDOMAINS.has(sub)) ? { slug: sub, careers_url: u.origin } : null;
+  },
+
   async fetch(entry, ctx) {
     const feedUrl = resolveFeedUrl(entry);
     if (!feedUrl) throw new Error(`breezy: cannot derive feed URL for ${entry.name} — set careers_url (https) or feed_url`);

@@ -107,6 +107,16 @@ export default {
     return feedUrl ? { url: feedUrl } : null;
   },
 
+  // url→identity (inverse of probe): mine a {slug}.teamtailor.com link to { slug, careers_url }.
+  // Custom-domain TT sites carry no slug in the host → null (route via explicit provider).
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const h = u.hostname.toLowerCase();
+    if (!h.endsWith('.teamtailor.com')) return null;
+    const sub = h.split('.')[0];
+    return (sub && sub !== 'www' && sub !== 'teamtailor') ? { slug: sub, careers_url: `https://${sub}.teamtailor.com` } : null;
+  },
+
   async fetch(entry, ctx) {
     const feedUrl = resolveFeedUrl(entry);
     if (!feedUrl) throw new Error(`teamtailor: cannot derive feed URL for ${entry.name} — set careers_url (https) or feed_url`);

@@ -133,6 +133,15 @@ export default {
     return listUrl ? { url: listUrl } : null;
   },
 
+  // url→identity (inverse of probe): mine a {tenant}.bamboohr.com link to { slug, careers_url }.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const h = u.hostname.toLowerCase();
+    if (!h.endsWith('.bamboohr.com')) return null;
+    const sub = h.split('.')[0];
+    return (sub && sub !== 'www' && sub !== 'app') ? { slug: sub, careers_url: `https://${sub}.bamboohr.com` } : null;
+  },
+
   async fetch(entry, ctx) {
     const listUrl = resolveListUrl(entry);
     if (!listUrl) throw new Error(`bamboohr: cannot derive list URL for ${entry && entry.name} — set careers_url (https on the .bamboohr.com tenant) or feed_url`);

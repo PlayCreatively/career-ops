@@ -59,6 +59,15 @@ export default {
     return apiUrl ? { url: apiUrl } : null;
   },
 
+  // url→identity (inverse of probe): mine a {slug}.recruitee.com link to { slug, careers_url }.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const h = u.hostname.toLowerCase();
+    if (!RECRUITEE_HOST_RE.test(h)) return null;
+    const sub = h.split('.')[0];
+    return (sub && sub !== 'www') ? { slug: sub, careers_url: `https://${sub}.recruitee.com` } : null;
+  },
+
   async fetch(entry, ctx) {
     const apiUrl = resolveApiUrl(entry);
     if (!apiUrl) throw new Error(`recruitee: cannot derive API URL for ${entry.name}`);

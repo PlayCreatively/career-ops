@@ -92,6 +92,18 @@ export default {
     return resolved ? { url: `https://${resolved.host}/wday/cxs/${resolved.tenant}/${resolved.site}/jobs` } : null;
   },
 
+  // url→identity (inverse of probe): mine a {tenant}.{dc}.myworkdayjobs.com/{locale?}/{site}
+  // link to { slug, careers_url }; careers_url ({host}/{site}) is self-sufficient — fetch()
+  // re-derives tenant/site from it. slug = tenant; label shows tenant/site.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const host = u.hostname.toLowerCase();
+    if (!host.endsWith('.myworkdayjobs.com')) return null;
+    const tenant = host.split('.')[0];
+    const site = u.pathname.split('/').filter(Boolean).find(s => !LOCALE_RE.test(s));
+    return (tenant && site) ? { slug: tenant, careers_url: `https://${host}/${site}`, label: `${tenant}/${site}` } : null;
+  },
+
   async fetch(entry, ctx) {
     const resolved = resolveWorkday(entry);
     if (!resolved) throw new Error(`workday: cannot resolve tenant/site for ${entry.name} — use a *.myworkdayjobs.com careers_url or set tenant:/site:`);

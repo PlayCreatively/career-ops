@@ -85,6 +85,15 @@ export default {
     return apiUrl ? { url: apiUrl } : null;
   },
 
+  // url→identity (inverse of probe): mine a (careers|jobs).smartrecruiters.com/{slug}
+  // link to { slug, careers_url }. Slug case is preserved (SR slugs are case-sensitive).
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    if (!SR_CAREERS_HOSTS.has(u.hostname.toLowerCase())) return null;
+    const slug = u.pathname.split('/').filter(Boolean)[0];
+    return slug ? { slug, careers_url: `https://careers.smartrecruiters.com/${slug}` } : null;
+  },
+
   async fetch(entry, ctx) {
     const slug = resolveSlug(entry);
     if (!slug) throw new Error(`smartrecruiters: cannot derive API URL for ${entry.name}`);

@@ -81,6 +81,20 @@ export default {
     return feedUrl ? { url: feedUrl } : null;
   },
 
+  // url→identity (inverse of probe): mine apply.workable.com/{slug} or {slug}.workable.com
+  // to { slug, careers_url } (the apply.workable.com form fetch() accepts).
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const h = u.hostname.toLowerCase();
+    let slug = null;
+    if (h === 'apply.workable.com') slug = u.pathname.split('/').filter(Boolean)[0];
+    else if (h.endsWith('.workable.com')) {
+      const sub = h.split('.')[0];
+      if (sub && sub !== 'apply' && sub !== 'www') slug = sub;
+    }
+    return slug ? { slug, careers_url: `https://apply.workable.com/${slug}` } : null;
+  },
+
   async fetch(entry, ctx) {
     const slug = resolveSlug(entry);
     if (!slug) throw new Error(`workable: cannot derive feed URL for ${entry.name}`);

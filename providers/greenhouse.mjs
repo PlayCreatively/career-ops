@@ -63,6 +63,20 @@ export default {
     }
   },
 
+  // url→identity (inverse of probe): mine a raw greenhouse board/job link down to
+  // { slug, careers_url } for mine-asgc.mjs, or null if not greenhouse. Board hosts
+  // carry the slug in the path; a {slug}.greenhouse.io vanity host carries it as the
+  // subdomain. careers_url is normalised to the job-boards form fetch() accepts.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const h = u.hostname.replace(/^www\./, '').toLowerCase();
+    if (!/(^|\.)greenhouse\.io$/.test(h)) return null;
+    const slug = /^(boards|job-boards|boards-api)(\.eu)?\.greenhouse\.io$/.test(h)
+      ? u.pathname.split('/').filter(Boolean)[0]
+      : h.replace(/(\.eu)?\.greenhouse\.io$/, '');
+    return slug ? { slug, careers_url: `https://job-boards.greenhouse.io/${slug}` } : null;
+  },
+
   async fetch(entry, ctx) {
     const apiUrl = resolveApiUrl(entry);
     if (!apiUrl) throw new Error(`greenhouse: cannot derive API URL for ${entry.name}`);

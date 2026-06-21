@@ -71,6 +71,7 @@ exclude_companies:
   - Aristocrat Gaming      # ASGC name variant of the above
   - Light & Wonder         # casino / lottery / social-casino (ex-Scientific Games)
   - High 5 Games           # social casino / slot-game maker (iGaming), not video games
+  - Evoplay                # online-casino / slots provider (iGaming) — affiliate/licensing roles, not video games
 
 tracked_companies:
 
@@ -1282,6 +1283,7 @@ tracked_companies:
     provider: teamtailor
     careers_url: https://jobs.ringtailinteractive.com
     last_probe: 2026-06-21
+    health_ignore: true   # reviewed: feed unreachable but kept on watch — don't raise departed-ATS alert
     notes: "Stockholm, 51-200. Teamtailor. Domain unreachable on 2026-06-21 probe — kept enabled; audit re-checks each run."
   - name: Midjiwan
     careers_url: https://midjiwan.com/career/
@@ -1309,6 +1311,7 @@ tracked_companies:
     provider: teamtailor
     careers_url: https://jobs.turborilla.com
     last_probe: 2026-06-21
+    health_ignore: true   # reviewed: TT board unpublished/empty, studio alive — don't raise departed-ATS alert
     notes: "Umeå (Mad Skills). Teamtailor (jobs.turborilla.com). Board empty/unpublished on 2026-06-21 probe — returns when they post; careers page also has jobs@turborilla.com fallback. Kept enabled."
   - name: Hello There Games
     careers_url: https://hellothere.se
@@ -1326,6 +1329,7 @@ tracked_companies:
     provider: teamtailor
     careers_url: https://www.falldamagestudio.com
     last_probe: 2026-06-21
+    health_ignore: true   # reviewed: old domain down, studio may have moved to falldamage.com — don't raise departed-ATS alert
     notes: "Stockholm. Teamtailor (custom domain). falldamagestudio.com unreachable on 2026-06-21; studio may have moved to falldamage.com (board not yet located). Kept enabled; audit re-checks."
   - name: nDreams
     careers_url: https://ndreams.com/careers
@@ -7417,3 +7421,51 @@ tracked_companies:
     careers_url: https://companiongroupltd.recruitee.com
     status: resolved
     notes: "ASGC-mined; recruitee-confirmed live (12 jobs, 2026-06-21). Auto-added (high-confidence)."
+
+  # --- ASGC auto-added (2026-06-21, high-confidence, live-validated) ---
+  - name: Stratosphere Games
+    provider: personio
+    careers_url: https://stratosphere-games.jobs.personio.de
+    status: resolved
+    notes: "ASGC-mined; personio-confirmed live (2 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: DreamForge Games
+    provider: breezy
+    careers_url: https://dreamforge-games-corporation.breezy.hr
+    status: resolved
+    notes: "ASGC-mined; breezy-confirmed live (3 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Warhorse Studios
+    provider: breezy
+    careers_url: https://warhorsestudios.breezy.hr
+    status: resolved
+    notes: "ASGC-mined; breezy-confirmed live (6 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Welevel
+    provider: personio
+    careers_url: https://welevel.jobs.personio.com
+    status: resolved
+    notes: "ASGC-mined; personio-confirmed live (24 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Playdead
+    provider: breezy
+    careers_url: https://playdead.breezy.hr
+    status: resolved
+    notes: "ASGC-mined; breezy-confirmed live (14 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Aesir Interactive
+    provider: personio
+    careers_url: https://aesir.jobs.personio.com
+    status: resolved
+    notes: "ASGC-mined; personio-confirmed live (11 jobs, 2026-06-21). Auto-added (high-confidence)."
+  - name: Fugo Games
+    provider: breezy
+    careers_url: https://fugo-games.breezy.hr
+    status: resolved
+    notes: "ASGC-mined; breezy-confirmed live (11 jobs, 2026-06-21). Auto-added (high-confidence)."
+  # --- ASGC-mined, HAND-added (2026-06-21): real game studios that tripped auto-add thresholds ---
+  - name: Bigpoint
+    provider: personio
+    careers_url: https://bigpoint.jobs.personio.com
+    status: resolved
+    notes: "ASGC-mined; personio-confirmed live (2 jobs, 2026-06-21: Unity Developer/Hamburg). Hand-added — ASGC mis-tagged its postings 'Other' so the gaming-share gate dropped it; verified real game studio (Drakensang)."
+  - name: Keen Software House
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/keensoftwarehouseas
+    status: resolved
+    notes: "ASGC-mined; greenhouse-confirmed live (2 jobs, 2026-06-21: 2D/UI Artist/Prague). Hand-added — small board landed at frac 0.33 (just under the 0.34 auto-add threshold); verified real game studio (Space Engineers)."
