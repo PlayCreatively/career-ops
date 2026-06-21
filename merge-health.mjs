@@ -28,31 +28,32 @@
  *
  * @param {Partial<HealthState>|null|undefined} prev  previous state (may be empty/missing)
  * @param {Outcome[]} outcomes  companies actually ATTEMPTED this run
- * @param {{ threshold?: number, now?: Date, ignore?: Iterable<string> }} [opts]
- *        ignore: studio names to keep tracking but exclude from `alerts` (reviewed "known-quiet")
+ * @param {{ threshold?: number, now?: Date, tracked?: Iterable<string> }} [opts]
+ *        tracked: names of studios that currently have a feed (ignoring this run's
+ *        filter). When given, a carried-forward record whose studio is no longer in
+ *        this set is DROPPED — so unwiring/removing a studio also clears its stale
+ *        streak (and its banner) instead of pinning it at 10+ forever.
  * @returns {HealthState}
  */
 export function mergeHealth(prev, outcomes, opts = {}) {
   const threshold = opts.threshold ?? 10;
   const now = opts.now ?? new Date();
   const today = now.toISOString().slice(0, 10);
-  // Studios the maintainer has reviewed and chosen to keep watching even though
-  // their feed is currently down/unpublished — an empty/unpublished board between
-  // postings is not a dead studio (Teamtailor 404, "Send Us Your Information" CTA,
-  // etc.). We still TRACK the failure streak (so it auto-recovers and stays visible
-  // in the CI tally), but these names are excluded from `alerts` so the public
-  // board banner and the auto-opened GitHub issue don't nag about them.
-  const ignore = new Set([...(opts.ignore || [])].map((s) => String(s).trim().toLowerCase()));
+  const tracked = opts.tracked
+    ? new Set([...opts.tracked].map((s) => String(s).trim().toLowerCase()))
+    : null;
 
   const prevCompanies = (prev && prev.companies) || {};
   const attempted = new Set();
   /** @type {Record<string, CompanyHealth>} */
   const companies = {};
 
-  // Carry forward companies NOT attempted this run, unchanged. (A run scoped to
-  // one ATS, or a company temporarily dropped from studios.yml, must not reset
-  // or lose another company's streak.)
+  // Carry forward companies NOT attempted this run, unchanged (a run scoped to one
+  // ATS, or a company temporarily dropped from studios.yml, must not reset or lose
+  // another company's streak) — EXCEPT studios no longer in `tracked` (unwired /
+  // removed): drop their record so the stale streak and its alert clear.
   for (const [name, rec] of Object.entries(prevCompanies)) {
+    if (tracked && !tracked.has(name.trim().toLowerCase())) continue;
     companies[name] = { ...rec };
   }
 
@@ -74,7 +75,7 @@ export function mergeHealth(prev, outcomes, opts = {}) {
   }
 
   const alerts = Object.entries(companies)
-    .filter(([name, rec]) => rec.fails >= threshold && !ignore.has(name.trim().toLowerCase()))
+    .filter(([, rec]) => rec.fails >= threshold)
     .map(([name]) => name)
     .sort();
 

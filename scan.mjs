@@ -1076,11 +1076,14 @@ async function main() {
       catch { console.log(`\n⚠ Could not parse --health-in ${healthIn}; starting tally fresh.`); }
     }
     const outcomes = [...companyOutcomes].map(([name, o]) => ({ name, ...o }));
-    // Studios with `health_ignore: true` in studios.yml are reviewed "known-quiet"
-    // (feed down/unpublished but the studio is alive) — keep tracking them but
-    // never raise the public departed-ATS alert. See mergeHealth + the board banner.
-    const healthIgnore = companies.filter((c) => c && c.health_ignore && c.name).map((c) => c.name);
-    const newHealth = mergeHealth(prevHealth, outcomes, { threshold: healthThreshold, ignore: healthIgnore });
+    // Studios that currently have a resolvable feed (ignoring this run's filter).
+    // Passed so mergeHealth drops the stale streak of any studio that's been
+    // unwired/removed from studios.yml — otherwise a removed studio's 10+ failure
+    // record would carry forward forever and keep firing the departed-ATS banner.
+    const trackedNames = companies
+      .filter((c) => c && typeof c.name === 'string' && c.enabled !== false && resolveProvider(c, providers))
+      .map((c) => c.name);
+    const newHealth = mergeHealth(prevHealth, outcomes, { threshold: healthThreshold, tracked: trackedNames });
     mkdirSync(path.dirname(healthOut) || '.', { recursive: true });
     writeFileSync(healthOut, JSON.stringify(newHealth));
     const flagged = Object.entries(newHealth.companies)

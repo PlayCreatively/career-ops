@@ -1280,11 +1280,10 @@ tracked_companies:
     last_probe: 2026-06-08
     notes: "Sweden. Resolve pass #5."
   - name: Ringtail Interactive
-    provider: teamtailor
-    careers_url: https://jobs.ringtailinteractive.com
+    country: SE
+    status: unresolved
     last_probe: 2026-06-21
-    health_ignore: true   # reviewed: feed unreachable but kept on watch — don't raise departed-ATS alert
-    notes: "Stockholm, 51-200. Teamtailor. Domain unreachable on 2026-06-21 probe — kept enabled; audit re-checks each run."
+    notes: "Stockholm, 51-200. ATS connection removed 2026-06-21: Teamtailor jobs.ringtailinteractive.com domain unreachable (DNS-000). Re-resolve if it returns."
   - name: Midjiwan
     careers_url: https://midjiwan.com/career/
     recipe: { kind: blocked, reason: "custom contact-form application (portfolio+CV), no ATS/feed; 'currently not looking'" }
@@ -1308,11 +1307,10 @@ tracked_companies:
     last_probe: 2026-06-08
     notes: "Sweden. Resolve pass #6."
   - name: Turborilla
-    provider: teamtailor
-    careers_url: https://jobs.turborilla.com
+    country: SE
+    status: unresolved
     last_probe: 2026-06-21
-    health_ignore: true   # reviewed: TT board unpublished/empty, studio alive — don't raise departed-ATS alert
-    notes: "Umeå (Mad Skills). Teamtailor (jobs.turborilla.com). Board empty/unpublished on 2026-06-21 probe — returns when they post; careers page also has jobs@turborilla.com fallback. Kept enabled."
+    notes: "Umeå (Mad Skills). ATS connection removed 2026-06-21: Teamtailor board jobs.turborilla.com returns TT 404 (unpublished); careers currently email-only (jobs@turborilla.com). Re-resolve if they republish a board."
   - name: Hello There Games
     careers_url: https://hellothere.se
     recipe: { kind: browser, reason: "site unreachable from this env (timeout via fetch + WebFetch); verify careers/ATS in browser" }
@@ -1326,11 +1324,10 @@ tracked_companies:
     recipe: { kind: browser, reason: "Teamtailor per refs but no custom domain found (404s); jobs@ email" }
     notes: "Stockholm (Shelter, Book of Travels)."
   - name: Fall Damage
-    provider: teamtailor
-    careers_url: https://www.falldamagestudio.com
+    country: SE
+    status: unresolved
     last_probe: 2026-06-21
-    health_ignore: true   # reviewed: old domain down, studio may have moved to falldamage.com — don't raise departed-ATS alert
-    notes: "Stockholm. Teamtailor (custom domain). falldamagestudio.com unreachable on 2026-06-21; studio may have moved to falldamage.com (board not yet located). Kept enabled; audit re-checks."
+    notes: "Stockholm. ATS connection removed 2026-06-21: Teamtailor custom domain falldamagestudio.com unreachable (DNS-000); studio may have moved to falldamage.com (board not located). Re-resolve."
   - name: nDreams
     careers_url: https://ndreams.com/careers
     recipe: { kind: browser, reason: "Gatsby+DatoCMS site; job list rendered client-side by a DatoCmsCareersArchive block — careers page-data.json carries NO inline vacancies and HTML references no ATS host. Open the browser Network tab on /careers#careers-archive to capture the jobs XHR, then make a recipe: json." }
@@ -2524,10 +2521,9 @@ tracked_companies:
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: GeoGuessr
     country: SE
-    provider: teamtailor
-    careers_url: https://geoguessr.teamtailor.com
+    status: unresolved
     last_probe: 2026-06-21
-    notes: "GDI 2025. Teamtailor. Board empty/unpublished on 2026-06-21 probe (404) — returns when they post. Kept enabled."
+    notes: "GDI 2025. ATS connection removed 2026-06-21: Teamtailor geoguessr.teamtailor.com returns 404 (slug stale). Re-resolve if they republish."
   - name: Ghetto Blaster
     country: SE
     status: unresolved
