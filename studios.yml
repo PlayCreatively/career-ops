@@ -1258,6 +1258,12 @@ tracked_companies:
   # scan.mjs skips them; /career-ops resolve walks them and assigns a provider,
   # recipe, parser, or a blocked tag. Run `node track-check.mjs "Name"` first.
 
+  - name: Warner Bros. Games
+    careers_url: https://warnerbrosgames.com/careers
+    recipe: { kind: browser, reason: "warnerbrosgames.com/careers redirects to careers.wbd.com (Phenom People ATS), which is PerimeterX bot-gated — /api/jobs returns 'A server error occurred' on plain HTTP. Needs a Playwright pass. Also a WBD-wide site (HBO/CNN/etc.), so a resolve pass must filter business=Games (NetherRealm, Avalanche, WB Games Boston/Montreal/SF, Player First, TT Games)." }
+    last_probe: 2026-06-22
+    notes: "Major publisher, user-requested. Resolve via browser + business=Games facet."
+
   # status: unresolved — small Swedish studios, not yet individually researched
   # (mostly tiny/custom/email per ats-research.md; low yield, but worth one probe).
   - name: Flamebait Games
