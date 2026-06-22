@@ -20,7 +20,7 @@
  */
 import http from 'http';
 import { readFile } from 'fs/promises';
-import { watch } from 'fs';
+import { watch, writeFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { projectTargeting } from './project-targeting.mjs';
@@ -30,6 +30,7 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SITE = path.join(ROOT, 'site');
 const SRC = process.argv[2] || 'portals.yml';
 const OUT = path.join(SITE, 'data', 'targeting.local.json');
+const RANKED_OUT = path.join(ROOT, 'data', 'ranked.md');
 const PORT = Number(process.env.PORT) || 5173;
 
 const TYPES = {
@@ -75,11 +76,30 @@ async function handleSaveTargeting(req, res) {
   }
 }
 
+// ── Export handler: the board POSTs its exact rendered, fit-sorted, exclude-
+// filtered list as markdown; we mirror it to data/ranked.md. The board owns the
+// ranking — this just persists what the web view already computed, so the file
+// never re-derives the logic. Localhost-only, like the save endpoint. ──────────
+async function handleExportRanked(req, res) {
+  try {
+    const body = await readBody(req);
+    if (!body || !body.startsWith('# Ranked Pipeline')) throw new Error('unexpected ranked.md body');
+    writeFileSync(RANKED_OUT, body, 'utf-8');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, bytes: body.length, file: path.relative(ROOT, RANKED_OUT) }));
+  } catch (err) {
+    console.error(`  ✗ ranked export failed: ${err.message}`);
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: err.message }));
+  }
+}
+
 // ── Static server (site/ only; no directory traversal) ──────────────
 const server = http.createServer(async (req, res) => {
   try {
     const url = decodeURIComponent((req.url || '/').split('?')[0]);
     if (req.method === 'POST' && url === '/save-targeting') { await handleSaveTargeting(req, res); return; }
+    if (req.method === 'POST' && url === '/export-ranked') { await handleExportRanked(req, res); return; }
     const rel = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
     const full = path.join(SITE, rel);
     if (!full.startsWith(SITE)) { res.writeHead(403).end('forbidden'); return; }

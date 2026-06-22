@@ -4,18 +4,14 @@ Process job URLs stored in `data/pipeline.md`. The user adds URLs at any time an
 
 ## Workflow
 
-0. **Pre-rank and gate to the top N (default 20).** The board snapshot can hold
-   thousands of scanned jobs; deep CV-aware evaluation is the expensive step, so
-   never evaluate the whole board blindly. First refresh + rank the board snapshot
-   (the SAME data + `portals.yml` targeting the web board uses — one source of truth):
-
-   ```bash
-   npm run board:refresh   # scan → site/data/jobs.json, project targeting, write data/ranked.md
-   ```
-
-   If a scan can't run (offline, throttled), re-rank the existing snapshot instead
-   with `node rank.mjs`. Either way `data/ranked.md` ends up sorted by surface fit
-   (location · role · seniority · company) and mirrors the web board exactly.
+0. **Pre-rank and gate to the top N (default 20).** The board can surface
+   thousands of jobs; deep CV-aware evaluation is the expensive step, so never
+   evaluate the whole board blindly. The ranking has ONE source of truth: the job
+   board. `data/ranked.md` is written BY the board — when served locally
+   (`npm run board:fresh`, then open it) the web view POSTs its exact visible,
+   fit-sorted, exclude-filtered list to board-dev.mjs, which writes the markdown.
+   So `data/ranked.md` always mirrors the web board. If it looks stale, open the
+   local board to refresh it.
 
    **Choosing N:**
    - If the user passed `--top {x}` (e.g. `/career-ops pipeline --top 30`), use `x`.

@@ -1311,6 +1311,55 @@ function render() {
   document.getElementById("more").textContent =
     filtered.length > RENDER_CAP ? "…" + (filtered.length - RENDER_CAP) + " more — narrow your filters to see them." : "";
   updateSaveState();   // refresh the localhost Save button + its diff
+  exportRanked(filtered);   // localhost: mirror this exact list into data/ranked.md
+}
+
+// ── data/ranked.md export (localhost only) ───────────────────────────────────
+// The board is the SINGLE source of the ranking. Rather than re-deriving the
+// scored/sorted/exclude-filtered list anywhere in Node, we hand the board's exact
+// rendered `filtered` list to board-dev.mjs, which writes it to data/ranked.md.
+// So the markdown mirror is always literally what the web view shows.
+function mdCell(s) { return String(s == null ? "" : s).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim(); }
+function buildRankedMd(list) {
+  var date = new Date().toISOString().slice(0, 10);
+  var out = [
+    "# Ranked Pipeline",
+    "",
+    "_Written by the job board (`npm run board:fresh`, open it) on " + date + " — the",
+    "board's exact visible, fit-sorted list with excluded roles hidden, so it always",
+    "mirrors the web view. Surface fit only (no CV); run `/career-ops pipeline` for",
+    "deep, CV-aware evaluation of the top picks._",
+    "",
+    "| # | Fit | Studio | Role | Location | Tags |",
+    "|---|-----|--------|------|----------|------|",
+  ];
+  list.forEach(function (j, i) {
+    var tags = [];
+    GROUPS.forEach(function (g) {
+      (j._mem[g.id] || []).forEach(function (fid) {
+        var rec = FBYID[fid]; if (!rec || rec.f.else) return;
+        var label = Rank.filterLabel(rec.f); if (label) tags.push(label);
+      });
+    });
+    var title = mdCell(j.title).replace(/[\[\]]/g, "\\$&");
+    var role = j.url ? "[" + title + "](<" + String(j.url).trim() + ">)" : title;
+    out.push("| " + (i + 1) + " | " + (j._final != null ? j._final : fitOf(j)).toFixed(3) +
+      " | " + mdCell(j.company) + " | " + role + " | " + (mdCell(j.location) || "—") +
+      " | " + mdCell(tags.join(", ")) + " |");
+  });
+  return out.join("\n") + "\n";
+}
+var _rankedTimer = null, _lastRankedMd = "";
+function exportRanked(list) {
+  if (!LIVE) return;   // only the local board-dev.mjs server can write the file
+  var md = buildRankedMd(list);
+  if (md === _lastRankedMd) return;   // skip no-op re-renders (hover, sort indicator…)
+  _lastRankedMd = md;
+  clearTimeout(_rankedTimer);
+  _rankedTimer = setTimeout(function () {
+    fetch("/export-ranked", { method: "POST", headers: { "Content-Type": "text/markdown" }, body: md })
+      .catch(function () {});
+  }, 400);
 }
 
 function esc(s) {

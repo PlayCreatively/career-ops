@@ -1,41 +1,29 @@
 #!/usr/bin/env node
 
 /**
- * rank.mjs — Deterministic, zero-token pre-ranker for the job pipeline.
+ * rank.mjs — Deterministic, zero-token scoring library for the job board.
  *
- * Ranks the board's fresh scan snapshot (`site/data/jobs.json`) — the SAME data
- * the local/public web board scores — using the `targeting:` weights in
- * portals.yml (identical to the board's projected targeting.local.json). So
- * data/ranked.md is a faithful CLI mirror of the web board, not a second source
- * of truth. The board snapshot is the ONLY input: regenerate it with
- * `npm run board:refresh` (which then runs this). Writes a sorted list to
- * data/ranked.md and prints the top results to stdout.
+ * This is the SHARED scoring core: pure, exported functions (keyword matching,
+ * group membership, exclusion, per-group scores) used by scan.mjs's targeting
+ * filter and by the test suite. It mirrors `site/rank.browser.js`, which runs the
+ * SAME model in the browser to power the web board.
  *
- * This is SURFACE fit only — it never reads cv.md. Deep, CV-aware match is the
- * LLM step (`/career-ops pipeline`). rank.mjs is the cheap triage that decides
- * WHICH jobs are worth that expensive step, and in what order.
+ * It does NOT generate data/ranked.md. The job board is the single source of the
+ * ranking: the web view computes the scored/sorted/exclude-filtered list and,
+ * when served locally (`npm run board:fresh`), POSTs that exact list to
+ * board-dev.mjs, which writes data/ranked.md. So the markdown mirror is produced
+ * BY the board, never re-derived here.
  *
- * Compositional by design: it imports nothing from scan.mjs and writes only its
- * own artifact (data/ranked.md). It shares the data format, not code. Every
- * scoring function below is pure and exported, so it can be unit-tested or
- * reused without running the CLI.
- *
- * Usage:
- *   node rank.mjs                 # rank board snapshot, write data/ranked.md, print top 15
- *   node rank.mjs --top 30        # print the top 30 instead
- *   node rank.mjs --all           # print every job
- *   node rank.mjs --dry-run       # print only, don't write data/ranked.md
+ * SURFACE fit only — never reads cv.md. Deep, CV-aware match is the LLM step
+ * (`/career-ops pipeline`).
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'fs';
 import yaml from 'js-yaml';
 
 // ── Paths & defaults ────────────────────────────────────────────────
 
 const PORTALS_PATH = 'portals.yml';
-const BOARD_JOBS_PATH = 'site/data/jobs.json';
-const RANKED_PATH = 'data/ranked.md';
 
 // Used only if portals.yml has no `ranking:` block, so rank.mjs runs standalone.
 const DEFAULT_RANKING = {
@@ -345,97 +333,12 @@ export function isExcluded(job, groups) {
   return groups.some((g) => matchGroup(job, g, index).some((f) => f.weight === 0));
 }
 
-/** Weighted fit across groups (group weights normalized at use). */
-export function fitGroups(job, groups) {
-  const index = buildFilterIndex(groups);
-  let total = 0;
-  let sum = 0;
-  for (const g of groups) {
-    const w = g.weight || 0;
-    total += w;
-    sum += w * scoreGroup(job, g, index);
-  }
-  return total ? sum / total : DEFAULT_GROUP_WEIGHT;
-}
-
-/**
- * Score one job against a `groups` array. Returns the job enriched with a per
- * group breakdown, a combined `fit`, and an `excluded` flag (a hard 0 anywhere).
- */
-export function scoreJobGroups(job, groups) {
-  const index = buildFilterIndex(groups);
-  const breakdown = groups.map((g) => {
-    const matched = matchGroup(job, g, index);
-    return {
-      name: g.name,
-      field: g.field,
-      score: scoreGroup(job, g, index),
-      matched: matched.filter((f) => !f.else).map(filterLabel).filter(Boolean),
-    };
-  });
-  return { ...job, group_scores: breakdown, fit: fitGroups(job, groups), excluded: isExcluded(job, groups) };
-}
-
-/** Normalize a {key: number} weight map so the values sum to 1. */
-export function normalizeWeights(weights) {
-  const entries = Object.entries(weights).filter(([, v]) => typeof v === 'number' && v > 0);
-  const total = entries.reduce((s, [, v]) => s + v, 0);
-  if (total === 0) return Object.fromEntries(entries.map(([k]) => [k, 0]));
-  return Object.fromEntries(entries.map(([k, v]) => [k, v / total]));
-}
-
-/**
- * Score a single job {title, location} against a ranking config.
- * Returns the job enriched with per-dimension scores and a combined `fit`.
- */
-export function scoreJob(job, ranking) {
-  // New unified schema: a `groups:` array. Falls through to the legacy flat
-  // location/role/seniority path when groups are absent.
-  if (Array.isArray(ranking?.groups)) return scoreJobGroups(job, ranking.groups);
-  const w = normalizeWeights(ranking.weights || DEFAULT_RANKING.weights);
-  const combine = ranking.combine || 'max';
-  const location = scoreCategory(job.location, ranking.location || {}, combine);
-  const role = scoreCategory(job.title, ranking.role || {}, combine);
-  const seniority = scoreCategory(job.title, ranking.seniority || {}, combine);
-  const company = scoreCategory(job.company, ranking.company || {}, combine);
-  const fit =
-    (w.location || 0) * location.score +
-    (w.role || 0) * role.score +
-    (w.seniority || 0) * seniority.score +
-    (w.company || 0) * company.score;
-  return { ...job, location_score: location, role_score: role, seniority_score: seniority, company_score: company, fit };
-}
-
-/** Score and sort a list of jobs, highest fit first. Stable for equal fits. */
-export function rankJobs(jobs, ranking) {
-  return jobs
-    .map((j) => scoreJob(j, ranking))
-    .sort((a, b) => b.fit - a.fit || a.company.localeCompare(b.company));
-}
+// Per-job fit, the table renderers, and the CLI used to live here; they moved to
+// the board (site/index.html + board-dev.mjs), which is now the single source of
+// the ranking and the only writer of data/ranked.md. What remains is the shared
+// scoring core above, used by scan.mjs's targeting filter and the test suite.
 
 // ── Data loading (impure, isolated from the scoring core) ────────────
-
-/**
- * Read the board's job snapshot (`site/data/jobs.json`) — the full, fresh,
- * URL-deduped scan that the public/local web board ranks. This is the SAME data
- * the board scores, so ranking it here with the same `portals.yml` targeting
- * makes data/ranked.md a faithful mirror of the local board (no second source of
- * truth). Rows already carry {title, url, company, location, postedDate,
- * workMode, department}; we only defaults-fill the fields the scorer touches so
- * a sparse row can't throw. Returns [] when the file is missing or malformed.
- */
-export function loadBoardJobs(jsonText) {
-  let parsed;
-  try { parsed = JSON.parse(jsonText); } catch { return []; }
-  const jobs = Array.isArray(parsed) ? parsed : parsed?.jobs;
-  if (!Array.isArray(jobs)) return [];
-  return jobs.map((j) => ({
-    ...j,
-    title: j.title || '',
-    company: j.company || '',
-    location: j.location || '',
-  }));
-}
 
 /**
  * Read the ranking config from portals.yml, or fall back to defaults.
@@ -447,123 +350,4 @@ export function loadRanking(portalsPath = PORTALS_PATH) {
   if (!existsSync(portalsPath)) return DEFAULT_RANKING;
   const config = yaml.load(readFileSync(portalsPath, 'utf-8')) || {};
   return config.targeting || config.ranking || DEFAULT_RANKING;
-}
-
-// ── Rendering ───────────────────────────────────────────────────────
-
-const pct = (n) => `${(n * 100).toFixed(0)}%`;
-
-// Escape characters that would break a markdown table cell — chiefly the pipe,
-// which several job titles contain (e.g. "Gameplay Programmer | Programmeur").
-const cell = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
-
-// Render a job title as a clickable markdown link to its posting, for one-click
-// access. The link text also escapes square brackets (which would otherwise
-// break the `[text]` part), and the URL is wrapped in <…> so parentheses or
-// other reserved characters in the posting URL can't break the `(…)` part.
-// Falls back to plain text when the job has no URL.
-function roleLink(title, url) {
-  const text = cell(title).replace(/[[\]]/g, '\\$&');
-  const href = String(url ?? '').trim();
-  return href ? `[${text}](<${href}>)` : text;
-}
-
-// `linkify` makes the Role cell a clickable markdown link to the posting —
-// on for the data/ranked.md artifact, off for the terminal preview (where a
-// raw markdown link is just noise).
-// Group-schema results carry `group_scores` (one entry per group) instead of
-// the fixed location/role/seniority columns — render a column per group.
-function renderTableGroups(ranked, { linkify = false } = {}) {
-  const groupNames = ranked[0].group_scores.map((g) => g.name);
-  const rows = ranked.map((j, i) => {
-    const fit = j.fit.toFixed(3);
-    const title = linkify ? roleLink(j.title, j.url) : cell(j.title);
-    const groupCells = j.group_scores
-      .map((g) => cell(`${pct(g.score)} ${g.matched.join(', ') || '—'}`))
-      .join(' | ');
-    return `| ${i + 1} | ${fit} | ${cell(j.company)} | ${title} | ${cell(j.location) || '—'} | ${groupCells} |`;
-  });
-  return [
-    `| # | Fit | Company | Role | Location | ${groupNames.join(' | ')} |`,
-    `|---|-----|---------|------|----------|${groupNames.map(() => '---').join('|')}|`,
-    ...rows,
-  ].join('\n');
-}
-
-function renderTable(ranked, { linkify = false } = {}) {
-  if (ranked.length && ranked[0].group_scores) return renderTableGroups(ranked, { linkify });
-  const rows = ranked.map((j, i) => {
-    const fit = j.fit.toFixed(3);
-    const loc = cell(`${pct(j.location_score.score)} ${j.location_score.matched}`);
-    const role = cell(`${pct(j.role_score.score)} ${j.role_score.matched}`);
-    const sen = cell(`${pct(j.seniority_score.score)} ${j.seniority_score.matched}`);
-    const co = cell(`${pct(j.company_score.score)} ${j.company_score.matched}`);
-    const title = linkify ? roleLink(j.title, j.url) : cell(j.title);
-    return `| ${i + 1} | ${fit} | ${cell(j.company)} | ${title} | ${cell(j.location) || '—'} | ${loc} | ${role} | ${sen} | ${co} |`;
-  });
-  return [
-    '| # | Fit | Company | Role | Location | Loc match | Role match | Lvl match | Co match |',
-    '|---|-----|---------|------|----------|-----------|------------|-----------|----------|',
-    ...rows,
-  ].join('\n');
-}
-
-function renderRankedFile(ranked, date) {
-  return [
-    '# Ranked Pipeline',
-    '',
-    `_Deterministic surface-fit ranking — generated by rank.mjs on ${date}._`,
-    '_Source: the board snapshot (`site/data/jobs.json`) ranked with `portals.yml`',
-    'targeting — the SAME data + config the web board uses, so this file mirrors it',
-    '(`npm run board:fresh`). This does NOT read your CV; run `/career-ops pipeline`',
-    'for deep, CV-aware evaluation of the top picks._',
-    '',
-    renderTable(ranked, { linkify: true }),
-    '',
-  ].join('\n');
-}
-
-// ── CLI ─────────────────────────────────────────────────────────────
-
-function main() {
-  const args = process.argv.slice(2);
-  const dryRun = args.includes('--dry-run');
-  const showAll = args.includes('--all');
-  const topIdx = args.indexOf('--top');
-  const top = topIdx !== -1 ? parseInt(args[topIdx + 1], 10) || 15 : 15;
-
-  const ranking = loadRanking();
-
-  // The board snapshot is the ONLY source — the SAME data the web board ranks, so
-  // data/ranked.md mirrors it exactly (no second source of truth). Regenerate the
-  // snapshot with `npm run board:refresh`, which writes it then runs this.
-  if (!existsSync(BOARD_JOBS_PATH)) {
-    console.error(`No board snapshot at ${BOARD_JOBS_PATH}. Run \`npm run board:refresh\` to scan + rank.`);
-    process.exit(1);
-  }
-  const jobs = loadBoardJobs(readFileSync(BOARD_JOBS_PATH, 'utf-8'));
-  if (jobs.length === 0) {
-    console.log(`Board snapshot ${BOARD_JOBS_PATH} has no jobs — nothing to rank.`);
-    return;
-  }
-
-  const ranked = rankJobs(jobs, ranking);
-  const date = new Date().toISOString().slice(0, 10);
-
-  if (!dryRun) {
-    writeFileSync(RANKED_PATH, renderRankedFile(ranked, date), 'utf-8');
-  }
-
-  const shown = showAll ? ranked : ranked.slice(0, top);
-  console.log(`\nRanked ${ranked.length} jobs by surface fit from the board snapshot (${BOARD_JOBS_PATH})\n`);
-  console.log(renderTable(shown));
-  if (!showAll && ranked.length > shown.length) {
-    console.log(`\n… ${ranked.length - shown.length} more. Use --all to see them.`);
-  }
-  if (!dryRun) console.log(`\nFull ranking written to ${RANKED_PATH}`);
-  console.log('→ Run /career-ops pipeline to deep-evaluate the top picks against your CV.');
-}
-
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  main();
 }
