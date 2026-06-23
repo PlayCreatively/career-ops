@@ -334,6 +334,14 @@ tracked_companies:
     notes: "Skövde. Satisfactory, Valheim publisher."
     enabled: true
 
+  - name: LEGO Digital Play
+    provider: teamtailor
+    careers_url: https://careers.legodigitalplay.com
+    status: resolved
+    last_probe: 2026-06-23
+    enabled: true
+    notes: "Created 2025 by KIRKBI / LEGO Holding (the Kirk Kristiansen family holding co.), NOT the LEGO Group toy operating company — operates INDEPENDENTLY from the LEGO Group (separate org/tenant, own Teamtailor portal). Mandate = wholly-owned branded digital play, distinct from licensed (TT Games) and the LEGO Group's own Fortnite-ecosystem division. Self-described 'earliest phases of this new company', Billund/Copenhagen/London. Affiliated with Light Brick Studio (LEGO Ventures-backed, makers of Builder's Journey / Voyagers). Building a digital-play *platform* — SDKs/APIs, content pipelines, engine integrations, developer tooling — plus mobile/live-service games. Dedicated Teamtailor feed = clean games-only listings (Software Engineer Core Tech, Lead Engineer Mobile Games, Game Design Director, Technical Artist, Animation TD, Game Analytics, UI Designer — ~16 roles, 2026-06-23), so NO keyword/facet scoping needed. Mobile/live-service titles may be Unity (good fit); some roles are London (UK visa). COMPLEMENTARY to (not a replacement for) the 'Warner Bros. Games' TT entry AND the separate LEGO Group corporate Workday stream that carries the Unreal Engine Plugins / Game Ecosystem Integration / Fortnite-ecosystem / LEGO DESiGN roles — different orgs, keep both."
+
   - name: 10 Chambers
     provider: teamtailor
     careers_url: https://10chambers.teamtailor.com
@@ -1274,6 +1282,23 @@ tracked_companies:
     status: resolved
     last_probe: 2026-06-23
     notes: "Whole WBD careers (Phenom front-end at careers.wbd.com) is PerimeterX-gated, but the underlying Workday tenant (warnerbros.wd5) serves zero-token. The global site is all of WBD (462 jobs, HBO/CNN/Leavesden retail incl.) with NO games facet, so scoped by studio office address → ~18 jobs (verified 2026-06-23). Covers Rocksteady, NetherRealm, Avalanche, TT Games, WB Games Montreal + Boston. Earlier query='WB Games' searchText was dropped: fuzzy, leaked WBD (Roku/payroll) AND undercounted (missed an Avalanche role); office-list is exact + complete. One known leak: Montreal 888 is shared, so a non-game payroll role rides along (accepted for completeness). Deliberately excluded as non-game: SF 153 Kearny (Bleacher Report/sports), Burbank 750 (theatrical/corp), NY 30 Hudson (CNN). Player First has no cleanly-identifiable postings here (its name fuzzy-matches unrelated roles). Phenom's /c/game-development-jobs category (~15, craft-only) is a useful cross-check but can't be queried zero-token (gated XHR) and omits studio support roles."
+
+  - name: LEGO Group (Games)
+    provider: workday
+    careers_url: https://lego.wd103.myworkdayjobs.com/LEGO_External
+    # LEGO's whole-company Workday tenant (toys, retail, marketing, manufacturing).
+    # No games business-unit facet, and the games roles sit in Billund/Copenhagen
+    # alongside everything else, so `locations` can't isolate them. Scope server-
+    # side by the keyword "game" (maps to Workday's searchText): LEGO brands its
+    # in-house games effort consistently as Game Development / Game Ecosystem /
+    # Gaming Passion, so this reliably catches the sector (~17 hits, 2026-06-23) —
+    # every games role probed surfaced under it. Recall-first: pulls a little
+    # marketing/licensing noise, which the downstream title filter ranks out.
+    # Fail-safe — drop `query` to scan the whole company.
+    query: "game"
+    status: resolved
+    last_probe: 2026-06-23
+    notes: "LEGO's OWN in-house games division (announced Mar 2025), distinct from WB-owned TT Games. Centred on the LEGO Fortnite ecosystem with Epic + LEGO DESiGN interactive-play design; Billund/Copenhagen (EEA → visa-free). query='game' → ~17 postings incl. VP Head of Game Development (req is internally 'Head of LEGO Fortnite ecosystem'), Lead Software Engineer Game Ecosystem Integration, Software Engineer Unreal Engine Plugins, Senior Interactive Systems/Play Designers (LEGO DESiGN). Effort is Epic/Fortnite/Unreal-centric. Noise pulled: marketing/licensing 'Gaming Passion' roles + occasional far misses (a retail Sales Associate matched once) — accepted as recall-first; the targeting title filter downranks them. Tenant lego.wd103, site LEGO_External, zero-token cxs API."
 
   # status: unresolved — small Swedish studios, not yet individually researched
   # (mostly tiny/custom/email per ats-research.md; low yield, but worth one probe).
