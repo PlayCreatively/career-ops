@@ -1261,10 +1261,17 @@ tracked_companies:
   - name: Warner Bros. Games
     provider: workday
     careers_url: https://warnerbros.wd5.myworkdayjobs.com/global
-    query: "WB Games"
+    # WBD's Workday tenant has no business-unit facet, so scope to the games
+    # studios by their dedicated office addresses (each office = one studio).
+    locations:
+      - "Rocksteady Studios"                 # London — Rocksteady
+      - "Chicago 2650A W Bradley"            # NetherRealm
+      - "Salt Lake City 175 East 400 South"  # Avalanche Software
+      - "Remote Utah"                        # Avalanche (remote)
+      - "Knutsford Canute Court"             # TT Games
     status: resolved
     last_probe: 2026-06-23
-    notes: "Whole WBD careers (Phenom front-end at careers.wbd.com) is PerimeterX-gated, but the underlying Workday tenant (warnerbros.wd5) serves zero-token. The global site is all WBD (462 jobs, HBO/CNN incl.), so scoped with query='WB Games' → 84 game-division jobs across all studios (Rocksteady/London, NetherRealm/Chicago, Avalanche/SLC, TT Games/Knutsford, WB Montreal/Needham/SF/Burbank). One entry covers them all; per-studio searchText is noisier (Player First/Monolith fuzzy-match). Confirmed live 84 jobs 2026-06-23."
+    notes: "Whole WBD careers (Phenom front-end at careers.wbd.com) is PerimeterX-gated, but the underlying Workday tenant (warnerbros.wd5) serves zero-token. The global site is all of WBD (462 jobs, HBO/CNN/Leavesden retail incl.) with NO games facet, so scoped by studio office address → ~12 jobs, 100% game (verified 2026-06-23). Earlier query='WB Games' searchText was dropped: fuzzy, leaked WBD (Roku/payroll) AND undercounted (missed an Avalanche role). NOT included: WB Montreal/Needham/SF/Burbank game teams share offices with WBD corporate, so they can't be isolated cleanly — add their office strings here if you'll accept some corporate leakage."
 
   # status: unresolved — small Swedish studios, not yet individually researched
   # (mostly tiny/custom/email per ats-research.md; low yield, but worth one probe).

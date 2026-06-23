@@ -30,14 +30,31 @@
 //
 // Scoping a shared/whole-company site: some tenants expose one site that mixes
 // many business units (e.g. warnerbros/global = all of Warner Bros Discovery,
-// HBO/CNN + the games studios). Pin an entry to a slice with `query:` — it maps
-// straight to Workday's `searchText`, the same fuzzy keyword the careers UI
-// search box uses, and `total`/pagination reflect the filtered set:
+// HBO/CNN + the games studios), with no business-unit facet to filter on. Two
+// optional, fail-safe knobs scope such an entry (omit both = scan everything):
+//
+//   query: "<keyword>"   server-side — maps to Workday's `searchText` (the
+//                        careers UI search box). Fuzzy/OR-matched, so it can
+//                        both leak (matches any field) and undercount (misses
+//                        postings that don't mention the term). Coarse; prefer
+//                        `locations` when a business unit maps to fixed offices.
+//
+//   locations: [..]      client-side allow-list — keep only postings whose
+//                        location contains one of these substrings (case-
+//                        insensitive). Exact and complete when each office
+//                        belongs to one business unit. This is how WB Games is
+//                        carved out of the WBD tenant: its studios sit at
+//                        dedicated addresses, so the offices ARE the filter:
 //
 //   - name: Warner Bros. Games
 //     provider: workday
 //     careers_url: https://warnerbros.wd5.myworkdayjobs.com/global
-//     query: "WB Games"
+//     locations:
+//       - "Rocksteady Studios"                 # London (Rocksteady)
+//       - "Chicago 2650A W Bradley"            # NetherRealm
+//       - "Salt Lake City 175 East 400 South"  # Avalanche Software
+//       - "Remote Utah"                        # Avalanche (remote)
+//       - "Knutsford Canute Court"             # TT Games
 
 const PER_PAGE = 20;
 const MAX_PAGES = 25; // hard cap: 25 * 20 = 500 postings per tenant, plenty.
@@ -142,6 +159,19 @@ export default {
       // Stop on a short/empty page, or once we've pulled the first-page total.
       if (batch.length < PER_PAGE) break;
       if (knownTotal && jobs.length >= knownTotal) break;
+    }
+
+    // Optional office allow-list: keep only postings at one of the named
+    // locations (case-insensitive substring). Fail-safe — an empty/missing or
+    // all-blank list filters nothing.
+    const allow = Array.isArray(entry.locations)
+      ? entry.locations.filter(l => typeof l === 'string' && l.trim()).map(l => l.trim().toLowerCase())
+      : [];
+    if (allow.length) {
+      return jobs.filter(j => {
+        const loc = (j.location || '').toLowerCase();
+        return allow.some(a => loc.includes(a));
+      });
     }
     return jobs;
   },
