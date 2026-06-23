@@ -1262,16 +1262,18 @@ tracked_companies:
     provider: workday
     careers_url: https://warnerbros.wd5.myworkdayjobs.com/global
     # WBD's Workday tenant has no business-unit facet, so scope to the games
-    # studios by their dedicated office addresses (each office = one studio).
+    # studios by their dedicated office addresses (each office ≈ one studio).
     locations:
       - "Rocksteady Studios"                 # London — Rocksteady
       - "Chicago 2650A W Bradley"            # NetherRealm
       - "Salt Lake City 175 East 400 South"  # Avalanche Software
       - "Remote Utah"                        # Avalanche (remote)
       - "Knutsford Canute Court"             # TT Games
+      - "Montreal 888"                       # WB Games Montreal (mostly game; 1 payroll role leaks)
+      - "Needham 117 Kendrick"               # WB Games Boston (Turbine)
     status: resolved
     last_probe: 2026-06-23
-    notes: "Whole WBD careers (Phenom front-end at careers.wbd.com) is PerimeterX-gated, but the underlying Workday tenant (warnerbros.wd5) serves zero-token. The global site is all of WBD (462 jobs, HBO/CNN/Leavesden retail incl.) with NO games facet, so scoped by studio office address → ~12 jobs, 100% game (verified 2026-06-23). Earlier query='WB Games' searchText was dropped: fuzzy, leaked WBD (Roku/payroll) AND undercounted (missed an Avalanche role). NOT included: WB Montreal/Needham/SF/Burbank game teams share offices with WBD corporate, so they can't be isolated cleanly — add their office strings here if you'll accept some corporate leakage."
+    notes: "Whole WBD careers (Phenom front-end at careers.wbd.com) is PerimeterX-gated, but the underlying Workday tenant (warnerbros.wd5) serves zero-token. The global site is all of WBD (462 jobs, HBO/CNN/Leavesden retail incl.) with NO games facet, so scoped by studio office address → ~18 jobs (verified 2026-06-23). Covers Rocksteady, NetherRealm, Avalanche, TT Games, WB Games Montreal + Boston. Earlier query='WB Games' searchText was dropped: fuzzy, leaked WBD (Roku/payroll) AND undercounted (missed an Avalanche role); office-list is exact + complete. One known leak: Montreal 888 is shared, so a non-game payroll role rides along (accepted for completeness). Deliberately excluded as non-game: SF 153 Kearny (Bleacher Report/sports), Burbank 750 (theatrical/corp), NY 30 Hudson (CNN). Player First has no cleanly-identifiable postings here (its name fuzzy-matches unrelated roles). Phenom's /c/game-development-jobs category (~15, craft-only) is a useful cross-check but can't be queried zero-token (gated XHR) and omits studio support roles."
 
   # status: unresolved — small Swedish studios, not yet individually researched
   # (mostly tiny/custom/email per ats-research.md; low yield, but worth one probe).
