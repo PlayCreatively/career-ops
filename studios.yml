@@ -1259,10 +1259,12 @@ tracked_companies:
   # recipe, parser, or a blocked tag. Run `node track-check.mjs "Name"` first.
 
   - name: Warner Bros. Games
-    careers_url: https://warnerbrosgames.com/careers
-    recipe: { kind: browser, reason: "warnerbrosgames.com/careers redirects to careers.wbd.com (Phenom People ATS), which is PerimeterX bot-gated — /api/jobs returns 'A server error occurred' on plain HTTP. Needs a Playwright pass. Also a WBD-wide site (HBO/CNN/etc.), so a resolve pass must filter business=Games." }
+    provider: workday
+    careers_url: https://warnerbros.wd5.myworkdayjobs.com/global
+    query: "WB Games"
+    status: resolved
     last_probe: 2026-06-23
-    notes: "Major publisher, user-requested. Resolve via browser + business=Games facet. Per-studio wiring checked 2026-06-23 and rejected: NetherRealm/Avalanche/TT Games all route to careers.wbd.com (same gate); Rocksteady is email-only (jobs@rocksteadyltd.com); Player First host down. No independent per-studio feed exists — this one entry covers them all."
+    notes: "Whole WBD careers (Phenom front-end at careers.wbd.com) is PerimeterX-gated, but the underlying Workday tenant (warnerbros.wd5) serves zero-token. The global site is all WBD (462 jobs, HBO/CNN incl.), so scoped with query='WB Games' → 84 game-division jobs across all studios (Rocksteady/London, NetherRealm/Chicago, Avalanche/SLC, TT Games/Knutsford, WB Montreal/Needham/SF/Burbank). One entry covers them all; per-studio searchText is noisier (Player First/Monolith fuzzy-match). Confirmed live 84 jobs 2026-06-23."
 
   # status: unresolved — small Swedish studios, not yet individually researched
   # (mostly tiny/custom/email per ats-research.md; low yield, but worth one probe).

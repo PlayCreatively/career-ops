@@ -27,6 +27,17 @@
 //     careers_url: https://jobs.ea.com
 //     tenant: ea
 //     site: ea_external
+//
+// Scoping a shared/whole-company site: some tenants expose one site that mixes
+// many business units (e.g. warnerbros/global = all of Warner Bros Discovery,
+// HBO/CNN + the games studios). Pin an entry to a slice with `query:` — it maps
+// straight to Workday's `searchText`, the same fuzzy keyword the careers UI
+// search box uses, and `total`/pagination reflect the filtered set:
+//
+//   - name: Warner Bros. Games
+//     provider: workday
+//     careers_url: https://warnerbros.wd5.myworkdayjobs.com/global
+//     query: "WB Games"
 
 const PER_PAGE = 20;
 const MAX_PAGES = 25; // hard cap: 25 * 20 = 500 postings per tenant, plenty.
@@ -109,21 +120,28 @@ export default {
     if (!resolved) throw new Error(`workday: cannot resolve tenant/site for ${entry.name} — use a *.myworkdayjobs.com careers_url or set tenant:/site:`);
     const { host, tenant, site } = resolved;
     const endpoint = `https://${host}/wday/cxs/${tenant}/${site}/jobs`;
+    // Optional keyword scope for shared sites (maps to Workday's searchText).
+    const searchText = typeof entry.query === 'string' ? entry.query.trim() : '';
 
     const jobs = [];
+    // Some tenants (e.g. warnerbros/global) report `total` only on the first
+    // page and return 0 afterwards, so capture it once and otherwise let a
+    // short page signal the end — never trust a per-page `total` to paginate.
+    let knownTotal = 0;
     for (let page = 0; page < MAX_PAGES; page++) {
       const offset = page * PER_PAGE;
       const json = await ctx.fetchJson(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify({ appliedFacets: {}, limit: PER_PAGE, offset, searchText: '' }),
+        body: JSON.stringify({ appliedFacets: {}, limit: PER_PAGE, offset, searchText }),
         redirect: 'error',
       });
+      if (page === 0 && Number.isFinite(json?.total) && json.total > 0) knownTotal = json.total;
       const batch = parseWorkdayPage(json, { host, site, company: entry.name });
       jobs.push(...batch);
-      const total = Number.isFinite(json?.total) ? json.total : 0;
-      // Stop once we've covered `total`, or a short page signals the end.
-      if (offset + PER_PAGE >= total || batch.length < PER_PAGE) break;
+      // Stop on a short/empty page, or once we've pulled the first-page total.
+      if (batch.length < PER_PAGE) break;
+      if (knownTotal && jobs.length >= knownTotal) break;
     }
     return jobs;
   },
