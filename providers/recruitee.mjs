@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { toIsoDate } from './_util.mjs';
+
 // Recruitee provider — hits the public per-tenant offers API.
 // Auto-detects from careers_url pattern `https://<slug>.recruitee.com`.
 // Per-tenant subdomains are the variable part — SSRF defence uses a
@@ -37,6 +39,17 @@ function resolveApiUrl(entry) {
   return `https://${parsed.hostname}/api/offers/`;
 }
 
+const rcParse = (d) => (d && Array.isArray(d.offers)) ? { count: d.offers.length, loc: d.offers[0]?.location || '' } : null;
+
+/** @type {import('./_types.js').Probe} */
+export const probe = {
+  canary: 'tellent', // Recruitee's own corporate tenant (it rebranded to Tellent post-acquisition; the old `recruitee` slug now 404s) — throttle check
+  endpoints: [
+    { kind: 'slug', url: (s) => `https://${s}.recruitee.com/api/offers/`, where: (s) => `${s}.recruitee.com`, careersUrl: (s) => `https://${s}.recruitee.com`, parse: rcParse },
+    { kind: 'domain', confidence: 'high', url: (host) => `https://${host}/api/offers/`, where: (host) => host, careersUrl: (host) => `https://${host}`, parse: rcParse },
+  ],
+};
+
 /** @type {Provider} */
 export default {
   id: 'recruitee',
@@ -44,6 +57,15 @@ export default {
   detect(entry) {
     const apiUrl = resolveApiUrl(entry);
     return apiUrl ? { url: apiUrl } : null;
+  },
+
+  // url→identity (inverse of probe): mine a {slug}.recruitee.com link to { slug, careers_url }.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const h = u.hostname.toLowerCase();
+    if (!RECRUITEE_HOST_RE.test(h)) return null;
+    const sub = h.split('.')[0];
+    return (sub && sub !== 'www') ? { slug: sub, careers_url: `https://${sub}.recruitee.com` } : null;
   },
 
   async fetch(entry, ctx) {
@@ -61,16 +83,12 @@ export default {
  * Recruitee returns:
  *   { offers: [{ title, careers_url?, url?, city?, country?, remote?, location? }] }
  *
- * - url: prefer `careers_url`, fall back to `url`. Recruitee tenants commonly
- *   serve postings on their own custom domain (e.g. `careers.hostaway.com`),
- *   so this URL is NOT host-locked to `*.recruitee.com`. Unlike the API
- *   endpoint, the per-offer URL is display-only — it is written to the pipeline
- *   and scan history but never server-fetched here, so the SSRF rationale does
- *   not apply. It is sourced from the already-validated tenant API response.
- *   Requirement: a well-formed `https:` URL; a non-HTTPS or malformed URL is
+ * - url: prefer `careers_url`, fall back to `url`; validated against
+ *   `https://<safe-slug>.recruitee.com` — an off-domain or non-HTTPS URL is
  *   dropped (empty string returned per the Job contract).
  * - location: prefer the explicit `location` field; else assemble from
- *   city/country, appending "Remote" when `remote` is true.
+ *   city/country. Remoteness is carried by the structured `workMode` field
+ *   (from the remote/hybrid/on_site booleans), not appended to the text.
  *
  * @param {any} json
  * @param {string} companyName
@@ -82,21 +100,16 @@ export function parseRecruiteeResponse(json, companyName) {
   return offers.map(j => {
     const city = j.city || '';
     const country = j.country || '';
-    const remote = j.remote ? 'Remote' : '';
-    const location = j.location || [city, country, remote].filter(Boolean).join(', ');
+    // Location stays place-only; remoteness is carried by workMode (below).
+    const location = j.location || [city, country].filter(Boolean).join(', ');
 
-    // Resolve offer URL. Recruitee tenants commonly publish postings on their
-    // own custom domain (e.g. careers.hostaway.com), so the per-offer URL is
-    // NOT host-locked to *.recruitee.com — it is display-only (recorded in the
-    // pipeline/history, never server-fetched here) and comes from the already-
-    // validated tenant API response. Require only a well-formed https: URL;
-    // a non-https or malformed URL is dropped (empty string per the Job contract).
+    // Validate offer URL: must parse as https://<safe-slug>.recruitee.com/...
     let url = '';
     const rawUrl = j.careers_url || j.url || '';
     if (typeof rawUrl === 'string' && rawUrl) {
       try {
         const parsed = new URL(rawUrl);
-        if (parsed.protocol === 'https:') {
+        if (parsed.protocol === 'https:' && RECRUITEE_HOST_RE.test(parsed.hostname)) {
           url = parsed.href;
         }
       } catch {
@@ -104,11 +117,20 @@ export function parseRecruiteeResponse(json, companyName) {
       }
     }
 
+    // `published_at`/`created_at` arrive as "YYYY-MM-DD HH:mm:ss UTC".
+    const postedDate = toIsoDate(j.published_at || j.created_at);
+    const department = (typeof j.department === 'string' ? j.department : '').trim();
+    // Recruitee exposes three independent booleans rather than one field;
+    // resolve them to the tri-state token (remote wins, then hybrid, then onsite).
+    const workMode = j.remote ? 'remote' : j.hybrid ? 'hybrid' : j.on_site ? 'onsite' : '';
     return {
       title: j.title || '',
       url,
       location,
       company: companyName,
+      ...(postedDate ? { postedDate } : {}),
+      ...(department ? { department } : {}),
+      ...(workMode ? { workMode } : {}),
     };
   });
 }

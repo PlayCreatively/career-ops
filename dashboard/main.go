@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
+	"runtime"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -82,22 +84,12 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.theme,
 			msg.Path, msg.Title,
 			m.pipeline.Width(), m.pipeline.Height(),
-			msg.App, m.careerOpsPath,
 		)
 		m.state = viewReport
 		return m, nil
 
 	case screens.ViewerClosedMsg:
 		m.state = viewPipeline
-		return m, nil
-
-	case screens.ViewerUpdateStatusMsg:
-		err := data.UpdateApplicationStatus(m.careerOpsPath, msg.App, msg.NewStatus)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "WARN: status update failed: %v\n", err)
-		}
-		m.viewer.UpdateAppStatus(msg.NewStatus)
-		m.reloadPipelineData()
 		return m, nil
 
 	case screens.PipelineOpenProgressMsg:
@@ -116,9 +108,18 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case screens.PipelineOpenURLMsg:
 		url := msg.URL
 		return m, func() tea.Msg {
-			if err := openWithDefaultApp(url); err != nil {
-				fmt.Fprintf(os.Stderr, "WARN: failed to open URL %q: %v\n", url, err)
+			var cmd *exec.Cmd
+			switch runtime.GOOS {
+			case "darwin":
+				cmd = exec.Command("open", url)
+			case "linux":
+				cmd = exec.Command("xdg-open", url)
+			case "windows":
+				cmd = exec.Command("cmd", "/c", "start", "", url)
+			default:
+				cmd = exec.Command("xdg-open", url)
 			}
+			_ = cmd.Run()
 			return nil
 		}
 

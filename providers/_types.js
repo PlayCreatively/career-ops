@@ -18,18 +18,19 @@
  * @property {string} company  May be empty when the source can't expose it
  *                             at the list-page level; populated downstream.
  * @property {string} location May be empty.
- * @property {string} [description] Job description text, populated ONLY when the
- *                               provider's list payload carries it for free (no
- *                               extra per-job request — the scanner is zero-token).
- *                               Lever supplies it via `descriptionPlain`; most
- *                               providers omit it. Consumed by scan.mjs's
- *                               content_filter; an empty/absent value always
- *                               passes the filter.
- * @property {number} [postedAt] Epoch ms when the posting was published.
- *                               Omitted when the source doesn't expose a
- *                               usable date. scan.mjs ignores it; consumers
- *                               like scan-ats-full.mjs use it for recency
- *                               filtering.
+ * @property {string}  [postedDate] Optional ISO-8601 posting date, when the
+ *                                  source exposes one at the list level.
+ *                                  Normalise via providers/_util.mjs `toIsoDate`.
+ * @property {('remote'|'hybrid'|'onsite'|'anywhere')} [workMode] Optional work
+ *                                  arrangement. Set from a structured field
+ *                                  (ashby/lever `workplaceType`, recruitee
+ *                                  remote/hybrid/on_site, smartrecruiters
+ *                                  location.remote) or derived from the location
+ *                                  text. 'anywhere' is geography-free remote
+ *                                  ("Anywhere"/"Distributed"). Omitted when
+ *                                  unknown. Normalise via providers/_util.mjs
+ *                                  `normalizeWorkMode`.
+ * @property {string}  [department]  Optional department/team label.
  */
 
 /**
@@ -44,7 +45,6 @@
  * @property {string}             name             User-facing label; appears in logs and placeholders.
  * @property {boolean}            [enabled]        Default: true.
  * @property {string}             [careers_url]    Public listing URL; consumed by detect().
- * @property {string}             [api]            JSON API URL; used directly by greenhouse/ashby providers.
  * @property {string}             [provider]       Explicit provider id — bypasses detect().
  * @property {('http')}           [transport]      Default: 'http'. Reserved for future transports.
  */
@@ -65,7 +65,6 @@
  * @property {Object<string,string>} [headers]
  * @property {string}                [method]
  * @property {(string|null)}         [body]
- * @property {('error'|'follow'|'manual')} [redirect]
  */
 
 /**
@@ -87,6 +86,55 @@
  * @property {string} id                                                       Unique across all loaded providers.
  * @property {((entry: PortalEntry) => (DetectHit | null))} [detect]           Optional auto-detection.
  * @property {(entry: PortalEntry, ctx: Context) => Promise<Job[]>} fetch      Required.
+ */
+
+/**
+ * Result of probing one candidate URL — a hit (count + sample location) or null
+ * for a miss. `count` may be 0 (a real-but-empty board still proves the ATS).
+ *
+ * @typedef {object} ProbeHit
+ * @property {number} count
+ * @property {string} loc     A sample location string (shown in probe output).
+ */
+
+/**
+ * One candidate endpoint to probe. `kind:'slug'` builds the URL from a slug
+ * guessed off the company name; `kind:'domain'` builds it from the studio's own
+ * domain host (the custom-domain sweep). `parse` receives the fetched JSON and
+ * returns a ProbeHit or null. Pure data + pure functions — no I/O; the probe
+ * runner (probe-studios.mjs) does the fetching.
+ *
+ * @typedef {object} ProbeEndpoint
+ * @property {('slug'|'domain')} kind
+ * @property {(key: string) => string} url            key = slug (kind:slug) or host (kind:domain)
+ * @property {(key: string) => string} where          human-readable "where" label for the hit
+ * @property {(data: unknown) => (ProbeHit | null)} parse
+ * @property {string} [label]                         override the displayed ATS name (e.g. 'lever-eu')
+ * @property {('high'|'medium'|'verify')} [confidence] override the provider's base tier for this endpoint
+ */
+
+/**
+ * Optional discovery descriptor. Providers that can be FOUND by guessing a
+ * slug/domain export this as a named `probe` export; probe-studios.mjs auto-loads
+ * every provider that has one. Aggregators (hitmarker/work-with-indies/...) and
+ * recipe/parser/complex providers simply omit it and are skipped by the probe —
+ * so adding a discoverable ATS is one self-contained provider file, no probe edit.
+ *
+ * @typedef {object} Probe
+ * @property {ProbeEndpoint[]} endpoints
+ * @property {('high'|'medium'|'verify')} [confidence]  base tier for a hit (default 'medium')
+ * @property {boolean} [namesakeProne]                  downgrade short/generic slug hits to 'verify'
+ * @property {(name: string) => string[]} [slugs]       override slug generation (default: name-derived)
+ * @property {string} [canary]                          a KNOWN-LIVE slug for this ATS, used as a NON-fatal
+ *                                                      preflight before each wave. If the canary returns a
+ *                                                      throttle/error (403/429/5xx/timeout) the ATS is
+ *                                                      disabled for the run (cheap early exit). If it returns
+ *                                                      a clean 404 / unparseable 2xx the canary is only
+ *                                                      flagged STALE (the company may have left the ATS) — it
+ *                                                      never disables, so a rotted canary can't kill a working
+ *                                                      ATS. The real disable trigger is the live 403/429
+ *                                                      signal from probe traffic; the canary just catches it
+ *                                                      earlier. Omit when no stable live tenant is known.
  */
 
 export {};

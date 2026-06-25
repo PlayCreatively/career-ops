@@ -1,10 +1,9 @@
 ---
 name: career-ops
 description: AI job search command center -- evaluate offers, generate CVs, scan portals, track applications
-arguments: mode
-user_invocable: true
+arguments: mode # Claude Code specific
 user-invocable: true
-argument-hint: "[scan | deep | pdf | latex | cover | eu-swe | oferta | ofertas | apply | batch | tracker | pipeline | contacto | training | project | interview-prep | interview | patterns | followup | update]"
+argument-hint: "[scan | resolve | deep | pdf | cover | oferta | ofertas | apply | batch | tracker | pipeline | contacto | training | project | interview-prep | interview | update]"
 license: MIT
 ---
 
@@ -24,20 +23,19 @@ Determine the mode from `$mode`:
 | `deep` | `deep` |
 | `interview-prep` | `interview-prep` |
 | `interview` | `interview` |
-| `eu-swe` | `regional/eu-swe` |
 | `pdf` | `pdf` |
-| `latex` | `latex` |
+| `cover` | `cover` |
 | `training` | `training` |
 | `project` | `project` |
 | `tracker` | `tracker` |
 | `pipeline` | `pipeline` |
 | `apply` | `apply` |
 | `scan` | `scan` |
+| `resolve` | `resolve` |
 | `batch` | `batch` |
 | `patterns` | `patterns` |
 | `followup` | `followup` |
 | `update` | `update` |
-| `cover` | `cover` |
 
 **Auto-pipeline detection:** If `$mode` is not a known sub-command AND contains JD text (keywords: "responsibilities", "requirements", "qualifications", "about the role", "we're looking for", company name + role) or a URL to a JD, execute `auto-pipeline`.
 
@@ -60,16 +58,15 @@ Available commands:
   /career-ops contacto  → LinkedIn power move: find contacts + draft message
   /career-ops deep      → Deep research prompt about company
   /career-ops interview-prep → Generate company-specific interview prep doc
-  /career-ops interview    → Interactive profile/CV onboarding interview
-  /career-ops eu-swe    → Calibrate a European SWE application before CV/apply/interview
+  /career-ops interview → Interactive profile/CV onboarding interview
   /career-ops pdf       → PDF only, ATS-optimized CV
-  /career-ops latex     → Export CV as LaTeX/Overleaf .tex
   /career-ops cover     → Cover letter: standalone JD paste or /career-ops cover {slug}
   /career-ops training  → Evaluate course/cert against North Star
   /career-ops project   → Evaluate portfolio project idea
   /career-ops tracker   → Application status overview
   /career-ops apply     → Live application assistant (reads form + generates answers)
   /career-ops scan      → Scan portals and discover new offers
+  /career-ops resolve   → Wire up unresolved studios (backlog → zero-token feed)
   /career-ops batch     → Batch processing with parallel workers
   /career-ops patterns  → Analyze rejection patterns and improve targeting
   /career-ops followup  → Follow-up cadence tracker: flag overdue, generate drafts
@@ -88,15 +85,15 @@ After determining the mode, load the necessary files before executing:
 ### Modes that require `_shared.md` + their mode file:
 Read `modes/_shared.md` + `modes/{mode}.md`
 
-Applies to: `auto-pipeline`, `oferta`, `ofertas`, `pdf`, `contacto`, `apply`, `pipeline`, `scan`, `batch`
+Applies to: `auto-pipeline`, `oferta`, `ofertas`, `pdf`, `contacto`, `apply`, `pipeline`, `scan`, `resolve`, `batch`
 
 ### Standalone modes (only their mode file):
 Read `modes/{mode}.md`
 
-Applies to: `tracker`, `deep`, `interview-prep`, `interview`, `regional/eu-swe`, `latex`, `training`, `project`, `patterns`, `followup`, `cover`
+Applies to: `tracker`, `deep`, `interview-prep`, `interview`, `training`, `project`, `patterns`, `followup`, `cover`
 
 ### Modes delegated to subagent:
-For `scan`, `apply` (with Playwright), and `pipeline` (3+ URLs): launch as Agent with the content of `_shared.md` + `modes/{mode}.md` injected into the subagent prompt.
+For `scan`, `resolve`, `apply` (with Playwright), and `pipeline` (3+ URLs): launch as Agent with the content of `_shared.md` + `modes/{mode}.md` injected into the subagent prompt.
 
 ```
 Agent(

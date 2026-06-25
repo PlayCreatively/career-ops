@@ -1,40 +1,107 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-// Workday provider — hits the public CXS jobs endpoint (POST, paginated).
-// Auto-detects from careers_url pattern
-// `https://<tenant>.<instance>.myworkdayjobs.com[/<locale>]/<site>`,
-// e.g. https://23andme.wd5.myworkdayjobs.com/23 →
-//      POST https://23andme.wd5.myworkdayjobs.com/wday/cxs/23andme/23/jobs
+// Workday provider — hits the public "cxs" job-search JSON API that every
+// Workday career site exposes at:
 //
-// Workday only exposes a relative "postedOn" label ("Posted Today",
-// "Posted 5 Days Ago", "Posted 30+ Days Ago"); postedAt is derived from it
-// and omitted for the unbounded "30+ Days Ago" form.
+//   POST https://{host}/wday/cxs/{tenant}/{site}/jobs
+//   body: {"appliedFacets":{},"limit":20,"offset":0,"searchText":""}
+//
+// This is the same unauthenticated endpoint the Workday careers UI calls; no
+// login, no scraping. Workday powers most large publishers (EA, King, Toca
+// Boca/Spin Master, ...). Unlike the per-studio ATS providers it is paginated
+// (total + offset), so we loop until we've pulled `total` postings (capped).
+//
+// Routing: most tenants live on `{tenant}.{dc}.myworkdayjobs.com`, which
+// detect() claims and parses automatically:
+//
+//   - name: King
+//     careers_url: https://activision.wd1.myworkdayjobs.com/King_External_Careers
+//
+// White-labelled custom domains (e.g. jobs.ea.com) can't be parsed from the
+// host, so pin them with explicit `tenant:` + `site:` (and careers_url as the
+// site origin):
+//
+//   - name: EA
+//     provider: workday
+//     careers_url: https://jobs.ea.com
+//     tenant: ea
+//     site: ea_external
+//
+// Scoping a shared/whole-company site: some tenants expose one site that mixes
+// many business units (e.g. warnerbros/global = all of Warner Bros Discovery,
+// HBO/CNN + the games studios), with no business-unit facet to filter on. Two
+// optional, fail-safe knobs scope such an entry (omit both = scan everything):
+//
+//   query: "<keyword>"   server-side — maps to Workday's `searchText` (the
+//                        careers UI search box). Fuzzy/OR-matched, so it can
+//                        both leak (matches any field) and undercount (misses
+//                        postings that don't mention the term). Coarse; prefer
+//                        `locations` when a business unit maps to fixed offices.
+//
+//   locations: [..]      client-side allow-list — keep only postings whose
+//                        location contains one of these substrings (case-
+//                        insensitive). Exact and complete when each office
+//                        belongs to one business unit. This is how WB Games is
+//                        carved out of the WBD tenant: its studios sit at
+//                        dedicated addresses, so the offices ARE the filter:
+//
+//   - name: Warner Bros. Games
+//     provider: workday
+//     careers_url: https://warnerbros.wd5.myworkdayjobs.com/global
+//     locations:
+//       - "Rocksteady Studios"                 # London (Rocksteady)
+//       - "Chicago 2650A W Bradley"            # NetherRealm
+//       - "Salt Lake City 175 East 400 South"  # Avalanche Software
+//       - "Remote Utah"                        # Avalanche (remote)
+//       - "Knutsford Canute Court"             # TT Games
 
-const PAGE_SIZE = 20;
-const MAX_PAGES = 50; // safety cap — at most 1000 postings per site
+const PER_PAGE = 20;
+const MAX_PAGES = 25; // hard cap: 25 * 20 = 500 postings per tenant, plenty.
 
-function resolveEndpoint(entry) {
-  const url = entry.careers_url || '';
-  const m = url.match(/^https:\/\/([\w-]+)\.(wd[\w-]*)\.myworkdayjobs\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?([^/?#]+)/);
-  if (!m) return null;
-  const [, tenant, instance, site] = m;
-  const origin = `https://${tenant}.${instance}.myworkdayjobs.com`;
-  return {
-    api: `${origin}/wday/cxs/${tenant}/${site}/jobs`,
-    // externalPath is relative to the site, not the host root — without the
-    // site segment the URL 404s.
-    jobBase: `${origin}/${site}`,
-  };
+// A Workday path may carry a locale prefix (en-US, en_US, fr-FR). The site id is
+// the first path segment that isn't a locale.
+const LOCALE_RE = /^[a-z]{2}([-_][A-Za-z]{2})?$/;
+
+// Resolve {host, tenant, site} from a portal entry. Explicit tenant/site win
+// (needed for custom domains); otherwise derive from a *.myworkdayjobs.com URL.
+export function resolveWorkday(entry) {
+  let url;
+  try {
+    url = new URL(entry.careers_url || '');
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:') return null;
+  const host = url.hostname.toLowerCase();
+
+  const explicitTenant = typeof entry.tenant === 'string' ? entry.tenant.trim() : '';
+  const explicitSite = typeof entry.site === 'string' ? entry.site.trim() : '';
+  if (explicitTenant && explicitSite) {
+    return { host, tenant: explicitTenant, site: explicitSite };
+  }
+
+  // Auto-derive only for genuine Workday hosts.
+  if (!host.endsWith('.myworkdayjobs.com')) return null;
+  const tenant = host.split('.')[0];
+  const segments = url.pathname.split('/').filter(Boolean);
+  const site = segments.find(s => !LOCALE_RE.test(s));
+  if (!tenant || !site) return null;
+  return { host, tenant, site };
 }
 
-function parsePostedOn(label) {
-  if (!label) return undefined;
-  if (/posted\s+today/i.test(label)) return Date.now();
-  if (/posted\s+yesterday/i.test(label)) return Date.now() - 86_400_000;
-  const m = label.match(/posted\s+(\d+)(\+?)\s*day/i);
-  if (!m || m[2] === '+') return undefined; // "30+ Days Ago" — unbounded, no usable date
-  return Date.now() - Number(m[1]) * 86_400_000;
+export function parseWorkdayPage(json, { host, site, company }) {
+  const postings = Array.isArray(json?.jobPostings) ? json.jobPostings : [];
+  return postings
+    .filter(p => p && p.title && p.externalPath)
+    .map(p => ({
+      title: String(p.title),
+      // externalPath is site-relative and starts with "/job/..."; the public
+      // job URL is {origin}/{site}{externalPath}.
+      url: `https://${host}/${site}${p.externalPath}`,
+      company: company || '',
+      location: typeof p.locationsText === 'string' ? p.locationsText : '',
+    }));
 }
 
 /** @type {Provider} */
@@ -42,40 +109,69 @@ export default {
   id: 'workday',
 
   detect(entry) {
-    const ep = resolveEndpoint(entry);
-    return ep ? { url: ep.api } : null;
+    let host;
+    try {
+      host = new URL(entry.careers_url || '').hostname.toLowerCase();
+    } catch {
+      return null;
+    }
+    if (!host.endsWith('.myworkdayjobs.com')) return null;
+    const resolved = resolveWorkday(entry);
+    return resolved ? { url: `https://${resolved.host}/wday/cxs/${resolved.tenant}/${resolved.site}/jobs` } : null;
+  },
+
+  // url→identity (inverse of probe): mine a {tenant}.{dc}.myworkdayjobs.com/{locale?}/{site}
+  // link to { slug, careers_url }; careers_url ({host}/{site}) is self-sufficient — fetch()
+  // re-derives tenant/site from it. slug = tenant; label shows tenant/site.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const host = u.hostname.toLowerCase();
+    if (!host.endsWith('.myworkdayjobs.com')) return null;
+    const tenant = host.split('.')[0];
+    const site = u.pathname.split('/').filter(Boolean).find(s => !LOCALE_RE.test(s));
+    return (tenant && site) ? { slug: tenant, careers_url: `https://${host}/${site}`, label: `${tenant}/${site}` } : null;
   },
 
   async fetch(entry, ctx) {
-    const ep = resolveEndpoint(entry);
-    if (!ep) throw new Error(`workday: cannot derive CXS endpoint for ${entry.name}`);
+    const resolved = resolveWorkday(entry);
+    if (!resolved) throw new Error(`workday: cannot resolve tenant/site for ${entry.name} — use a *.myworkdayjobs.com careers_url or set tenant:/site:`);
+    const { host, tenant, site } = resolved;
+    const endpoint = `https://${host}/wday/cxs/${tenant}/${site}/jobs`;
+    // Optional keyword scope for shared sites (maps to Workday's searchText).
+    const searchText = typeof entry.query === 'string' ? entry.query.trim() : '';
 
     const jobs = [];
+    // Some tenants (e.g. warnerbros/global) report `total` only on the first
+    // page and return 0 afterwards, so capture it once and otherwise let a
+    // short page signal the end — never trust a per-page `total` to paginate.
+    let knownTotal = 0;
     for (let page = 0; page < MAX_PAGES; page++) {
-      const body = JSON.stringify({
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
-        searchText: '',
-        appliedFacets: {},
-      });
-      const json = await ctx.fetchJson(ep.api, {
+      const offset = page * PER_PAGE;
+      const json = await ctx.fetchJson(endpoint, {
         method: 'POST',
-        redirect: 'error',
-        body,
         headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ appliedFacets: {}, limit: PER_PAGE, offset, searchText }),
+        redirect: 'error',
       });
-      const postings = Array.isArray(json?.jobPostings) ? json.jobPostings : [];
-      for (const j of postings) {
-        if (!j.externalPath) continue;
-        jobs.push({
-          title: j.title || '',
-          url: ep.jobBase + j.externalPath,
-          company: entry.name,
-          location: j.locationsText || '',
-          postedAt: parsePostedOn(j.postedOn),
-        });
-      }
-      if (postings.length < PAGE_SIZE) break;
+      if (page === 0 && Number.isFinite(json?.total) && json.total > 0) knownTotal = json.total;
+      const batch = parseWorkdayPage(json, { host, site, company: entry.name });
+      jobs.push(...batch);
+      // Stop on a short/empty page, or once we've pulled the first-page total.
+      if (batch.length < PER_PAGE) break;
+      if (knownTotal && jobs.length >= knownTotal) break;
+    }
+
+    // Optional office allow-list: keep only postings at one of the named
+    // locations (case-insensitive substring). Fail-safe — an empty/missing or
+    // all-blank list filters nothing.
+    const allow = Array.isArray(entry.locations)
+      ? entry.locations.filter(l => typeof l === 'string' && l.trim()).map(l => l.trim().toLowerCase())
+      : [];
+    if (allow.length) {
+      return jobs.filter(j => {
+        const loc = (j.location || '').toLowerCase();
+        return allow.some(a => loc.includes(a));
+      });
     }
     return jobs;
   },

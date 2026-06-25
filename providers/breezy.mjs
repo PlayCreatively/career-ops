@@ -1,136 +1,153 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-// Breezy HR provider — hits the public per-tenant board feed.
-// Auto-detects from careers_url pattern `https://<tenant>.breezy.hr[/...]`.
-// Per-tenant subdomains are the variable part, so SSRF defence uses a regex
-// match on `<safe-tenant>.breezy.hr` rather than a static allowlist (same
-// approach as the recruitee / bamboohr providers).
+import { toIsoDate } from './_util.mjs';
+
+// Breezy HR provider — hits the public positions feed every Breezy career site
+// ships at `{tenant-origin}/json`. No auth, no scraping: it's the same JSON the
+// public careers page renders from, so this is as clean and account-safe as the
+// greenhouse / lever / teamtailor providers.
 //
-// Breezy boards expose every published position as a public JSON array at
-// `<tenant>.breezy.hr/json` — title, absolute url, location, and a published
-// date, all in the list payload at zero token cost (no per-job request, so the
-// scanner stays zero-token). Breezy's authenticated REST API (api.breezy.hr) is
-// intentionally NOT used; only the public board feed.
+// Per-company (like greenhouse/lever, NOT Hitmarker): one tracked_companies entry
+// per studio. Breezy tenants live at `{slug}.breezy.hr`, which detect() claims
+// automatically (skipping Breezy's own marketing/app subdomains). A studio on a
+// custom domain (rare) routes via an explicit `provider: breezy` + careers_url
+// (or feed_url):
+//
+//   tracked_companies:
+//     - name: Pine Creek Games
+//       careers_url: https://pine-creek-games.breezy.hr
+//
+// careers_url may be the site root or any page on it (a pasted job URL) — the
+// feed URL is derived from its origin.
 
-const BREEZY_HOST_RE = /^[a-z0-9][a-z0-9-]*\.breezy\.hr$/;
+// Breezy subdomains that are NOT customer tenants (marketing / app surfaces). A
+// careers_url on one of these is Breezy itself, not a studio, so detect() skips it.
+const RESERVED_SUBDOMAINS = new Set([
+  'www', 'app', 'marketing', 'support', 'help', 'status', 'api', 'blog',
+  'login', 'secure', 'account', 'developer', 'developers',
+]);
 
-/** @param {string} url */
-function assertBreezyUrl(url) {
-  let parsed;
+// Derive the JSON feed URL from any URL on a Breezy tenant. An explicit
+// `feed_url` wins so an unusual deployment can be pinned by hand. Requires https;
+// returns null otherwise. Does NOT enforce the .breezy.hr host here (custom
+// domains route in via an explicit provider:); the host check lives in detect().
+function resolveFeedUrl(entry) {
+  if (typeof entry.feed_url === 'string' && entry.feed_url.trim()) return entry.feed_url.trim();
+  const raw = typeof entry.careers_url === 'string' ? entry.careers_url : '';
+  let origin;
   try {
-    parsed = new URL(url);
-  } catch {
-    throw new Error(`breezy: invalid URL: ${url}`);
-  }
-  if (parsed.protocol !== 'https:') throw new Error(`breezy: URL must use HTTPS: ${url}`);
-  if (!BREEZY_HOST_RE.test(parsed.hostname)) {
-    throw new Error(`breezy: untrusted hostname "${parsed.hostname}" — must match <tenant>.breezy.hr`);
-  }
-  return url;
-}
-
-/**
- * Resolve the tenant origin (`https://<tenant>.breezy.hr`) from an entry.
- * Honours an explicit `api:` URL, else parses `careers_url`.
- * @param {import('./_types.js').PortalEntry} entry
- * @returns {string | null}
- */
-function resolveOrigin(entry) {
-  const rawApi = typeof entry.api === 'string' ? entry.api : '';
-  const rawCareers = typeof entry.careers_url === 'string' ? entry.careers_url : '';
-  const raw = (rawApi || rawCareers).trim();
-  if (!raw) return null;
-  let parsed;
-  try {
-    parsed = new URL(raw);
+    origin = new URL(raw).origin;
   } catch {
     return null;
   }
-  if (parsed.protocol !== 'https:') return null;
-  if (!BREEZY_HOST_RE.test(parsed.hostname)) return null;
-  return `https://${parsed.hostname}`;
+  if (!origin.startsWith('https:')) return null;
+  return `${origin}/json`;
 }
+
+// Compose a human-readable location from a Breezy location object. Breezy fills
+// `name` inconsistently (sometimes a city, sometimes the country), so compose
+// "City, Country" only when both are present and distinct, else whichever exists.
+function formatLocation(loc) {
+  if (!loc || typeof loc !== 'object') return '';
+  const name = typeof loc.name === 'string' ? loc.name.trim() : '';
+  const country = typeof loc.country?.name === 'string' ? loc.country.name.trim() : '';
+  if (name && country && name.toLowerCase() !== country.toLowerCase()) return `${name}, ${country}`;
+  return name || country;
+}
+
+/**
+ * Parse Breezy's public `/json` positions feed (a top-level JSON array). Exported
+ * for unit tests. Each element exposes `name` (title), `url`, an optional nested
+ * `company.name`, a `location` object (with `is_remote` + `remote_details`), a
+ * `department`, and a `published_date`. Items missing name or url are dropped.
+ *
+ * @param {unknown} json — parsed feed body
+ * @param {string} fallbackCompany — used when the item has no company.name
+ */
+export function parseBreezyFeed(json, fallbackCompany) {
+  const items = Array.isArray(json) ? json : [];
+  return items
+    .filter(it => it && it.name && it.url)
+    .map(it => {
+      const loc = it.location || (Array.isArray(it.locations) ? it.locations[0] : null);
+      const org = it.company?.name;
+      const postedDate = toIsoDate(it.published_date);
+      const department = typeof it.department === 'string' ? it.department.trim() : '';
+      // is_remote → workMode. remote_details.value distinguishes "anywhere"
+      // (no geo constraint) from a region-scoped remote ("remote-location").
+      let workMode = '';
+      if (loc?.is_remote) {
+        const rd = String(loc.remote_details?.value || '').toLowerCase();
+        workMode = rd.includes('anywhere') ? 'anywhere' : 'remote';
+      }
+      return {
+        title: String(it.name),
+        url: String(it.url),
+        company: typeof org === 'string' && org.trim() ? org.trim() : (fallbackCompany || ''),
+        location: formatLocation(loc),
+        ...(postedDate ? { postedDate } : {}),
+        ...(workMode ? { workMode } : {}),
+        ...(department ? { department } : {}),
+      };
+    });
+}
+
+/** @type {import('./_types.js').Probe} */
+export const probe = {
+  namesakeProne: true, // {tenant}.breezy.hr subdomain slugs collide with non-game namesakes
+  // Breezy IP-throttles with 403 (not 404), but it CAN regress to 404-style
+  // hiding under a WAF — so a known-live tenant guards the probe's 404 trust.
+  // pine-creek-games is a confirmed real Breezy tenant (Winter Burrow devs); if
+  // its /json stops returning an array, Breezy is unhealthy and 404s are distrusted.
+  canary: 'pine-creek-games',
+  endpoints: [{
+    kind: 'slug',
+    // A dead slug 200s with the marketing HTML page (non-JSON), so a parsed
+    // array proves a real tenant — even an empty [] means they use Breezy.
+    url: (s) => `https://${s}.breezy.hr/json`,
+    where: (s) => `${s}.breezy.hr`,
+    careersUrl: (s) => `https://${s}.breezy.hr`,
+    parse: (d) => Array.isArray(d) ? { count: d.length, loc: d[0]?.location?.name || '' } : null,
+  }],
+};
 
 /** @type {Provider} */
 export default {
   id: 'breezy',
 
+  // Claim the default *.breezy.hr tenant domains automatically. Bare breezy.hr
+  // and reserved marketing/app subdomains are not tenants. Custom domains can't
+  // be detected by host, so those route via explicit provider: breezy.
   detect(entry) {
-    const origin = resolveOrigin(entry);
-    return origin ? { url: `${origin}/json` } : null;
+    let host;
+    try {
+      host = new URL(entry.careers_url || '').hostname.toLowerCase();
+    } catch {
+      return null;
+    }
+    if (host !== 'breezy.hr' && !host.endsWith('.breezy.hr')) return null;
+    if (host === 'breezy.hr' || RESERVED_SUBDOMAINS.has(host.split('.')[0])) return null;
+    const feedUrl = resolveFeedUrl(entry);
+    return feedUrl ? { url: feedUrl } : null;
+  },
+
+  // url→identity (inverse of probe): mine a {slug}.breezy.hr link to { slug, careers_url };
+  // careers_url is the tenant origin. Bare/reserved hosts aren't tenants → null.
+  mineUrl(jobUrl) {
+    let u; try { u = new URL(jobUrl); } catch { return null; }
+    const h = u.hostname.toLowerCase();
+    if (h === 'breezy.hr' || !h.endsWith('.breezy.hr')) return null;
+    const sub = h.split('.')[0];
+    return (sub && !RESERVED_SUBDOMAINS.has(sub)) ? { slug: sub, careers_url: u.origin } : null;
   },
 
   async fetch(entry, ctx) {
-    const origin = resolveOrigin(entry);
-    if (!origin) throw new Error(`breezy: cannot derive API URL for ${entry.name}`);
-    const apiUrl = `${origin}/json`;
-    assertBreezyUrl(apiUrl);
-    // redirect:'error' + the host check above keep the final hostname pinned to
-    // the tenant — a server-side redirect can't bounce us off-domain (SSRF).
-    const json = /** @type {any} */ (await ctx.fetchJson(apiUrl, { redirect: 'error' }));
-    return parseBreezyResponse(json, entry.name);
+    const feedUrl = resolveFeedUrl(entry);
+    if (!feedUrl) throw new Error(`breezy: cannot derive feed URL for ${entry.name} — set careers_url (https) or feed_url`);
+    // redirect:'error' blocks redirect-based SSRF; the host is trusted user
+    // config (studios.yml/portals.yml), so no allowlist is enforced beyond https.
+    const json = await ctx.fetchJson(feedUrl, { redirect: 'error' });
+    return parseBreezyFeed(json, entry.name);
   },
 };
-
-/**
- * Parse a Breezy `<tenant>.breezy.hr/json` response. Exported for unit tests.
- *
- * Breezy returns a top-level array of positions:
- *   [{ name, url, published_date?,
- *      location: { name?, city?, state?, country?: { name }, is_remote? } }]
- *
- * - url: Breezy supplies an absolute posting URL on the tenant domain
- *   (`https://<tenant>.breezy.hr/p/<id>-<slug>`); it is the Job contract's dedup
- *   key. The per-offer URL is display-only (recorded in the pipeline/history,
- *   never server-fetched here), so it is not host-locked — only a well-formed
- *   `https:` URL is required; rows without one are dropped.
- * - location: prefer the ready-made `location.name`; else assemble from
- *   city / state / country.name, appending "Remote" when `is_remote` is truthy.
- * - postedAt: parsed from the ISO `published_date` when present and valid — Breezy
- *   gives it for free in the list payload, so recency consumers can use it.
- *
- * @param {any} json
- * @param {string} companyName
- * @returns {Array<{title: string, url: string, company: string, location: string, postedAt?: number}>}
- */
-export function parseBreezyResponse(json, companyName) {
-  const rows = Array.isArray(json) ? json : [];
-  const out = [];
-  for (const j of rows) {
-    if (!j || !j.name) continue;
-
-    // Resolve the posting URL (dedup key). Require a well-formed https: URL;
-    // a non-https or malformed/missing URL drops the row.
-    let url = '';
-    const rawUrl = typeof j.url === 'string' ? j.url : '';
-    if (rawUrl) {
-      try {
-        const parsed = new URL(rawUrl);
-        if (parsed.protocol === 'https:') url = parsed.href;
-      } catch { /* malformed → drop */ }
-    }
-    if (!url) continue;
-
-    const loc = j.location || {};
-    const remote = loc.is_remote ? 'Remote' : '';
-    const assembled = [loc.city, loc.state, loc.country?.name].filter(Boolean).join(', ');
-    const base = (typeof loc.name === 'string' && loc.name.trim()) ? loc.name.trim() : assembled;
-    const location = remote && !/remote/i.test(base)
-      ? [base, remote].filter(Boolean).join(', ')
-      : base;
-
-    const job = {
-      title: String(j.name),
-      url,
-      company: companyName,
-      location,
-    };
-
-    const ts = Date.parse(j.published_date);
-    if (!Number.isNaN(ts)) job.postedAt = ts;
-
-    out.push(job);
-  }
-  return out;
-}
