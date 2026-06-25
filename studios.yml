@@ -7702,6 +7702,11 @@ tracked_companies:
     notes: "Australia. Animation + games (Amazing Digital Circus)."
     enabled: true
   # --- rehm-mined (2026-06-25, high-confidence, live-validated) ---
+  - name: Square Enix
+    provider: workable
+    careers_url: https://apply.workable.com/square-enix/
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (4 jobs, 2026-06-25). Base entity (Square Enix Europe); Japan variant (hrmos) dedups here."
   - name: GameOn Studio
     provider: smartrecruiters
     careers_url: https://careers.smartrecruiters.com/gameonstudio

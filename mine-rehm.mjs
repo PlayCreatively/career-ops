@@ -23,7 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { makeHttpCtx, classifyFetchError } from './providers/_http.mjs';
+import { makeHttpCtx } from './providers/_http.mjs';
 
 const ROOT = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 const JOBS = path.join(ROOT, 'rehm-jobs.json');
@@ -235,7 +235,7 @@ async function validateLive(g) {
     const jobs = await provider.fetch(entry, HTTP_CTX);
     return Array.isArray(jobs) ? jobs.length : 0;
   } catch (err) {
-    return err && err.status != null ? err.status : 'ERR ' + classifyFetchError(err);
+    return err && err.status != null ? err.status : 'ERR ' + (err && err.code ? err.code : (err && err.message ? err.message.slice(0, 40) : 'unknown'));
   }
 }
 async function validateAll(list) {
