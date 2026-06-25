@@ -7561,3 +7561,120 @@ tracked_companies:
     recipe: { kind: blocked, reason: "Applications go through eRecruiter (system.erecruiter.pl ASP.NET form) and external skillshot.pl postings; join-us page itself states email applications 'may not be considered'. No keyless JSON/ATS feed (eRecruiter is form-only, not a supported provider). Site is rebel-wolves.com (hyphenated)." }
     last_probe: 2026-06-25
     notes: "Warsaw, Poland. The Blood of Dawnwalker (ex-CDPR vets, ~160 staff). Resolve pass #8."
+
+  # ══════════════════════════════════════════════════════════════════
+  # NEW ATS PROVIDERS — wired 2026-06-26 (providers/hrmos.mjs, jazzhr.mjs).
+  #   Studios + tenant slugs sourced once from alexanderrehm.com/jobs.html as a
+  #   reference, then pointed straight at the underlying ATS (zero-token, like
+  #   greenhouse/lever). NOT harvested from that file on a schedule.
+  # ── HRMOS (hrmos.co) — Japanese multi-tenant ATS. Postings render in
+  #    Japanese; the provider tags non-remote roles ", Japan" so the location
+  #    filter drops Tokyo-onsite roles and only surfaces remote/EN ones. ──
+  # ══════════════════════════════════════════════════════════════════
+  - name: Cygames
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/cygames/jobs
+    notes: "Tokyo. Granblue Fantasy, Uma Musume. Largest HRMOS board (~350 roles)."
+    enabled: true
+  - name: Colorful Palette
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/colorfulpalette/jobs
+    notes: "Tokyo. Cygames subsidiary (Project SEKAI)."
+    enabled: true
+  - name: Aiming
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/aiming/jobs
+    notes: "Tokyo. MMO / mobile online games."
+    enabled: true
+  - name: GAME FREAK
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/gamefreak/jobs
+    notes: "Tokyo. Pokémon developer."
+    enabled: true
+  - name: Extreme
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/extreme/jobs
+    notes: "Tokyo. Game development support studio."
+    enabled: true
+  - name: Bandai Namco Studios
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/bandainamcostudios/jobs
+    notes: "Tokyo. Tekken, Elden Ring co-dev."
+    enabled: true
+  - name: Kojima Productions
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/2052996596448374784/jobs
+    notes: "Tokyo. Death Stranding. Numeric HRMOS slug."
+    enabled: true
+  - name: Square Enix (Japan)
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/square-enix/jobs
+    notes: "Tokyo. Final Fantasy, Dragon Quest (JP-domestic hiring board)."
+    enabled: true
+  - name: NOW Production
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/nowproduction/jobs
+    notes: "Osaka / Tokyo. Co-development studio."
+    enabled: true
+  - name: Spike Chunsoft
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/spchun/jobs
+    notes: "Tokyo. Danganronpa, Zero Escape."
+    enabled: true
+  - name: Happinet
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/happinet/jobs
+    notes: "Tokyo. Games/toys publisher & distributor."
+    enabled: true
+  - name: Bandai Namco Aces
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/bnaces/jobs
+    notes: "Tokyo. Ace Combat studio."
+    enabled: true
+  - name: Silicon Studio
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/siliconstudiohr/jobs
+    notes: "Tokyo. Middleware (Mizuchi) + game dev."
+    enabled: true
+  - name: GREE
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/gree/jobs
+    notes: "Tokyo. Mobile games & entertainment."
+    enabled: true
+  - name: Bandai Namco Nexus
+    provider: hrmos
+    careers_url: https://hrmos.co/pages/bandainamco-nexus/jobs
+    notes: "Tokyo. Data / online services arm."
+    enabled: true
+
+  # ── JazzHR (<slug>.applytojob.com) — multi-tenant ATS, English boards. ──
+  - name: Obsidian Entertainment
+    provider: jazzhr
+    careers_url: https://obsidian.applytojob.com/
+    notes: "Irvine, CA. Avowed, Pillars of Eternity (Xbox studio)."
+    enabled: true
+  - name: Next Level Games
+    provider: jazzhr
+    careers_url: https://nextlevelgames.applytojob.com/
+    notes: "Vancouver, Canada. Nintendo studio (Luigi's Mansion, Mario Strikers)."
+    enabled: true
+  - name: Certain Affinity
+    provider: jazzhr
+    careers_url: https://certainaffinityinc.applytojob.com/
+    notes: "Austin TX / Toronto. Call of Duty, Halo co-dev."
+    enabled: true
+  - name: Sago Mini
+    provider: jazzhr
+    careers_url: https://sagomini.applytojob.com/
+    notes: "Toronto, Canada. Kids' games (Sago Mini World)."
+    enabled: true
+  - name: Glitch Productions
+    provider: jazzhr
+    careers_url: https://glitchproductions.applytojob.com/
+    notes: "Australia. Animation + games (Amazing Digital Circus)."
+    enabled: true
+  - name: Maximum Entertainment
+    provider: jazzhr
+    careers_url: https://maximumgames.applytojob.com/
+    notes: "Sweden / US. Publisher (Maximum Games / Modus)."
+    enabled: true
