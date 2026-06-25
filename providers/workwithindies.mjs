@@ -22,6 +22,9 @@ import { toIsoDate } from './_util.mjs';
 
 const FEED_URL = 'https://www.workwithindies.com/careers/rss.xml';
 
+// Per-job page fetch concurrency for the closed-posting check (see below).
+const VERIFY_CONCURRENCY = 8;
+
 // "{Company} is hiring a/an {Role} to work from {Location}" | "... to work remotely"
 const TITLE_RE = /^(.*?) is hiring an? (.*?) to work (?:from (.*?)|(remotely))\.?$/;
 
@@ -70,6 +73,41 @@ export function parseWorkWithIndiesFeed(xml) {
   return jobs;
 }
 
+// Whether a fetched job page shows the "This position has been closed." banner.
+//
+// The literal string is NOT a reliable signal: Webflow renders that banner into
+// EVERY job page's HTML and merely hides it with the `w-condition-invisible`
+// class while the posting is open. A closed posting drops that class so the
+// banner (the `closed-notif` wrapper) becomes visible. So we look for a
+// `closed-notif` element that is NOT Webflow-hidden, rather than for the text.
+//
+//   open:   <div class="closed-notif w-condition-invisible">…closed…</div>
+//   closed: <div class="closed-notif">…closed…</div>
+//
+// Returns false for anything we can't positively read as closed — the caller is
+// fail-safe and keeps a job whenever the page is ambiguous or unreachable.
+export function isClosedPosting(html) {
+  if (typeof html !== 'string' || !html) return false;
+  for (const m of html.matchAll(/class="([^"]*\bclosed-notif\b[^"]*)"/g)) {
+    if (!/\bw-condition-invisible\b/.test(m[1])) return true;
+  }
+  return false;
+}
+
+// Run async `worker` over `items` with a fixed concurrency cap, preserving order.
+async function mapConcurrent(items, limit, worker) {
+  const results = new Array(items.length);
+  let i = 0;
+  async function next() {
+    while (i < items.length) {
+      const idx = i++;
+      results[idx] = await worker(items[idx], idx);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, next));
+  return results;
+}
+
 /** @type {Provider} */
 export default {
   id: 'work-with-indies',
@@ -91,6 +129,26 @@ export default {
       ? entry.feed_url.trim()
       : FEED_URL;
     const xml = await ctx.fetchText(feedUrl, { redirect: 'error' });
-    return parseWorkWithIndiesFeed(xml);
+    const jobs = parseWorkWithIndiesFeed(xml);
+
+    // Closed-posting filter. The RSS feed can still list a role after the studio
+    // has closed it, so we open each job page and drop the ones whose "This
+    // position has been closed." banner is actually visible. One extra request
+    // per job — opt out with `verify_closed: false` in the studios.yml entry to
+    // keep the single-request behaviour.
+    //
+    // Fail-safe throughout: a page that errors, times out, or reads ambiguously
+    // is KEPT, so a flaky network never silently shrinks the feed.
+    if (entry.verify_closed === false) return jobs;
+
+    const open = await mapConcurrent(jobs, VERIFY_CONCURRENCY, async (job) => {
+      try {
+        const html = await ctx.fetchText(job.url, { timeoutMs: 8000 });
+        return isClosedPosting(html) ? null : job;
+      } catch {
+        return job; // unreachable page → keep it, the next scan can re-check
+      }
+    });
+    return open.filter(Boolean);
   },
 };
