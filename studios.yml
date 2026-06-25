@@ -340,7 +340,7 @@ tracked_companies:
     status: resolved
     last_probe: 2026-06-23
     enabled: true
-    notes: "Created 2025 by KIRKBI / LEGO Holding (the Kirk Kristiansen family holding co.), NOT the LEGO Group toy operating company — operates INDEPENDENTLY from the LEGO Group (separate org/tenant, own Teamtailor portal). Mandate = wholly-owned branded digital play, distinct from licensed (TT Games) and the LEGO Group's own Fortnite-ecosystem division. Self-described 'earliest phases of this new company', Billund/Copenhagen/London. Affiliated with Light Brick Studio (LEGO Ventures-backed, makers of Builder's Journey / Voyagers). Building a digital-play *platform* — SDKs/APIs, content pipelines, engine integrations, developer tooling — plus mobile/live-service games. Dedicated Teamtailor feed = clean games-only listings (Software Engineer Core Tech, Lead Engineer Mobile Games, Game Design Director, Technical Artist, Animation TD, Game Analytics, UI Designer — ~16 roles, 2026-06-23), so NO keyword/facet scoping needed. Mobile/live-service titles may be Unity (good fit); some roles are London (UK visa). COMPLEMENTARY to (not a replacement for) the 'Warner Bros. Games' TT entry AND the separate LEGO Group corporate Workday stream that carries the Unreal Engine Plugins / Game Ecosystem Integration / Fortnite-ecosystem / LEGO DESiGN roles — different orgs, keep both."
+    notes: "Created 2025 by KIRKBI / LEGO Holding (the Kirk Kristiansen family holding co.), NOT the LEGO Group toy operating company — operates INDEPENDENTLY from the LEGO Group (separate org/tenant, own Teamtailor portal). Mandate = wholly-owned branded digital play, distinct from licensed (TT Games) and the LEGO Group's own Fortnite-ecosystem division. Self-described 'earliest phases of this new company', Billund/Copenhagen/London. Affiliated with Light Brick Studio (LEGO Ventures-backed, makers of Builder's Journey / Voyagers). Building a digital-play *platform* — SDKs/APIs, content pipelines, engine integrations, developer tooling — plus mobile/live-service games. Dedicated Teamtailor feed = clean games-only listings (Software Engineer Core Tech, Lead Engineer Mobile Games, Game Design Director, Technical Artist, Animation TD, Game Analytics, UI Designer — ~16 roles, 2026-06-23), so NO keyword/facet scoping needed. Mobile/live-service titles may be Unity (good fit); some roles are London (UK). COMPLEMENTARY to (not a replacement for) the 'Warner Bros. Games' TT entry AND the separate LEGO Group corporate Workday stream that carries the Unreal Engine Plugins / Game Ecosystem Integration / Fortnite-ecosystem / LEGO DESiGN roles — different orgs, keep both."
 
   - name: 10 Chambers
     provider: teamtailor
@@ -710,6 +710,14 @@ tracked_companies:
     careers_url: https://jobs.lever.co/kabam
     notes: "Vancouver. Mobile (Marvel Contest of Champions)."
     enabled: true
+  - name: Blackbird Interactive
+    careers_url: https://jobs.lever.co/blackbirdinteractive
+    notes: "Vancouver, BC, Canada. Homeworld 3, Minecraft Legends. Resolved 2026-06-25 (15 roles)."
+    enabled: true
+  - name: Jam City
+    careers_url: https://jobs.lever.co/jamcity
+    notes: "Los Angeles, US; some LATAM/remote. Mobile (Harry Potter: Hogwarts Mystery). Resolved 2026-06-25 (6 roles)."
+    enabled: true
   - name: Fanatee
     careers_url: https://jobs.lever.co/fanatee
     notes: "Remote. Mobile word/puzzle (CodyCross, Stop)."
@@ -949,6 +957,16 @@ tracked_companies:
     provider: recruitee
     careers_url: https://blooberteam.recruitee.com
     notes: "Kraków. Silent Hill 2 remake. (Also at careers.blooberteam.com.)"
+    enabled: true
+  - name: SOFTGAMES
+    provider: recruitee
+    careers_url: https://softgames.recruitee.com
+    notes: "Berlin. HTML5/instant games. Remote-friendly. Resolved 2026-06-25 (5 roles)."
+    enabled: true
+  - name: CrazyGames
+    provider: recruitee
+    careers_url: https://crazygames.recruitee.com
+    notes: "Leuven, BE. Browser games platform. Remote. Resolved 2026-06-25 (2 roles)."
     enabled: true
 
   # ── Studios on Workable (research pass #3) ────────────────────────
@@ -1298,7 +1316,7 @@ tracked_companies:
     query: "game"
     status: resolved
     last_probe: 2026-06-23
-    notes: "LEGO's OWN in-house games division (announced Mar 2025), distinct from WB-owned TT Games. Centred on the LEGO Fortnite ecosystem with Epic + LEGO DESiGN interactive-play design; Billund/Copenhagen (EEA → visa-free). query='game' → ~17 postings incl. VP Head of Game Development (req is internally 'Head of LEGO Fortnite ecosystem'), Lead Software Engineer Game Ecosystem Integration, Software Engineer Unreal Engine Plugins, Senior Interactive Systems/Play Designers (LEGO DESiGN). Effort is Epic/Fortnite/Unreal-centric. Noise pulled: marketing/licensing 'Gaming Passion' roles + occasional far misses (a retail Sales Associate matched once) — accepted as recall-first; the targeting title filter downranks them. Tenant lego.wd103, site LEGO_External, zero-token cxs API."
+    notes: "LEGO's OWN in-house games division (announced Mar 2025), distinct from WB-owned TT Games. Centred on the LEGO Fortnite ecosystem with Epic + LEGO DESiGN interactive-play design; Billund/Copenhagen, Denmark. query='game' → ~17 postings incl. VP Head of Game Development (req is internally 'Head of LEGO Fortnite ecosystem'), Lead Software Engineer Game Ecosystem Integration, Software Engineer Unreal Engine Plugins, Senior Interactive Systems/Play Designers (LEGO DESiGN). Effort is Epic/Fortnite/Unreal-centric. Noise pulled: marketing/licensing 'Gaming Passion' roles + occasional far misses (a retail Sales Associate matched once) — accepted as recall-first; the targeting title filter downranks them. Tenant lego.wd103, site LEGO_External, zero-token cxs API."
 
   # status: unresolved — small Swedish studios, not yet individually researched
   # (mostly tiny/custom/email per ats-research.md; low yield, but worth one probe).
@@ -1911,10 +1929,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Code Club
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Codeborn
     country: SE
     status: unresolved
@@ -1948,10 +1962,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Conchimpur
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Contentasoft
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -2233,10 +2243,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Edyoutec
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: eelDev
     country: SE
     status: unresolved
@@ -2318,10 +2324,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Eternal Minds
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Evergreen IT
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -2578,10 +2580,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Giron Software
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Glass Rock Gathering
     country: SE
     status: unresolved
@@ -2629,10 +2627,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Good Old Pixel
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Gr IT
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -2904,19 +2898,11 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: ius innovation
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jacklin Game Consultancy
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Jämmerdal Games
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: JE Software
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -2937,10 +2923,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: JN Interactive
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: JN Programutveckling
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -3122,10 +3104,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Liquid Media
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Llama Lane
     country: SE
     status: unresolved
@@ -3300,10 +3278,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Ming Media
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Minoan Studios
     country: SE
     status: unresolved
@@ -3371,10 +3345,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Moreish Games
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Morningdew Media
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -3456,10 +3426,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Nena Innovation
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Neon Artery
     country: SE
     status: unresolved
@@ -3493,10 +3459,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: NFG Nordic Forest Games
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Nibiru Software
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -3725,10 +3687,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Perfect Random
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Perpetuum Media Sverige
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -4039,14 +3997,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: RENNSPORT Sweden
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Reset Media
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Rift Consulting
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -4540,10 +4490,6 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Tension technology
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Ternios
     country: SE
     status: unresolved
@@ -4633,10 +4579,6 @@ tracked_companies:
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Toppluva
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Trancenders Media
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -4928,19 +4870,11 @@ tracked_companies:
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: wrlds technologies
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
   - name: Wrong Organ
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
   - name: WuzzyWizard Studio
-    country: SE
-    status: unresolved
-    notes: "GDI 2025 (Dataspelsbranschen)."
-  - name: Wynne Technology
     country: SE
     status: unresolved
     notes: "GDI 2025 (Dataspelsbranschen)."
@@ -7507,3 +7441,123 @@ tracked_companies:
     careers_url: https://job-boards.greenhouse.io/keensoftwarehouseas
     status: resolved
     notes: "ASGC-mined; greenhouse-confirmed live (2 jobs, 2026-06-21: 2D/UI Artist/Prague). Hand-added — small board landed at frac 0.33 (just under the 0.34 auto-add threshold); verified real game studio (Space Engineers)."
+
+  # ══════════════════════════════════════════════════════════════════
+  # Resolve pass #8 (2026-06-25) — LinkedIn studio list
+  # Sources confirmed via probe + WebFetch. SOFTGAMES/CrazyGames (Recruitee)
+  # and Blackbird/Jam City (Lever) live in their provider sections above.
+  # ══════════════════════════════════════════════════════════════════
+
+  # (Companion Group already tracked above via the ASGC Recruitee pass — not re-added.)
+
+  # -- Tier-2 custom recipes (own careers pages, no shared ATS) --
+  - name: YoYo Studios
+    careers_url: https://yoyostudios.gg/careers
+    recipe:
+      kind: html
+      list_selector: "a.block"
+      fields: { title: "h3", url: "@href" }
+      url_base: https://yoyostudios.gg
+    last_probe: 2026-06-25
+    notes: "(Meme Wars dev) Remote. Custom Tailwind careers board; each job is an a.block card → h3 title + /careers/{slug} href (7 roles). No ATS. Resolve pass #8."
+    enabled: true
+  - name: Digital Sun Games
+    careers_url: https://digitalsungames.com/jobs/
+    recipe:
+      kind: html
+      list_selector: ".nectar-hor-list-item"
+      fields: { title: "h3", url: "a.full-link@href" }
+      url_base: https://digitalsungames.com
+      headers: { user-agent: "career-ops" }
+    last_probe: 2026-06-25
+    notes: "Valencia, Spain. Moonlighter, The Mageseeker, Cataclismo. Custom WordPress board at digitalsungames.com/jobs/ (NOT digitalsun.es); WAF 403s the default scanner UA, so the recipe pins a bare 'career-ops' UA (10 roles). No ATS. Resolve pass #8."
+    enabled: true
+  - name: Grimlore Games
+    careers_url: https://grimloregames.com/jobs/
+    recipe:
+      kind: html
+      list_selector: "article.post-article"
+      fields: { title: "h4", url: "a@href" }
+      url_base: https://grimloregames.com
+    last_probe: 2026-06-25
+    notes: "Munich, Germany. THQ Nordic/Embracer studio (SpellForce, Titan Quest II). Custom WordPress board; article.post-article cards, h4 title (14 roles). No ATS. Resolve pass #8."
+    enabled: true
+  - name: Maliyo Games
+    careers_url: https://www.maliyo.com/career/
+    recipe:
+      kind: html
+      list_selector: ".e-loop-item"
+      fields: { title: "h2", url: "a@href" }
+      url_base: https://www.maliyo.com
+    last_probe: 2026-06-25
+    notes: "Lagos, Nigeria. Custom Elementor/WordPress board at maliyo.com/career/; e-loop-item cards, h2 title, links to /career/{slug}/ (3 roles). No ATS. Resolve pass #8."
+    enabled: true
+  - name: HandyGames
+    careers_url: https://www.handy-games.com/en/jobs/
+    recipe:
+      kind: html
+      list_selector: "a.astro-lz23yqzr"
+      fields: { title: "a", url: "@href" }
+      url_base: https://www.handy-games.com
+    last_probe: 2026-06-25
+    notes: "Giebelstadt, Germany. THQ Nordic/Embracer studio; remote-friendly + relocation. Astro-built board at handy-games.com/en/jobs/ (categories → per-job /en/jobs/{slug}/ links; 8 roles). Job anchors are isolated by the jobs-section scoped class astro-lz23yqzr (plain a.link-style-default also matches nav/footer); re-capture the hash if a redesign breaks it. Applications route to JOIN (join.com/companies/handy-games, companyId 10719) but its public API is gated, so we scrape the on-site list. Resolve pass #8."
+    enabled: true
+
+  # -- Tier-4 browser (feed likely exists; needs a Playwright pass to capture XHR) --
+  - name: Torpor Games
+    careers_url: https://torporgames.careers.hibob.com/
+    recipe: { kind: browser, reason: "Runs HiBob careers (torporgames.careers.hibob.com) — an Angular SPA. The public jobs API is POST api.hibob.com/v1/objects/position/search with a request body; every GET path returns the app shell, not JSON. Open Network tab on the careers page to capture the positions XHR (URL+body), then make a recipe: json. HiBob is not yet a shared provider." }
+    last_probe: 2026-06-25
+    notes: "Berlin, Germany. Provocative/political narrative games. Resolve pass #8."
+  - name: Starfish Studios
+    careers_url: https://jobs.talenthr.io/starfish
+    recipe: { kind: browser, reason: "Runs TalentHR (jobs.talenthr.io/starfish), a Next.js SPA. SSR JSON exists at _next/data/{buildId}/starfish.json (pageProps.positions) but the buildId rotates on every TalentHR deploy, so the URL isn't stable to hardcode; no buildId-free public API found. Only posting is a generic 'General Application'. Capture the live positions XHR in a browser to pin a stable recipe." }
+    last_probe: 2026-06-25
+    notes: "Minecraft-first studio (Marketplace products/mods), fully remote. Workable hit 'findstarfish' is a DIFFERENT 'Starfish Hiring' co — not this studio. Resolve pass #8."
+  - name: Skymap Games
+    careers_url: https://www.useparallel.com/skymapgames/careers
+    recipe: { kind: browser, reason: "Runs Parallel (useparallel.com/skymapgames/careers), a Next.js SPA that renders 'Loading...' and fetches jobs client-side; __NEXT_DATA__ and _next/data JSON carry NO inline positions; no keyless public API found. Capture the jobs XHR in a browser Network tab, then make a recipe: json." }
+    last_probe: 2026-06-25
+    notes: "Manchester, NH, US. Indie studio, mostly fully-remote roles. Resolve pass #8."
+  - name: Reality Reload
+    careers_url: https://www.realityreload.com/careers
+    recipe: { kind: browser, reason: "Own site is a Vite/React SPA (index-*.js bundle); /careers HTML is a ~738-byte app shell with no inline jobs and no ATS host referenced. Live postings currently surface only via Work With Indies (already tracked). Capture the jobs XHR in a browser, or wire its WWI feed." }
+    last_probe: 2026-06-25
+    notes: "US. Narrative studio (immigrant-experience minigames); 'no AI-generated content'. Contract roles. Resolve pass #8."
+  - name: iBLOXX Studios
+    careers_url: https://www.ibloxx.io/
+    recipe: { kind: browser, reason: "Domain ibloxx.io unreachable from this env (curl 000 on both ibloxx.io and www; main site is ibloxx.com). No own careers page located via WebFetch/WebSearch; postings appear only on Outscal/ArtStation aggregators. Load the site in a real browser to find a careers page/ATS, else re-tag blocked." }
+    last_probe: 2026-06-25
+    notes: "Dubai, UAE. iBLOXX Group, blockchain/multiplayer games. Resolve pass #8."
+
+  # -- Tier-4 blocked (confirmed no machine feed) --
+  - name: Mobius Digital
+    careers_url: https://www.mobiusdigitalgames.com/jobs.html
+    recipe: { kind: blocked, reason: "Custom one-off HTML site (mobiusdigitalgames.com, NOT mobiusdigital.com); careers explicitly state submissions are PAUSED ('we have paused new submissions') and notifications are email-only (jobs@mobiusdigitalgames.com). No ATS, no machine feed." }
+    last_probe: 2026-06-25
+    notes: "Los Angeles, US. Outer Wilds. Resolve pass #8."
+  - name: Enduring Games
+    careers_url: https://enduring.games/jobs/
+    recipe: { kind: blocked, reason: "Openings listed but application is email-only (jobs@enduring.games) with no apply links to any ATS; custom site, no JSON/feed. All roles on-site Austin." }
+    last_probe: 2026-06-25
+    notes: "Austin, US — on-site only. Co-dev (Demon's Souls, Godfall ports). Resolve pass #8."
+  - name: Skytear Games
+    careers_url: https://skytear.com
+    recipe: { kind: blocked, reason: "Domain skytear.com is PARKED — 302-redirects to hugedomains.com (for-sale listing). Studio is a small Italian board-game publisher (Skytear MOBA), digital storefront at playskytear.com; no careers page or feed found." }
+    last_probe: 2026-06-25
+    notes: "Italy. Board-game publisher (ex-PvP Geeks); only ever 1 video-game dev role, via Work With Indies. Resolve pass #8."
+  - name: Can Can Can a Man
+    careers_url: https://www.cancancanaman.com/jobs.html
+    recipe: { kind: blocked, reason: "Static jobs.html has 13 job-ad blocks but ALL are HTML-commented-out (<!--<div class=job-ad>); application is email-only (jobs@cancancanaman.com), no ATS/feed. Only live role is on Work With Indies (already tracked). Apex domain 000s; www works." }
+    last_probe: 2026-06-25
+    notes: "Tiny indie (rhythm/horror/tactics; 'no AI/NFT/Crypto'). Resolve pass #8."
+  - name: Passion Republic Games
+    careers_url: https://www.passionrepublic.com/career/
+    recipe: { kind: blocked, reason: "passionrepublicgames.com is the GigaBash game site only — no careers (/careers, /jobs, /join-us all 404). Hiring lives on the parent art studio passionrepublic.com/career/, a custom portfolio/questionnaire flow with no ATS host or machine feed; other postings only on Jobstreet/Jobstore." }
+    last_probe: 2026-06-25
+    notes: "Kuala Lumpur, Malaysia. Game art/animation studio + GigaBash dev. Resolve pass #8."
+  - name: Rebel Wolves
+    careers_url: https://rebel-wolves.com/en/join-us
+    recipe: { kind: blocked, reason: "Applications go through eRecruiter (system.erecruiter.pl ASP.NET form) and external skillshot.pl postings; join-us page itself states email applications 'may not be considered'. No keyless JSON/ATS feed (eRecruiter is form-only, not a supported provider). Site is rebel-wolves.com (hyphenated)." }
+    last_probe: 2026-06-25
+    notes: "Warsaw, Poland. The Blood of Dawnwalker (ex-CDPR vets, ~160 staff). Resolve pass #8."

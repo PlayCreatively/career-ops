@@ -269,7 +269,9 @@ export default {
     if (r.kind === 'html') {
       const url = r.endpoint || entry.careers_url;
       if (!url) throw new Error(`custom: html recipe needs endpoint (or careers_url) for ${entry.name}`);
-      const html = await ctx.fetchText(url, { redirect: 'follow' });
+      const opts = { redirect: 'follow' };
+      if (r.headers && typeof r.headers === 'object') opts.headers = r.headers;
+      const html = await ctx.fetchText(url, opts);
       return parseHtmlRecipe(html, r, entry);
     }
     throw new Error(`custom: unsupported recipe kind "${r.kind}" for ${entry.name}`);
