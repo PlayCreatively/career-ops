@@ -340,7 +340,8 @@
   .meta .vlink.on { color: var(--accent); font-weight: 700; text-decoration: underline; }
   .meta .vlink.zero { opacity: .5; }
   /* Eye-off icon on the "untagged only" view link — hides the rows you've already
-     starred / applied to / ignored. Sized to sit on the meta line's text baseline.
+     applied to / ignored (starred rows stay, as a shortlist). Sized to sit on the
+     meta line's text baseline.
      overflow:visible keeps the slash stroke from clipping at the viewBox edge; the
      border-bottom on hover/active mimics the text links' underline (text-decoration
      doesn't paint under an SVG). */
@@ -787,7 +788,7 @@ function viewControlsHtml() {
   ALL.forEach(function (j) {
     if (!passesBase(j)) return;
     var st = jobStatus(j.url);
-    if (st === "s") cs++; else if (st === "c") cc++; else if (st === "i") ci++; else cu++;
+    if (st === "s") { cs++; cu++; } else if (st === "c") cc++; else if (st === "i") ci++; else cu++;
   });
   if (!cs && !cc && !ci && VIEW === "all") return "";
   function lk(v, label, n, title) {
@@ -796,8 +797,8 @@ function viewControlsHtml() {
   }
   // ︎ = text-presentation selector: forces ✓/✕ to render as plain text
   // glyphs instead of oversized color emoji (which inflated the hitbox + gap).
-  // The 4th link isolates the UNTAGGED roles — the inverse of the three marks, so
-  // you can hide everything you've already starred / applied to / ignored. No row
+  // The 4th link isolates the UNTAGGED roles (plus starred, kept as a shortlist) —
+  // so you can hide everything you've already applied to / ignored. No row
   // glyph mirrors it, so a plain mark would read as cryptic; an eye-off (hide)
   // icon + a tooltip carries the meaning instead.
   var EYE_OFF = '<svg class="vico" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -806,7 +807,7 @@ function viewControlsHtml() {
     '5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19' +
     'm-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   return ' · ' + lk("s", "★︎", cs, "Starred only") + lk("c", "✓︎", cc, "Applied / done only") +
-    lk("i", "✕︎", ci, "Ignored only") + lk("u", EYE_OFF, cu, "Untagged only — hide starred, applied & ignored");
+    lk("i", "✕︎", ci, "Ignored only") + lk("u", EYE_OFF, cu, "Untagged + starred — hide applied & ignored");
 }
 // Local dev: when served from localhost (e.g. `npm run board:dev`), the YAML is
 // the source of truth — the board mirrors data/targeting.json live and ignores
@@ -1104,7 +1105,7 @@ function passes(j) {
   // Mark-view: when a chip other than "All" is active, keep only jobs carrying
   // that mark. Layered on top of search/filters; pill counts use passesBase so
   // they stay unaffected.
-  if (VIEW === "u") { if (jobStatus(j.url) !== "") return false; }
+  if (VIEW === "u") { var us = jobStatus(j.url); if (us !== "" && us !== "s") return false; }
   else if (VIEW !== "all" && jobStatus(j.url) !== VIEW) return false;
   // Isolate lens (set by clicking a pill's view/total number): restrict the list
   // to one filter's matches. `total` mode shows EVERY match (even ones your hard-
@@ -1291,7 +1292,7 @@ function render() {
     var emptyMsg = VIEW === "s" ? "No starred roles yet — hit ★ on a row to add one."
       : VIEW === "c" ? "Nothing marked done yet — hit ✓ on a row as you apply."
       : VIEW === "i" ? "No ignored roles — hit ✕ on a row to tuck one away here."
-      : VIEW === "u" ? "Nothing left untagged — every match is starred, applied, or ignored."
+      : VIEW === "u" ? "Nothing left here — every match is applied or ignored."
       : "No openings match these filters.";
     rows.innerHTML = '<tr><td colspan="6" class="empty">' + emptyMsg + '</td></tr>';
   }
