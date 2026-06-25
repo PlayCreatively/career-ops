@@ -68,6 +68,7 @@ career-dashboard
 package-lock.json
 /data
 asgc-jobs.json
+rehm-jobs.json
 # Studio-mining scratch workspace (jobs.jsonl, sitemap, cursor state — regenerable)
 .mining/
 

@@ -55,6 +55,7 @@
 exclude_companies:
   - ByteDance              # cloud infra / AI-LLM research / sales — 0 game roles
   - Netflix Game Studio    # whole Netflix corporate careers (marketing/HR/post) leaking
+  - Netflix Games Studios  # plural variant as it appears in aggregator feeds
   - NVIDIA                 # silicon / chip verification / hardware — 0 game roles
   - Aristocrat             # gambling / slot machines (casino), not video games
   - Logitech               # gaming hardware / peripherals
@@ -72,6 +73,20 @@ exclude_companies:
   - Light & Wonder         # casino / lottery / social-casino (ex-Scientific Games)
   - High 5 Games           # social casino / slot-game maker (iGaming), not video games
   - Evoplay                # online-casino / slots provider (iGaming) — affiliate/licensing roles, not video games
+  - SciPlay                # social casino (Light & Wonder subsidiary), not video games
+  - Penn Interactive       # online casino + sportsbook (ESPN Bet / Penn Entertainment)
+  - GRID Esports           # esports data/trading platform, not a game studio
+  - GAMURS Group           # esports/games media network, not a game studio
+  - Intel                  # silicon / hardware — 0 game roles
+  - AMD                    # silicon / hardware — 0 game roles
+  - Hasbro                 # toy/board-game corporate careers (video games via licensing only)
+  - Cluetivity             # AR escape-room / location-based entertainment, not video games
+  - Triotech Amusement     # location-based amusement attractions, not video games
+  - Holo-Light             # industrial AR/XR software, not video games
+  - Holo-Industrie 4.0 Software GmbH # Holo-Light's legal name as it appears in feeds
+  - keywords-intl1         # Keywords Studios — games outsourcer (QA/loc/art), mass postings
+  - Side (PTW)             # PTW/Side — games audio & localization outsourcer, mass postings
+  - sonyglobal-sonyglobalcareers # Sony corporate global careers (PlayStation tracked separately)
 
 tracked_companies:
 
@@ -148,6 +163,17 @@ tracked_companies:
       # - Administration
       # - Operations
       # - Customer Services
+
+  - name: Rehm — uncovered ATS (games)
+    provider: rehm
+    # alexanderrehm.com curated games board (jobs.json). Scoped by DEFAULT to the
+    # long tail of studios on an ATS we don't scan first-party (hrmos, ea-careers,
+    # comeet, phenom, garena, eightfold, oracle-hcm, …) so it never double-counts
+    # our direct feeds. Coverage is derived from providers/ automatically. Drops
+    # exclude_companies + off-theme employers in-provider. `scope: all` to widen.
+    # See providers/rehm.mjs.
+    notes: "Curated games aggregator. Complementary long-tail (ATSes we don't ship a provider for)."
+    enabled: true
 
   # ── Studios on Breezy HR ──────────────────────────────────────────
   # Per-company ATS (like greenhouse/lever): one entry per studio. Tenants live
@@ -7561,3 +7587,405 @@ tracked_companies:
     recipe: { kind: blocked, reason: "Applications go through eRecruiter (system.erecruiter.pl ASP.NET form) and external skillshot.pl postings; join-us page itself states email applications 'may not be considered'. No keyless JSON/ATS feed (eRecruiter is form-only, not a supported provider). Site is rebel-wolves.com (hyphenated)." }
     last_probe: 2026-06-25
     notes: "Warsaw, Poland. The Blood of Dawnwalker (ex-CDPR vets, ~160 staff). Resolve pass #8."
+
+  # --- rehm-mined (2026-06-25, high-confidence, live-validated) ---
+  - name: GameOn Studio
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/gameonstudio
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Alegrium
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/alegrium1
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (2 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Blue Isle studios
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/BlueIsleStudios
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (2 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Electric Square
+    provider: workable
+    careers_url: https://apply.workable.com/electric-square
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (1 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Yalla Play
+    provider: breezy
+    careers_url: https://yallaplay.breezy.hr
+    status: resolved
+    notes: "rehm-mined; breezy-confirmed live (1 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Bootloader studio
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/bootloaderstudio
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (1 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: lumen games
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/lumengames
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (1 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Ryse up studios
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/ryseupstudios
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (1 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: JOFSOFT
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/jofsoft
+    status: resolved
+    notes: "rehm-mined; greenhouse-confirmed live (1 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Megazebra
+    provider: bamboohr
+    careers_url: https://megazebragmbh.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (1 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: VOID Interactive
+    provider: bamboohr
+    careers_url: https://void.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (1 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Ember Lab
+    provider: bamboohr
+    careers_url: https://emberlab.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (1 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Immersive Entertainment
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/immersiveentertainment
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (6 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Tentworks Interactive
+    provider: workable
+    careers_url: https://apply.workable.com/tentworks-interactive
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (5 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Adglobe
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/adglobe
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: PUBG Madison
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/pubgmadison
+    status: resolved
+    notes: "rehm-mined; greenhouse-confirmed live (6 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Demiurge Studios
+    provider: lever
+    careers_url: https://jobs.lever.co/demiurgestudios
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Dr. Panda
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/drpanda
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: MixMob
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/mixmob
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: A44 Games
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/a44games
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: HB Studios
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/hbstudios
+    status: resolved
+    notes: "rehm-mined; greenhouse-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Double Eleven
+    provider: workable
+    careers_url: https://apply.workable.com/double-eleven
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (7 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Red Point Labs
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/redpointlabs
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (5 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Fun Guy Studio Philippines
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/funguystudiophilippinesinc
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (5 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: limitbreak
+    provider: lever
+    careers_url: https://jobs.lever.co/limitbreak
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (27 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: AGBO
+    provider: breezy
+    careers_url: https://agbo.breezy.hr
+    status: resolved
+    notes: "rehm-mined; breezy-confirmed live (29 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: owi
+    provider: bamboohr
+    careers_url: https://owi.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (10 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: SkyBox Labs
+    provider: lever
+    careers_url: https://jobs.lever.co/skyboxlabs
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Soulbound
+    provider: workable
+    careers_url: https://apply.workable.com/soulbound
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Meta4
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/meta4
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Chewi Creative
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/chewicreative
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Arrible
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/arrible
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Bespoke Pixel
+    provider: teamtailor
+    careers_url: https://bespokepixel.teamtailor.com
+    status: resolved
+    notes: "rehm-mined; teamtailor-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Prism Studio
+    provider: bamboohr
+    careers_url: https://prismstudio.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Panic Stations
+    provider: workable
+    careers_url: https://apply.workable.com/panic-stations
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (2 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: QUANTIC DREAM
+    provider: lever
+    careers_url: https://jobs.eu.lever.co/quanticdream
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Bloxd
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/bloxd
+    status: resolved
+    notes: "rehm-mined; ashby-confirmed live (2 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: hard ball games
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/hardballgames
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (2 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Arkavis
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/arkavis
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (2 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Hampa Studio
+    provider: teamtailor
+    careers_url: https://hampastudio.teamtailor.com
+    status: resolved
+    notes: "rehm-mined; teamtailor-confirmed live (2 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Triggerfish Animation
+    provider: bamboohr
+    careers_url: https://triggerfish.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (2 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Sun Studio
+    provider: lever
+    careers_url: https://jobs.lever.co/sunstudio
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (7 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Liquid Development
+    provider: workable
+    careers_url: https://apply.workable.com/liquid-development
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (9 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Overdare
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/overdare
+    status: resolved
+    notes: "rehm-mined; greenhouse-confirmed live (12 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: ICON Creative Studio
+    provider: bamboohr
+    careers_url: https://iconcreative.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (25 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Airlab
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/airlabinc
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (10 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Lockwood Publishing
+    provider: workable
+    careers_url: https://apply.workable.com/lockwood
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (5 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Game5 Mobile
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/game5mobile
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (5 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Athena Studio
+    provider: bamboohr
+    careers_url: https://athenastudio.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (8 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Worldscape Technology
+    provider: lever
+    careers_url: https://jobs.lever.co/worldscape-technology
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (12 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Giants Software
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/GIANTSSoftwareGmbH
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (7 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Hardsuit Labs
+    provider: workable
+    careers_url: https://apply.workable.com/hardsuit-labs-1
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Bold Games
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/boldgames
+    status: resolved
+    notes: "rehm-mined; ashby-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Magnopus
+    provider: lever
+    careers_url: https://jobs.lever.co/magnopus
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (3 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: UserWise
+    provider: workable
+    careers_url: https://apply.workable.com/userwise-services
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (13 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: skydance
+    provider: lever
+    careers_url: https://jobs.lever.co/skydance
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (17 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Climax Studios
+    provider: workable
+    careers_url: https://apply.workable.com/climax-studios
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (15 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Pulse Games
+    provider: workable
+    careers_url: https://apply.workable.com/pulsegames
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (8 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Blockville
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/blockville
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (8 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Preloaded
+    provider: breezy
+    careers_url: https://preloaded.breezy.hr
+    status: resolved
+    notes: "rehm-mined; breezy-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Genies
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/genies
+    status: resolved
+    notes: "rehm-mined; ashby-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: X Studios
+    provider: bamboohr
+    careers_url: https://xstudios.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: King
+    provider: workday
+    careers_url: https://xboxgaming.wd1.myworkdayjobs.com/King_External_Careers
+    status: resolved
+    notes: "rehm-mined; workday-confirmed live (23 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Spyke Games
+    provider: lever
+    careers_url: https://jobs.lever.co/spyke-games
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (10 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: weltenbauer. Software Entwicklung GmbH
+    provider: personio
+    careers_url: https://weltenbauer-software-entwicklung-gmbh.jobs.personio.com
+    status: resolved
+    notes: "rehm-mined; personio-confirmed live (5 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: RBL Labs
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/rbllabs
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (5 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Grand Games
+    provider: lever
+    careers_url: https://jobs.lever.co/grand
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (11 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Tamatem
+    provider: workable
+    careers_url: https://apply.workable.com/tamatem
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (12 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: bellotalabs
+    provider: lever
+    careers_url: https://jobs.lever.co/bellotalabs
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (12 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Weekend
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/weekend
+    status: resolved
+    notes: "rehm-mined; ashby-confirmed live (6 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Magic Media
+    provider: workable
+    careers_url: https://apply.workable.com/magic-media
+    status: resolved
+    notes: "rehm-mined; workable-confirmed live (6 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: OmniCraft Labs
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/omnicraftlabs
+    status: resolved
+    notes: "rehm-mined; greenhouse-confirmed live (6 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Peak Games
+    provider: lever
+    careers_url: https://jobs.lever.co/peakgames
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (20 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Naver Vietnam
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/navervietnam
+    status: resolved
+    notes: "rehm-mined; greenhouse-confirmed live (21 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Hypixel Studios
+    provider: bamboohr
+    careers_url: https://hypixel.bamboohr.com
+    status: resolved
+    notes: "rehm-mined; bamboohr-confirmed live (7 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Rovio Entertainment
+    provider: lever
+    careers_url: https://jobs.lever.co/rovio-2
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (16 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Moonlake Games
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/moonlake
+    status: resolved
+    notes: "rehm-mined; ashby-confirmed live (8 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: LumenUp
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/lumenup1
+    status: resolved
+    notes: "rehm-mined; smartrecruiters-confirmed live (11 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: Sandbox VR
+    provider: lever
+    careers_url: https://jobs.lever.co/sandboxvr
+    status: resolved
+    notes: "rehm-mined; lever-confirmed live (11 jobs, 2026-06-25). Auto-added (high-confidence)."
+  - name: PartyHat
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/partyhat
+    status: resolved
+    notes: "rehm-mined; ashby-confirmed live (29 jobs, 2026-06-25). Auto-added (high-confidence)."
