@@ -17,11 +17,27 @@ import { toIsoDate, normalizeWorkMode } from './_util.mjs';
 //
 //   - name: Games Jobs Direct
 //     provider: games-jobs-direct
-//     pages: 300        # optional — cap the pages walked (default: walk all)
-//     exclude_sectors:  # optional — drop these board sectors (case-insensitive)
+//     pages: 300              # optional — cap the pages walked (default: walk all)
+//     enrich_country: true    # optional — fill in the country per posting (default: on)
+//     enrich_concurrency: 6   # optional — parallel detail fetches during enrichment
+//     exclude_sectors:        # optional — drop these board sectors (case-insensitive)
 //       - Finance
 //       - HR
 //       - Legal
+//
+// COUNTRY ENRICHMENT. The board's listing cards carry an inconsistent
+// `.job-location`: ~64% are already "City, Country" (e.g. "Daresbury, United
+// Kingdom"), but ~36% are a bare city ("Guildford", "Krakow", "Las Vegas") with
+// no country at all. Downstream targeting/ranking matches country names against
+// `job.location`, so those bare-city postings silently slip through any
+// country-level filter. The country only exists on each posting's own detail
+// page (a dedicated `Country` field — the listing HTML never sends it, and the
+// board has no JSON feed). So for the bare-city cards we fetch the detail page
+// once and append the country, turning "Guildford" into "Guildford, United
+// Kingdom". Cards that already carry a country (have a comma) or are themselves a
+// bare country are left untouched — no wasted request. Enrichment is fail-safe:
+// a failed detail fetch keeps the city-only location and never drops the posting.
+// Disable it with `enrich_country: false` to skip the extra requests entirely.
 //
 // Because this is a *whole-industry* board, its `/all-jobs` listing mixes
 // game-craft roles (Programming, Art, Animation, Design, Audio, Production, QA…)
@@ -48,6 +64,29 @@ import { toIsoDate, normalizeWorkMode } from './_util.mjs';
 const BASE = 'https://www.gamesjobsdirect.com';
 const LISTING_PATH = '/all-jobs';
 const MAX_PAGES = 400;        // hard cap (~4000 jobs) so a layout change can't loop forever
+const DEFAULT_ENRICH_CONCURRENCY = 6;  // parallel detail fetches when filling in country
+
+// Lowercased English country names, generated from ISO-3166 alpha-2 codes via
+// Intl so we never hand-maintain a names table. Used ONLY to skip a detail fetch
+// when a card's location is already a bare country ("Romania", "Singapore") — a
+// pure optimization, never a correctness gate. A spelling we miss (the board
+// writes "Republic of Korea", Intl says "South Korea") just costs one harmless
+// extra fetch; it can never produce wrong data.
+const COUNTRY_NAMES = (() => {
+  const set = new Set();
+  try {
+    const dn = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' });
+    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (const a of A) for (const b of A) {
+      let name;
+      try { name = dn.of(a + b); } catch { name = null; }
+      if (name) set.add(name.toLowerCase());
+    }
+  } catch { /* Intl region names unavailable — set stays empty, we just enrich a bit more */ }
+  // Board spellings Intl renders differently — keeps us from re-fetching these.
+  for (const n of ['united states', 'czech republic', 'republic of korea', 'russia', 'turkey']) set.add(n);
+  return set;
+})();
 
 function decodeEntities(s) {
   return String(s == null ? '' : s)
@@ -99,6 +138,28 @@ export function buildSectorFilter(excludeSectors) {
     const dept = (job.department || '').trim().toLowerCase();
     return dept === '' || !blocked.has(dept);
   };
+}
+
+// Does this listing-card location need a country looked up from the detail page?
+// No when it's empty (nothing to enrich), already has a comma (the card's own
+// "City, Country" form — last part is a real country ~98% of the time), or is
+// itself a bare country. Yes only for a bare city like "Guildford" / "Krakow".
+export function needsCountryEnrichment(location) {
+  const loc = (location || '').trim();
+  if (!loc) return false;
+  if (loc.includes(',')) return false;
+  return !COUNTRY_NAMES.has(loc.toLowerCase());
+}
+
+// Pull the country from a posting's detail page. The detail view renders a
+// dedicated field — `<label …>Country</label> <p …>United Kingdom</p>` — separate
+// from the combined Location line. Returns '' when absent (older layout, expired
+// posting), so the caller falls back to the city-only location.
+export function extractCountry(html) {
+  if (typeof html !== 'string') return '';
+  const m = html.match(/<label[^>]*>\s*Country\s*<\/label>\s*<p[^>]*>([\s\S]*?)<\/p>/i);
+  if (!m) return '';
+  return decodeEntities(m[1].replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
 }
 
 export function parseGamesJobsDirectPage(html) {
@@ -185,6 +246,35 @@ export default {
         jobs.push(job);
       }
     }
+
+    // Fill in the country for bare-city postings from their detail pages, so
+    // country-level targeting/ranking stops silently missing them. Opt-out with
+    // `enrich_country: false`. Fail-safe throughout: a failed detail fetch keeps
+    // the city-only location and never drops the posting.
+    if (entry.enrich_country !== false && typeof ctx.fetchText === 'function') {
+      const targets = jobs.filter((j) => needsCountryEnrichment(j.location));
+      const concurrency = Number.isInteger(entry.enrich_concurrency) && entry.enrich_concurrency > 0
+        ? entry.enrich_concurrency
+        : DEFAULT_ENRICH_CONCURRENCY;
+      let next = 0;
+      const worker = async () => {
+        while (next < targets.length) {
+          const job = targets[next++];
+          try {
+            const html = await ctx.fetchText(job.url, { redirect: 'error' });
+            const country = extractCountry(html);
+            // Don't duplicate a country the listing line already mentions.
+            if (country && !job.location.toLowerCase().includes(country.toLowerCase())) {
+              job.location = job.location ? `${job.location}, ${country}` : country;
+            }
+          } catch { /* keep city-only location */ }
+        }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(concurrency, targets.length) }, worker),
+      );
+    }
+
     return jobs;
   },
 };

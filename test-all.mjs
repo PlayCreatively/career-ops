@@ -2038,6 +2038,72 @@ try {
   } else {
     fail('buildSectorFilter blocklist/fail-safe behavior is wrong');
   }
+
+  // Country enrichment — bare-city cards get their country from the detail page.
+  const { needsCountryEnrichment, extractCountry } = await import(pathToFileURL(join(ROOT, 'providers/gamesjobsdirect.mjs')).href);
+
+  if (
+    needsCountryEnrichment('Guildford') === true &&                  // bare city → look up
+    needsCountryEnrichment('Frankfurt am Main') === true &&          // bare city w/ spaces
+    needsCountryEnrichment('Daresbury, United Kingdom') === false && // already "City, Country"
+    needsCountryEnrichment('Romania') === false &&                   // already a bare country
+    needsCountryEnrichment('Singapore') === false &&                 // city-state recognised as country
+    needsCountryEnrichment('') === false &&                          // nothing to enrich
+    needsCountryEnrichment(null) === false
+  ) {
+    pass('needsCountryEnrichment flags bare cities, skips comma-locations and bare countries');
+  } else {
+    fail('needsCountryEnrichment gate is wrong');
+  }
+
+  if (
+    extractCountry('<label class="control-label">Country</label> <p class="">United Kingdom</p>') === 'United Kingdom' &&
+    extractCountry('<label>Country</label>\n   <p class="x">  Czech&nbsp;Republic </p>') === 'Czech Republic' &&
+    extractCountry('<p>no country field here</p>') === '' &&
+    extractCountry(null) === ''
+  ) {
+    pass('extractCountry reads the detail-page Country field and decodes/trims, empty when absent');
+  } else {
+    fail('extractCountry parsing is wrong');
+  }
+
+  // End-to-end: only the bare-city card triggers a detail fetch; enrich_country:false skips all.
+  const enrichListing = `<ul>
+    <li class="list-group-item job-list "><div><p><a href="/job/skillsearch/experienced-programmer/345511" class="job-title" title="Experienced Programmer">Experienced Programmer</a></p>
+      <p class="job-info"><span class="job-location">Guildford</span><span class="job-company">Skillsearch</span><span class="job-sector"> Programming</span></p></div></li>
+    <li class="list-group-item job-list "><div><p><a href="/job/x/y/2" class="job-title" title="Artist">Artist</a></p>
+      <p class="job-info"><span class="job-location">Daresbury, United Kingdom</span><span class="job-company">X</span><span class="job-sector"> Art</span></p></div></li>
+    </ul>`;
+  const makeCtx = () => {
+    const counts = { pages: 0, details: 0 };
+    return {
+      counts,
+      async fetchText(url) {
+        if (url.includes('/all-jobs')) { counts.pages++; return counts.pages === 1 ? enrichListing : ''; }
+        counts.details++;
+        return '<label class="control-label">Country</label> <p class="">United Kingdom</p>';
+      },
+    };
+  };
+  const onCtx = makeCtx();
+  const enriched = await gjd.fetch({ pages: 5 }, onCtx);
+  if (
+    onCtx.counts.details === 1 &&                                    // only the bare-city card fetched
+    enriched.find((j) => j.title === 'Experienced Programmer')?.location === 'Guildford, United Kingdom' &&
+    enriched.find((j) => j.title === 'Artist')?.location === 'Daresbury, United Kingdom' // untouched
+  ) {
+    pass('games-jobs-direct.fetch() enriches bare-city locations with country, leaves comma-locations alone');
+  } else {
+    fail(`country enrichment e2e wrong: details=${onCtx.counts.details} jobs=${JSON.stringify(enriched.map((j) => j.location))}`);
+  }
+
+  const offCtx = makeCtx();
+  const unenriched = await gjd.fetch({ pages: 5, enrich_country: false }, offCtx);
+  if (offCtx.counts.details === 0 && unenriched.find((j) => j.title === 'Experienced Programmer')?.location === 'Guildford') {
+    pass('games-jobs-direct.fetch() honors enrich_country:false (no detail fetches, city-only kept)');
+  } else {
+    fail(`enrich_country:false not honored: details=${offCtx.counts.details}`);
+  }
 } catch (e) {
   fail(`games-jobs-direct provider tests crashed: ${e.message}`);
 }
