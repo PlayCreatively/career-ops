@@ -1,8 +1,6 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate } from './_util.mjs';
-
 // Greenhouse provider — hits the public boards-api JSON endpoint.
 // Handles both explicit `api:` URLs and auto-detection from `careers_url`.
 
@@ -13,6 +11,7 @@ const ALLOWED_GREENHOUSE_HOSTS = new Set([
   'job-boards.eu.greenhouse.io',
 ]);
 
+/** @param {string} url */
 function assertGreenhouseUrl(url) {
   let parsed;
   try {
@@ -26,6 +25,7 @@ function assertGreenhouseUrl(url) {
   return url;
 }
 
+/** @param {import('./_types.js').PortalEntry} entry */
 function resolveApiUrl(entry) {
   if (entry.api) {
     assertGreenhouseUrl(entry.api);
@@ -37,18 +37,12 @@ function resolveApiUrl(entry) {
   return null;
 }
 
-/** @type {import('./_types.js').Probe} */
-export const probe = {
-  namesakeProne: true, // single-word board slugs collide with non-game namesakes
-  canary: 'stripe',    // known-live tenant — proves greenhouse isn't throttling/blocking us
-  endpoints: [{
-    kind: 'slug',
-    url: (s) => `https://boards-api.greenhouse.io/v1/boards/${s}/jobs`,
-    where: (s) => s,
-    careersUrl: (s) => `https://job-boards.greenhouse.io/${s}`,
-    parse: (d) => (d && Array.isArray(d.jobs)) ? { count: d.jobs.length, loc: d.jobs[0]?.location?.name || '' } : null,
-  }],
-};
+// NaN-safe Date.parse — `|| undefined` would also coerce a valid epoch 0.
+function toEpochMs(value) {
+  if (!value) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
 
 /** @type {Provider} */
 export default {
@@ -63,40 +57,20 @@ export default {
     }
   },
 
-  // url→identity (inverse of probe): mine a raw greenhouse board/job link down to
-  // { slug, careers_url } for mine-asgc.mjs, or null if not greenhouse. Board hosts
-  // carry the slug in the path; a {slug}.greenhouse.io vanity host carries it as the
-  // subdomain. careers_url is normalised to the job-boards form fetch() accepts.
-  mineUrl(jobUrl) {
-    let u; try { u = new URL(jobUrl); } catch { return null; }
-    const h = u.hostname.replace(/^www\./, '').toLowerCase();
-    if (!/(^|\.)greenhouse\.io$/.test(h)) return null;
-    const slug = /^(boards|job-boards|boards-api)(\.eu)?\.greenhouse\.io$/.test(h)
-      ? u.pathname.split('/').filter(Boolean)[0]
-      : h.replace(/(\.eu)?\.greenhouse\.io$/, '');
-    return slug ? { slug, careers_url: `https://job-boards.greenhouse.io/${slug}` } : null;
-  },
-
   async fetch(entry, ctx) {
     const apiUrl = resolveApiUrl(entry);
     if (!apiUrl) throw new Error(`greenhouse: cannot derive API URL for ${entry.name}`);
     assertGreenhouseUrl(apiUrl);
     // redirect:'error' prevents SSRF via server-side redirects; combined with
     // assertGreenhouseUrl above it guarantees the final hostname stays in the allowlist.
-    const json = await ctx.fetchJson(apiUrl, { redirect: 'error' });
+    const json = /** @type {any} */ (await ctx.fetchJson(apiUrl, { redirect: 'error' }));
     const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
-    return jobs.filter(j => j.absolute_url).map(j => {
-      // `first_published` is the true posting date; `updated_at` is the last
-      // edit (re-published roles bump it). The basic /jobs feed exposes neither
-      // a structured remote flag nor a department, so only postedDate is set.
-      const postedDate = toIsoDate(j.first_published || j.updated_at);
-      return {
-        title: j.title || '',
-        url: j.absolute_url,
-        company: entry.name,
-        location: j.location?.name || '',
-        ...(postedDate ? { postedDate } : {}),
-      };
-    });
+    return jobs.filter(/** @param {any} j */ j => j.absolute_url).map(/** @param {any} j */ j => ({
+      title: j.title || '',
+      url: j.absolute_url,
+      company: entry.name,
+      location: j.location?.name || '',
+      postedAt: toEpochMs(j.first_published),
+    }));
   },
 };

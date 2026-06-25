@@ -1,8 +1,6 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate } from './_util.mjs';
-
 // SmartRecruiters provider — hits the public postings API.
 // Auto-detects from careers_url pattern
 // `https://(careers|jobs).smartrecruiters.com/<slug>`. A tracked_companies
@@ -27,30 +25,6 @@ function assertSmartRecruitersUrl(url) {
   }
   return url;
 }
-
-/** @type {import('./_types.js').Probe} */
-export const probe = {
-  namesakeProne: true, // company-id slugs collide with non-game namesakes on the same ATS
-  canary: 'Visa',      // known-live tenant — proves SmartRecruiters isn't throttling us
-  // SR slugs are case-sensitive; try the verbatim and upper-cased forms.
-  slugs: (name) => {
-    const a = name.replace(/[^A-Za-z0-9]+/g, '');
-    return [...new Set([a, a.toUpperCase()].filter((s) => s.length >= 2))];
-  },
-  endpoints: [{
-    kind: 'slug',
-    url: (s) => `https://api.smartrecruiters.com/v1/companies/${s}/postings?limit=10`,
-    where: (s) => s,
-    careersUrl: (s) => `https://careers.smartrecruiters.com/${s}`,
-    // SR returns 200 {totalFound:0, content:[]} for ANY slug (no 404), so only a
-    // count>0 result proves the company exists — a 0 result is indistinguishable
-    // from a fake and is treated as a miss.
-    parse: (d) => {
-      const n = typeof d?.totalFound === 'number' ? d.totalFound : (Array.isArray(d?.content) ? d.content.length : 0);
-      return n > 0 ? { count: n, loc: d.content[0]?.location?.city || '' } : null;
-    },
-  }],
-};
 
 function resolveSlug(entry) {
   const raw = typeof entry.careers_url === 'string' ? entry.careers_url : '';
@@ -85,15 +59,6 @@ export default {
     return apiUrl ? { url: apiUrl } : null;
   },
 
-  // url→identity (inverse of probe): mine a (careers|jobs).smartrecruiters.com/{slug}
-  // link to { slug, careers_url }. Slug case is preserved (SR slugs are case-sensitive).
-  mineUrl(jobUrl) {
-    let u; try { u = new URL(jobUrl); } catch { return null; }
-    if (!SR_CAREERS_HOSTS.has(u.hostname.toLowerCase())) return null;
-    const slug = u.pathname.split('/').filter(Boolean)[0];
-    return slug ? { slug, careers_url: `https://careers.smartrecruiters.com/${slug}` } : null;
-  },
-
   async fetch(entry, ctx) {
     const slug = resolveSlug(entry);
     if (!slug) throw new Error(`smartrecruiters: cannot derive API URL for ${entry.name}`);
@@ -119,8 +84,7 @@ export default {
  *   { content: [{ id, name, ref, location: { fullLocation?, city?, region?, country?, remote? } }] }
  *
  * - location: prefer `fullLocation`; else assemble from city/region/country
- *   parts (skipping empties). Remoteness is NOT appended here — it is carried by
- *   the structured `workMode` field (from `location.remote`).
+ *   parts (skipping empties); append "Remote" when `location.remote` is true.
  * - url: `j.ref` is an `api.smartrecruiters.com/v1/companies/<slug>/postings/<id>`
  *   URL — rewrite to the public `jobs.smartrecruiters.com/<slug>/postings/<id>`.
  *   If `ref` is missing, synthesise a URL from the company slug + posting id.
@@ -134,18 +98,11 @@ export function parseSmartRecruitersResponse(json, companyName) {
   if (!Array.isArray(items)) return [];
   return items.map(j => {
     const loc = j.location || {};
-    // Location stays place-only; remoteness is carried by workMode (below), not
-    // jammed into the location text.
-    const location = loc.fullLocation || [loc.city, loc.region, loc.country].filter(Boolean).join(', ');
+    const fullLocation = loc.fullLocation || [loc.city, loc.region, loc.country].filter(Boolean).join(', ');
+    const remote = loc.remote ? 'Remote' : '';
+    const location = [fullLocation, remote].filter(Boolean).join(', ');
     const slugified = (j.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    // Build the canonical rendered posting URL: jobs.smartrecruiters.com/<company>/<id>-<slug>.
-    // `j.ref` is the JSON API URL (api.smartrecruiters.com/v1/companies/<company>/postings/<id>);
-    // we mine the exact company slug + posting id from it (more reliable than
-    // slugifying the display name, e.g. "DON'T NOD" → "DONTNOD"). The API `/postings/`
-    // path is NOT valid on the careers host — linking to it 404s — so we always
-    // reconstruct the `<id>-<slug>` form and never pass the ref through verbatim.
-    let companySlug = '';
-    let postingId = j.id != null ? String(j.id) : '';
+    let url = '';
     if (typeof j.ref === 'string') {
       let parsedRef;
       try { parsedRef = new URL(j.ref); } catch { parsedRef = null; }
@@ -153,34 +110,16 @@ export function parseSmartRecruitersResponse(json, companyName) {
           && parsedRef.protocol === 'https:'
           && parsedRef.hostname === 'api.smartrecruiters.com'
           && parsedRef.pathname.startsWith('/v1/companies/')) {
-        const segs = parsedRef.pathname.slice('/v1/companies/'.length).split('/').filter(Boolean);
-        // segs == [<companySlug>, 'postings', <id>]; preserve ref casing for the slug.
-        if (segs[0]) companySlug = segs[0];
-        if (segs[1] === 'postings' && segs[2]) postingId = segs[2];
+        const restOfPath = parsedRef.pathname.slice('/v1/companies/'.length);
+        url = `https://jobs.smartrecruiters.com/${restOfPath}`;
       }
     }
-    if (!companySlug) {
-      companySlug = (companyName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    if (!url && j.id) {
+      const companySlug = (companyName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      if (companySlug) {
+        url = `https://jobs.smartrecruiters.com/${companySlug}/${j.id}-${slugified}`;
+      }
     }
-    let url = '';
-    if (companySlug && postingId) {
-      url = slugified
-        ? `https://jobs.smartrecruiters.com/${companySlug}/${postingId}-${slugified}`
-        : `https://jobs.smartrecruiters.com/${companySlug}/${postingId}`;
-    }
-    const postedDate = toIsoDate(j.releasedDate);
-    const department = (j.department?.label || '').trim();
-    // SmartRecruiters only exposes a boolean `location.remote` (no hybrid
-    // concept) → map to the tri-state's remote/onsite ends.
-    const workMode = typeof loc.remote === 'boolean' ? (loc.remote ? 'remote' : 'onsite') : '';
-    return {
-      title: j.name || '',
-      url,
-      location,
-      company: companyName,
-      ...(postedDate ? { postedDate } : {}),
-      ...(department ? { department } : {}),
-      ...(workMode ? { workMode } : {}),
-    };
+    return { title: j.name || '', url, location, company: companyName };
   });
 }

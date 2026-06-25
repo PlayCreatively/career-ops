@@ -1,22 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate, normalizeWorkMode, slugifyTitle } from './_util.mjs';
-
 // Ashby provider — hits the public posting-api endpoint.
 // Auto-detects from careers_url pattern `https://jobs.ashbyhq.com/<slug>`.
-//
-// Some tenants (e.g. Supercell) run Ashby for applications but DISABLE the
-// hosted jobs.ashbyhq.com board, surfacing each role on their own domain
-// instead. The posting-api still works, but j.jobUrl points at the dead board
-// (a 200 SPA shell that renders "Page not found"). For those, set
-// `job_url_template` on the studios.yml entry with {id} and {slug} tokens and we
-// rewrite each posting's URL to the live one. {slug} uses the host's observed
-// title-slug convention (see slugifyTitle in _util.mjs).
-//
-//   - name: Supercell
-//     careers_url: https://jobs.ashbyhq.com/supercell
-//     job_url_template: "https://supercell.com/en/careers/{slug}/{id}/"
 //
 // Ashby's public posting-api carries a ~10s+ server-side latency floor
 // (response time is independent of board size) and rate-limits repeated
@@ -28,6 +14,68 @@ import { toIsoDate, normalizeWorkMode, slugifyTitle } from './_util.mjs';
 const ASHBY_TIMEOUT_MS = 30_000;
 const ASHBY_RETRIES = 2;
 
+// Annualization multipliers for different compensation intervals
+const INTERVAL_MULTIPLIERS = {
+  '1 HOUR': 2080,
+  '1 DAY': 260,
+  '1 WEEK': 52,
+  '2 WEEK': 26,
+  '0.5 MONTH': 24,
+  '1 MONTH': 12,
+  '2 MONTH': 6,
+  '3 MONTH': 4,
+  '6 MONTH': 2,
+  '1 YEAR': 1,
+};
+
+/**
+ * Parse compensation data from Ashby job object.
+ * Returns structured salary object with min, max, and currency,
+ * or null if no valid compensation data exists.
+ * @param {any} job - Ashby job object
+ * @returns {{min: number, max: number, currency: string}|null}
+ */
+export function parseCompensation(job) {
+  const comp = job?.compensation;
+  if (!comp) return null;
+
+  const interval = /** @type {keyof typeof INTERVAL_MULTIPLIERS} */ (comp.interval || '1 YEAR');
+  const multiplier = INTERVAL_MULTIPLIERS[interval];
+  if (!multiplier) return null;
+
+  // Coerce and validate numeric fields — malformed API payloads must not propagate
+  /** @param {any} v */
+  const normalizeNum = (v) => {
+    if (v == null) return null;
+    if (typeof v === 'string' && v.trim() === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+  const minValue = normalizeNum(comp.minValue);
+  const maxValue = normalizeNum(comp.maxValue);
+  const currency = typeof comp.currency === 'string' ? comp.currency.trim() : '';
+
+  // If neither min nor max is provided, no valid compensation
+  if (minValue == null && maxValue == null) return null;
+
+  // Annualize the values
+  const min = minValue != null ? minValue * multiplier : null;
+  const max = maxValue != null ? maxValue * multiplier : null;
+
+  // Must have at least one valid annual value
+  if (min == null && max == null) return null;
+
+  // Ensure correct ordering (min <= max)
+  const resolvedMin = /** @type {number} */ (min ?? max);
+  const resolvedMax = /** @type {number} */ (max ?? min);
+  return {
+    min: Math.min(resolvedMin, resolvedMax),
+    max: Math.max(resolvedMin, resolvedMax),
+    currency: currency.toUpperCase(),
+  };
+}
+
+/** @param {import('./_types.js').PortalEntry} entry */
 function resolveApiUrl(entry) {
   const url = entry.careers_url || '';
   const match = url.match(/jobs\.ashbyhq\.com\/([^/?#]+)/);
@@ -37,18 +85,38 @@ function resolveApiUrl(entry) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** @type {import('./_types.js').Probe} */
-export const probe = {
-  namesakeProne: true,
-  canary: 'ramp',      // known-live tenant — proves ashby isn't throttling/blocking us
-  endpoints: [{
-    kind: 'slug',
-    url: (s) => `https://api.ashbyhq.com/posting-api/job-board/${s}`,
-    where: (s) => s,
-    careersUrl: (s) => `https://jobs.ashbyhq.com/${s}`,
-    parse: (d) => (d && Array.isArray(d.jobs)) ? { count: d.jobs.length, loc: d.jobs[0]?.location || '' } : null,
-  }],
-};
+// NaN-safe Date.parse — `|| undefined` would also coerce a valid epoch 0.
+function toEpochMs(value) {
+  if (!value) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+// Build the full location string from primary + secondary locations.
+// Ashby's posting-api puts extra hiring regions in `secondaryLocations[]`
+// (each with a region label + a postalAddress). Using only `j.location` drops
+// them, so an EU-eligible role whose PRIMARY label is e.g. "Canada" reads as
+// Canada-only and gets wrongly removed by scan.mjs's location_filter. We fold
+// in each secondary's region, locality, and country so the filter can match
+// (e.g. "Europe", "Berlin", "Germany"). Deduped, joined with " · ".
+/** @param {any} j */
+function formatLocation(j) {
+  const parts = [];
+  if (typeof j.location === 'string' && j.location.trim()) parts.push(j.location.trim());
+  if (Array.isArray(j.secondaryLocations)) {
+    for (const s of j.secondaryLocations) {
+      if (!s || typeof s !== 'object') continue;
+      if (typeof s.location === 'string' && s.location.trim()) parts.push(s.location.trim());
+      const pa = s.address && s.address.postalAddress;
+      if (pa) {
+        for (const k of ['addressLocality', 'addressCountry']) {
+          if (typeof pa[k] === 'string' && pa[k].trim()) parts.push(pa[k].trim());
+        }
+      }
+    }
+  }
+  return [...new Set(parts)].join(' · ');
+}
 
 /** @type {Provider} */
 export default {
@@ -59,18 +127,9 @@ export default {
     return apiUrl ? { url: apiUrl } : null;
   },
 
-  // url→identity (inverse of probe): mine a jobs.ashbyhq.com/{slug} link to { slug, careers_url }.
-  mineUrl(jobUrl) {
-    let u; try { u = new URL(jobUrl); } catch { return null; }
-    if (!/(^|\.)ashbyhq\.com$/.test(u.hostname.toLowerCase())) return null;
-    const slug = u.pathname.split('/').filter(Boolean)[0];
-    return slug ? { slug, careers_url: `https://jobs.ashbyhq.com/${slug}` } : null;
-  },
-
   async fetch(entry, ctx) {
     const apiUrl = resolveApiUrl(entry);
     if (!apiUrl) throw new Error(`ashby: cannot derive API URL for ${entry.name}`);
-
     let lastErr;
     for (let attempt = 0; attempt <= ASHBY_RETRIES; attempt++) {
       if (attempt > 0) {
@@ -79,33 +138,16 @@ export default {
         await sleep(backoff);
       }
       try {
-        const json = await ctx.fetchJson(apiUrl, { timeoutMs: ASHBY_TIMEOUT_MS });
+        const json = /** @type {any} */ (await ctx.fetchJson(apiUrl, { timeoutMs: ASHBY_TIMEOUT_MS, redirect: 'error' }));
         const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
-        const tpl = typeof entry.job_url_template === 'string' ? entry.job_url_template.trim() : '';
-        return jobs.map((j) => {
-          const postedDate = toIsoDate(j.publishedAt);
-          const department = (j.department || j.team || '').trim();
-          // Use `workplaceType` (OnSite/Hybrid/Remote) for the tri-state — NOT
-          // `isRemote`, which Ashby sets true for BOTH Hybrid and Remote roles.
-          // Fall back to isRemote only when workplaceType is absent (no hybrid
-          // signal available then).
-          const workMode = normalizeWorkMode(j.workplaceType)
-            || (typeof j.isRemote === 'boolean' ? (j.isRemote ? 'remote' : 'onsite') : '');
-          // job_url_template rewrites the dead-board jobUrl to the studio's own
-          // canonical page; needs both an id and a title, else fall back to jobUrl.
-          const url = (tpl && j.id && j.title)
-            ? tpl.replace(/\{id\}/g, j.id).replace(/\{slug\}/g, slugifyTitle(j.title))
-            : (j.jobUrl || '');
-          return {
-            title: j.title || '',
-            url,
-            company: entry.name,
-            location: j.location || '',
-            ...(postedDate ? { postedDate } : {}),
-            ...(department ? { department } : {}),
-            ...(workMode ? { workMode } : {}),
-          };
-        });
+        return jobs.map(/** @param {any} j */ (j) => ({
+          title: j.title || '',
+          url: j.jobUrl || '',
+          company: entry.name,
+          location: formatLocation(j),
+          salary: parseCompensation(j),
+          postedAt: toEpochMs(j.publishedAt),
+        }));
       } catch (e) {
         lastErr = e;
       }
