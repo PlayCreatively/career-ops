@@ -8725,8 +8725,10 @@ tracked_companies:
     enabled: true
   # ── recovered after provider fixes (2026-06-26) — had live jobs all along ──
   # Personio dropped the legacy /xml feed for newer tenants; provider now falls
-  # back to /search.json. jobvite boards (Capcom/Amber) are JS-rendered with no
-  # keyless feed, so they're sourced from the rehm aggregator (studio: <slug>).
+  # back to /search.json. jobvite boards (Capcom/Amber) are standard
+  # server-rendered careersites — wired DIRECT via provider: jobvite (the
+  # provider parses both legacy <td> tables and modern <li> cards). Capcom
+  # currently has 0 open jobs; Amber had 74.
   - name: Envision Entertainment
     provider: personio
     careers_url: https://envision-entertainment.jobs.personio.com
@@ -8742,11 +8744,11 @@ tracked_companies:
     notes: "rehm-mined; personio search.json-confirmed live (7 jobs, 2026-06-26). AR/escape-game experiences (Berlin, DE)."
     enabled: true
   - name: Capcom
-    provider: rehm
-    studio: capcom
+    provider: jobvite
+    careers_url: https://jobs.jobvite.com/capcomusa
     status: resolved
     last_probe: 2026-06-26
-    notes: "jobvite board is a legacy iframe-only deployment — no server-rendered list at /jobs or /jobs/positions; sourced from rehm aggregator. Confirmed 1 job (2026-06-26)."
+    notes: "jobvite (capcomusa) — standard server-rendered careersite, NOT iframe-only; currently 0 open jobs (board says 'There are currently no open jobs', confirmed via Playwright 2026-06-26). Provider returns [] cleanly and will catch openings (legacy <td> or modern <li> markup) when Capcom posts. Off rehm: its lone 'Capcom' record was a dead job ('listing no longer exists', first_seen 2026-05-15)."
     enabled: true
   - name: Amber
     provider: jobvite
