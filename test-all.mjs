@@ -1044,6 +1044,139 @@ try {
   fail(`hibob provider tests crashed: ${e.message}`);
 }
 
+// ── 12b3. PROVIDERS — HERP ──────────────────────────────────────────
+
+console.log('\n12b3. Provider — herp');
+
+try {
+  const herp = (await import(pathToFileURL(join(ROOT, 'providers/herp.mjs')).href)).default;
+  const { parseHerpList, resolveHerp } = await import(pathToFileURL(join(ROOT, 'providers/herp.mjs')).href);
+
+  if (herp.id === 'herp') pass('herp.id is "herp"');
+  else fail(`herp.id is ${JSON.stringify(herp.id)}`);
+
+  // detect() — auto-claims herp.careers/v1/<tenant>, derives the board URL.
+  const dHit = herp.detect({ name: 'PlatinumGames', careers_url: 'https://herp.careers/v1/pgrecruit' });
+  if (dHit && dHit.url === 'https://herp.careers/v1/pgrecruit') {
+    pass('herp.detect() auto-claims herp.careers/v1/<tenant> and returns the board URL');
+  } else {
+    fail(`herp.detect() returned ${JSON.stringify(dHit)}`);
+  }
+  if (herp.detect({ name: 'X', careers_url: 'https://herp.careers.evil.com/v1/x' }) === null) {
+    pass('herp.detect() returns null for a look-alike host');
+  } else {
+    fail('herp.detect() must not claim a host that only embeds herp.careers');
+  }
+  if (herp.detect({ name: 'X', careers_url: 'http://herp.careers/v1/x' }) === null) {
+    pass('herp.detect() returns null for non-https');
+  } else {
+    fail('herp.detect() should reject non-https careers_url');
+  }
+  if (herp.detect({ name: 'X', careers_url: 'https://herp.careers/v1' }) === null
+      && herp.detect({ name: 'X', careers_url: 'https://herp.careers/v1/requisition-groups/abc' }) === null) {
+    pass('herp.detect() returns null when there is no real tenant in the path');
+  } else {
+    fail('herp.detect() should reject a missing/category-only path');
+  }
+
+  // mineUrl() — url→identity for the rehm miner.
+  const mined = herp.mineUrl('https://herp.careers/v1/pgrecruit/Zo-SJ55QMOEB');
+  if (mined && mined.slug === 'pgrecruit' && mined.careers_url === 'https://herp.careers/v1/pgrecruit') {
+    pass('herp.mineUrl() extracts the tenant slug + canonical careers_url from a job URL');
+  } else {
+    fail(`herp.mineUrl() returned ${JSON.stringify(mined)}`);
+  }
+  if (herp.mineUrl('https://example.com/v1/x/y') === null) {
+    pass('herp.mineUrl() returns null for a non-herp host');
+  } else {
+    fail('herp.mineUrl() should ignore non-herp hosts');
+  }
+
+  // parseHerpList() — card parse, title cleanup, workMode, dedup, category reject.
+  const html = `
+    <div class="card requisition-list-card"><div class="card__section"><div class="career-page-group-name-tag-container">
+      <a class="career-page-group-name-tag-container" href="/v1/pgrecruit/requisition-groups/abc-123">
+        <div class="career-page-group-name-tag"><span class="career-page-group-name-tag__text">01-00.ゲーム開発職</span></div></a>
+      <a class="with-heading requisition-list-card__header-anchor" href="/v1/pgrecruit/019d9056-3be4-7551">
+        <h2 class="requisition-list-card__header with-heading__heading heading">01-01-00.【ハイブリッド勤務】ゲームデザイナー/Game Designer</h2></a>
+    </div></div>
+    <div class="card requisition-list-card">
+      <a class="with-heading requisition-list-card__header-anchor" href="/v1/pgrecruit/Zo-SJ55QMOEB">
+        <h2 class="requisition-list-card__header heading">01-14-02.【フルリモート】サウンドデザイナー/Sound &amp; Designer</h2></a>
+    </div>
+    <div class="card requisition-list-card">
+      <a class="with-heading requisition-list-card__header-anchor" href="/v1/pgrecruit/Zo-SJ55QMOEB">
+        <h2 class="requisition-list-card__header heading">DUPLICATE</h2></a>
+    </div>
+    <div class="card requisition-list-card">
+      <a class="with-heading requisition-list-card__header-anchor" href="/v1/OTHERTENANT/leak">
+        <h2 class="requisition-list-card__header heading">Cross-tenant leak</h2></a>
+    </div>`;
+  const rows = parseHerpList(html, 'PlatinumGames', 'https://herp.careers', 'pgrecruit');
+  if (rows.length === 2) pass('parseHerpList keeps 2 rows (dedups by url, ignores category links + cross-tenant href)');
+  else fail(`parseHerpList returned ${rows.length}, expected 2: ${JSON.stringify(rows.map(r => r.title))}`);
+
+  const r0 = rows[0];
+  if (r0 && r0.title === 'ゲームデザイナー/Game Designer'
+      && r0.url === 'https://herp.careers/v1/pgrecruit/019d9056-3be4-7551'
+      && r0.company === 'PlatinumGames' && r0.location === 'Japan' && r0.workMode === 'hybrid') {
+    pass('parseHerpList strips the "NN-NN." prefix + 【…】 tag, sets Japan, derives hybrid from the tag');
+  } else {
+    fail(`parseHerpList row 0 = ${JSON.stringify(r0)}`);
+  }
+  if (rows[1]?.workMode === 'remote' && rows[1]?.title === 'サウンドデザイナー/Sound & Designer') {
+    pass('parseHerpList derives remote from 【フルリモート】 and decodes entities in the title');
+  } else {
+    fail(`parseHerpList row 1 = ${JSON.stringify(rows[1])}`);
+  }
+  if (parseHerpList('', 'X', 'https://herp.careers', 'x').length === 0
+      && parseHerpList('<div>no cards</div>', 'X', 'https://herp.careers', 'x').length === 0) {
+    pass('parseHerpList returns [] on empty/cardless HTML (fail-safe)');
+  } else {
+    fail('parseHerpList should return [] when there are no cards');
+  }
+
+  // resolveHerp() — tenant extraction sanity.
+  const rv = resolveHerp({ careers_url: 'https://herp.careers/v1/dena' });
+  if (rv && rv.tenant === 'dena' && rv.origin === 'https://herp.careers') {
+    pass('resolveHerp() extracts {origin, tenant} from careers_url');
+  } else {
+    fail(`resolveHerp() returned ${JSON.stringify(rv)}`);
+  }
+
+  // fetch() — stays same-origin, parses the board, returns [] for an empty board.
+  let fetchedUrl = null;
+  const fetched = await herp.fetch(
+    { name: 'PlatinumGames', careers_url: 'https://herp.careers/v1/pgrecruit' },
+    {
+      transport: 'http',
+      fetchText: async (url) => {
+        fetchedUrl = url;
+        if (url !== 'https://herp.careers/v1/pgrecruit') throw new Error(`off-board fetch: ${url}`);
+        return html;
+      },
+    },
+  );
+  if (fetched.length === 2 && fetchedUrl === 'https://herp.careers/v1/pgrecruit') {
+    pass('herp.fetch() reads the tenant board URL and maps the cards');
+  } else {
+    fail(`herp.fetch() wrong: jobs=${fetched.length} url=${fetchedUrl}`);
+  }
+
+  const empty = await herp.fetch(
+    { name: 'X', careers_url: 'https://herp.careers/v1/x' },
+    { transport: 'http', fetchText: async () => '<div>There are currently no open jobs</div>' },
+  );
+  if (Array.isArray(empty) && empty.length === 0) {
+    pass('herp.fetch() returns [] for an empty board (no throw)');
+  } else {
+    fail(`herp.fetch() should return [] for an empty board, got ${JSON.stringify(empty)}`);
+  }
+
+} catch (e) {
+  fail(`herp provider tests crashed: ${e.message}`);
+}
+
 // ── 12c. PROVIDERS — BambooHR ───────────────────────────────────────
 
 console.log('\n12c. Provider — bamboohr');

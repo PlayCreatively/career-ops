@@ -979,6 +979,30 @@ tracked_companies:
     notes: "hibob-confirmed live (4 jobs, 2026-06-26) via /api/job-ad. Helsinki. Indie studio (was on rehm)."
     enabled: true
 
+  # ── HERP (herp.careers) — Japanese multi-tenant ATS, see providers/herp.mjs ──
+  # Shared host; tenant in the path (https://herp.careers/v1/<tenant>). Plain
+  # server-rendered HTML board, no pagination. Host auto-detected (no `provider:`
+  # line needed; kept explicit for clarity). Off rehm now (herp is a covered ATS).
+  # All JP — location is set to "Japan"; work mode parsed from the 【…】 title tag.
+  - name: PlatinumGames
+    provider: herp
+    careers_url: https://herp.careers/v1/pgrecruit
+    last_probe: 2026-06-26
+    notes: "herp-confirmed live (31 jobs, 2026-06-26) via /v1/pgrecruit board. Osaka/Tokyo, hybrid. Marquee AAA action studio (Bayonetta, NieR: Automata, Astral Chain). Was on rehm."
+    enabled: true
+  - name: ON Inc.
+    provider: herp
+    careers_url: https://herp.careers/v1/zoccon
+    last_probe: 2026-06-26
+    notes: "herp-confirmed live (27 jobs, 2026-06-26) via /v1/zoccon board. JP. Mixed web/IT services co with game roles (GAME ENGINEER/GAME PLANNER/UI DESIGNER-GAME) amid web/back-office; scan title-filter keeps the game roles. rehm labels it 'Zoccon'. Was on rehm."
+    enabled: true
+  - name: DeNA
+    provider: herp
+    careers_url: https://herp.careers/v1/dena
+    last_probe: 2026-06-26
+    notes: "herp-confirmed live (1 job, 2026-06-26) via /v1/dena board. Tokyo. Mobile-games publisher (Mobage); diversified. Only one stray new-grad eng role on this tenant. Was on rehm."
+    enabled: true
+
   # ══════════════════════════════════════════════════════════════════
   # -- Phenom (Phenom People) tenants — see providers/phenom.mjs.
   #    The Activision Blizzard family fronts its bot-protected Workday
