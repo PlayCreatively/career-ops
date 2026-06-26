@@ -8723,3 +8723,35 @@ tracked_companies:
     last_probe: 2026-06-26
     notes: "rehm-mined; greenhouse-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
     enabled: true
+  # ── recovered after provider fixes (2026-06-26) — had live jobs all along ──
+  # Personio dropped the legacy /xml feed for newer tenants; provider now falls
+  # back to /search.json. jobvite boards (Capcom/Amber) are JS-rendered with no
+  # keyless feed, so they're sourced from the rehm aggregator (studio: <slug>).
+  - name: Envision Entertainment
+    provider: personio
+    careers_url: https://envision-entertainment.jobs.personio.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; personio search.json-confirmed live (1 job, 2026-06-26). Strategy/sim game studio (Ingelheim, DE)."
+    enabled: true
+  - name: Cluetivity
+    provider: personio
+    careers_url: https://cluetivity.jobs.personio.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; personio search.json-confirmed live (7 jobs, 2026-06-26). AR/escape-game experiences (Berlin, DE)."
+    enabled: true
+  - name: Capcom
+    provider: rehm
+    studio: capcom
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "jobvite board is JS-rendered (no keyless feed); sourced from rehm aggregator. Confirmed 1 job (2026-06-26)."
+    enabled: true
+  - name: Amber
+    provider: rehm
+    studio: amber
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "jobvite board is JS-rendered (no keyless feed); sourced from rehm aggregator. Confirmed 74 jobs (2026-06-26). Co-dev/outsourcing studio (Bucharest/global)."
+    enabled: true

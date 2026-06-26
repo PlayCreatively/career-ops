@@ -21,6 +21,17 @@ import { toIsoDate, normalizeWorkMode } from './_util.mjs';
 //       # scope: all         # every games posting in the feed (overlaps direct feeds)
 //       # query: "gameplay"  # optional case-insensitive title filter
 //
+// SINGLE-STUDIO sourcing: a studio whose own ATS we ship a provider for but
+// CANNOT parse zero-token (e.g. jobvite boards that are now JS-rendered) can be
+// pinned to the rehm feed — rehm runs a headless scrape and publishes the jobs
+// we can't reach directly. `studio:` matches a feed row's source_studio slug (or
+// its company name) and bypasses the covered-ATS scope (we explicitly want this
+// one studio our direct provider misses):
+//
+//     - name: Capcom
+//       provider: rehm
+//       studio: capcomusa        # rehm source_studio slug (or company name)
+//
 // WHY scope to uncovered ATS by default: rehm exposes the REAL source_url, so its
 // rows look "direct" to dedupeSnapshot. Pass-1 dedup (company+req-id) only
 // collapses numeric-ID ATSes (greenhouse/teamtailor/recruitee); lever/ashby/
@@ -79,6 +90,17 @@ function isBlocked(company, excludes) {
   for (const e of excludes) { const en = blockNorm(e); if (en.length >= 6 && cn.includes(en)) return true; }
   return false;
 }
+// Exported for tests: does a feed record belong to the pinned single studio?
+// Match is EXACT on the source_studio slug or the normalized company name —
+// never a substring — so `studio: amber` pulls Amber but NOT "cloud-chamber"
+// (which contains "...ch-amber"). Empty studio matches nothing.
+export function recordMatchesStudio(rec, studio) {
+  if (!studio || !rec) return false;
+  const s = String(studio).toLowerCase();
+  const ss = String(rec.source_studio || '').toLowerCase();
+  return ss === s || blockNorm(rec.company || '') === blockNorm(s);
+}
+
 const OFF_THEME = /\b(vfx|fx\b|visual ?effects|imageworks|cinesite|framestore|feature animation|animation studios?|casino|gambling|i-?gaming|sportsbook|betting|lottery|slots?|poker|wager)\b/i;
 const OFF_THEME_GLUED = /(vfx|visualeffects|imageworks|cinesite|framestore)/;
 function isOffTheme(company) { return OFF_THEME.test(company || '') || OFF_THEME_GLUED.test(blockNorm(company)); }
@@ -105,15 +127,21 @@ export default {
 
   async fetch(entry, ctx) {
     const records = await loadFeed(ctx);
+    // Single-studio mode pins one studio (matched by source_studio slug or
+    // company name) and ignores scope — it exists precisely to recover studios
+    // whose ATS is "covered" but unparseable, so the covered-skip must not apply.
+    const studio = typeof entry.studio === 'string' && entry.studio.trim() ? entry.studio.trim().toLowerCase() : '';
     const scope = entry.scope === 'all' ? 'all' : 'uncovered';
-    const covered = scope === 'uncovered' ? coveredAts() : new Set();
+    const covered = !studio && scope === 'uncovered' ? coveredAts() : new Set();
     const excludes = loadExcludes();
     const q = typeof entry.query === 'string' && entry.query.trim() ? entry.query.trim().toLowerCase() : '';
 
     const jobs = [];
     for (const r of records) {
       if (!r || !r.title || !r.source_url) continue;
-      if (scope === 'uncovered' && covered.has(r.source_ats)) continue; // we scan this ATS directly
+      if (studio) {
+        if (!recordMatchesStudio(r, studio)) continue;
+      } else if (scope === 'uncovered' && covered.has(r.source_ats)) continue; // we scan this ATS directly
       const company = r.company || '';
       if (isBlocked(company, excludes) || isOffTheme(company)) continue;
       if (q && !String(r.title).toLowerCase().includes(q)) continue;

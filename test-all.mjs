@@ -2436,6 +2436,58 @@ try {
   fail(`health tally tests crashed: ${e.message}`);
 }
 
+// ── Provider — personio search.json fallback + rehm single-studio ───
+
+console.log('\n22. Provider — personio search.json + rehm single-studio');
+
+try {
+  const { parsePersonioSearchJson } = await import(pathToFileURL(join(ROOT, 'providers/personio.mjs')).href);
+  const sample = JSON.stringify([
+    { id: 1111501, name: 'QA Internship (m/f/d)', office: 'Ingelheim', department: 'QA' },
+    { id: 432429, name: 'Game Designer (m/f/d)', office: 'Remote or Berlin' },
+    { name: 'Missing id' },                    // no id → skipped
+    { id: 999, name: '' },                     // empty title → skipped
+    { id: 1111501, name: 'Duplicate id' },     // dup url → skipped
+  ]);
+  const pj = parsePersonioSearchJson(sample, 'https://envision-entertainment.jobs.personio.com', 'Envision');
+  if (pj.length === 2) pass('parsePersonioSearchJson keeps valid rows, skips missing/empty/dup');
+  else fail(`parsePersonioSearchJson returned ${pj.length} (expected 2): ${JSON.stringify(pj.map(j=>j.title))}`);
+
+  if (pj[0]?.url === 'https://envision-entertainment.jobs.personio.com/job/1111501' &&
+      pj[0]?.location === 'Ingelheim' && pj[0]?.department === 'QA' && pj[0]?.company === 'Envision') {
+    pass('parsePersonioSearchJson builds /job/{id} URL + maps office→location, department, company');
+  } else {
+    fail(`row 0 = ${JSON.stringify(pj[0])}`);
+  }
+
+  if (parsePersonioSearchJson('not json', 'https://x', 'X').length === 0 &&
+      parsePersonioSearchJson('{}', 'https://x', 'X').length === 0 &&
+      parsePersonioSearchJson('', 'https://x', 'X').length === 0) {
+    pass('parsePersonioSearchJson returns [] on invalid/non-array/empty input (fail-safe)');
+  } else {
+    fail('parsePersonioSearchJson should yield [] for invalid input');
+  }
+
+  const { recordMatchesStudio } = await import(pathToFileURL(join(ROOT, 'providers/rehm.mjs')).href);
+  if (recordMatchesStudio({ source_studio: 'amber', company: 'Amber' }, 'amber') &&
+      recordMatchesStudio({ source_studio: 'capcomusa', company: 'Capcom' }, 'capcom')) {
+    pass('recordMatchesStudio matches on exact source_studio slug or company name');
+  } else {
+    fail('recordMatchesStudio failed to match a real studio');
+  }
+
+  // The substring trap: "cloud-chamber" contains "...ch-amber" — must NOT match.
+  if (!recordMatchesStudio({ source_studio: 'cloud-chamber', company: 'Cloud Chamber' }, 'amber') &&
+      !recordMatchesStudio({ source_studio: 'x', company: 'y' }, '') &&
+      !recordMatchesStudio(null, 'amber')) {
+    pass('recordMatchesStudio is exact (no substring), and safe on empty/null');
+  } else {
+    fail('recordMatchesStudio must not substring-match and must be null/empty-safe');
+  }
+} catch (e) {
+  fail(`personio/rehm provider tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));

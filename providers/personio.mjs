@@ -52,6 +52,32 @@ function tag(block, name) {
     .replace(/\s+/g, ' ').trim();
 }
 
+// Modern Personio career sites (newer tenants) no longer serve the legacy
+// `/xml` workzag feed — it 404s — but expose the same openings as JSON at
+// `{origin}/search.json?language=en` (the data the React board hydrates from).
+// Each record carries id, name, office (headline city), department. Per-job URL
+// is the same `{origin}/job/{id}`. Exported for unit tests.
+export function parsePersonioSearchJson(text, origin, fallbackCompany) {
+  let arr;
+  try { arr = JSON.parse(text); } catch { return []; }
+  if (!Array.isArray(arr)) return [];
+  const jobs = [];
+  const seen = new Set();
+  for (const rec of arr) {
+    if (!rec || typeof rec !== 'object') continue;
+    const id = rec.id != null ? String(rec.id) : '';
+    const title = typeof rec.name === 'string' ? rec.name.trim() : '';
+    if (!id || !title) continue;
+    const url = origin ? `${origin}/job/${id}` : '';
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    const location = typeof rec.office === 'string' ? rec.office.trim() : '';
+    const department = typeof rec.department === 'string' ? rec.department.trim() : '';
+    jobs.push({ title, url, company: fallbackCompany || '', location, ...(department ? { department } : {}) });
+  }
+  return jobs;
+}
+
 export function parsePersonioFeed(xml, origin, fallbackCompany) {
   const jobs = [];
   const seen = new Set();
@@ -98,10 +124,27 @@ export default {
   },
 
   async fetch(entry, ctx) {
+    const origin = originOf(entry);
     const feedUrl = resolveFeedUrl(entry);
     if (!feedUrl) throw new Error(`personio: cannot derive feed URL for ${entry.name} — set careers_url (https) or feed_url`);
-    const origin = originOf(entry);
-    const xml = await ctx.fetchText(feedUrl, { redirect: 'error' });
-    return parsePersonioFeed(xml, origin, entry.name);
+
+    // An explicit feed_url ending in .json pins the modern endpoint directly.
+    const isJsonFeed = /\.json(\?|$)/i.test(feedUrl);
+
+    // Legacy `/xml` feed first (still live on many tenants, cheapest, has the
+    // richest location data). A 404 (newer tenant) or an empty board falls
+    // through to the modern search.json feed.
+    if (!isJsonFeed) {
+      try {
+        const xml = await ctx.fetchText(feedUrl, { redirect: 'error' });
+        const jobs = parsePersonioFeed(xml, origin, entry.name);
+        if (jobs.length) return jobs;
+      } catch { /* legacy feed gone — fall through to search.json */ }
+    }
+
+    const searchUrl = isJsonFeed ? feedUrl : (origin ? `${origin}/search.json?language=en` : '');
+    if (!searchUrl) throw new Error(`personio: cannot derive search.json URL for ${entry.name}`);
+    const text = await ctx.fetchText(searchUrl, { redirect: 'follow' });
+    return parsePersonioSearchJson(text, origin, entry.name);
   },
 };
