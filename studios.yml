@@ -936,8 +936,53 @@ tracked_companies:
     enabled: true
 
   # Not yet covered (need a browser):
-  #   King (Stockholm) — Workday but Cloudflare bot-protected (activision.wd1.myworkdayjobs.com/King_External_Careers)
   #   EA / DICE (Stockholm) — custom jobs.ea.com portal, not standard Workday
+  # (King moved below — now reachable via its public Phenom site, no longer browser-only.)
+
+  # ══════════════════════════════════════════════════════════════════
+  # -- Phenom (Phenom People) tenants — see providers/phenom.mjs.
+  #    The Activision Blizzard family fronts its bot-protected Workday
+  #    (xboxgaming.wd1 / activision.wd1, Cloudflare-gated) with PUBLIC
+  #    Phenom career sites that serve zero-token. Each tenant is its own
+  #    job pool (distinct jobSeqNo prefix), so no double-count between them
+  #    — and once phenom ships, rehm's derived coverage drops these too.
+  #    careers_url is the locale base; the provider appends /search-results.
+  # ══════════════════════════════════════════════════════════════════
+  - name: Blizzard Entertainment
+    provider: phenom
+    careers_url: https://careers.blizzard.com/global/en
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Public Phenom site for Blizzard (Irvine + global). Fronts the Cloudflare-gated xboxgaming.wd1 Workday. ~69 jobs (2026-06-26). SSR list reshuffles per request, so the provider unions multiple passes to hit totalHits."
+    enabled: true
+  - name: Activision
+    provider: phenom
+    careers_url: https://careers.activision.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Public Phenom site for Activision corporate + studios (ACPUUS pool). ~59 jobs (2026-06-26)."
+    enabled: true
+  - name: King
+    provider: phenom
+    careers_url: https://careers.king.com/us/en
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Candy Crush. Previously browser-only (Cloudflare-gated activision.wd1/King_External_Careers Workday); now zero-token via its public Phenom site. ~23 jobs (2026-06-26)."
+    enabled: true
+  - name: Infinity Ward
+    provider: phenom
+    careers_url: https://careers.infinityward.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Call of Duty studio (Activision). Own Phenom tenant, INWAUS pool — distinct from the Activision corporate feed. ~4 jobs (2026-06-26)."
+    enabled: true
+  - name: Treyarch
+    provider: phenom
+    careers_url: https://careers.treyarch.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Call of Duty studio (Activision). Own Phenom tenant; 0 open roles when wired (2026-06-26) — auto-updates."
+    enabled: true
 
   # ══════════════════════════════════════════════════════════════════
   # -- Research pass #3 (2026-06-04): prior probe-ats.mjs "misses" that
