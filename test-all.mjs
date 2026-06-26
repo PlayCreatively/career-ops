@@ -2799,6 +2799,43 @@ try {
   fail(`jobvite provider tests crashed: ${e.message}`);
 }
 
+// ── Provider — zohorecruit (entity-encoded JSON island) ─────────────
+
+console.log('\n24. Provider — zohorecruit JSON island');
+
+try {
+  const { parseZohoHtml } = await import(pathToFileURL(join(ROOT, 'providers/zohorecruit.mjs')).href);
+
+  // The career site embeds the whole list as an HTML-entity-encoded JSON array
+  // inside <input id="jobs" value="…">. Quotes arrive as &#34; / &quot;.
+  const island = JSON.stringify([
+    { Posting_Title: 'Senior Unreal Developer', id: '491343000016162049', City: 'Québec', Country: 'Canada', Remote_Job: false, Publish: true },
+    { Job_Opening_Name: 'Game Designer', id: '758428000002963001', City: null, Country: null, Remote_Job: true, Publish: true },
+    { Posting_Title: 'Draft Role (hidden)', id: '999', City: 'X', Country: 'Y', Publish: false },
+  ]).replace(/"/g, '&#34;').replace(/&(?!#34;)/g, '&amp;');
+  const html = `<input type="hidden" id="jobs" value="${island}"><input type="hidden" id="pageJson" value="{}">`;
+  const zj = parseZohoHtml(html, 'BKOM Studios', 'https://jobs.bkom.com');
+  if (zj.length === 2 &&
+      zj[0].title === 'Senior Unreal Developer' &&
+      zj[0].url === 'https://jobs.bkom.com/jobs/Careers/491343000016162049' &&
+      zj[0].location === 'Québec, Canada' && zj[0].company === 'BKOM Studios' && !zj[0].workMode &&
+      zj[1].title === 'Game Designer' && zj[1].location === '' && zj[1].workMode === 'remote') {
+    pass('parseZohoHtml decodes the island, builds /jobs/Careers/{id} URLs, maps City/Country + Remote_Job, drops unpublished');
+  } else {
+    fail(`zoho island parse = ${JSON.stringify(zj)}`);
+  }
+
+  if (parseZohoHtml('', 'X', 'https://x.zohorecruit.com').length === 0 &&
+      parseZohoHtml('<div>no jobs input here</div>', 'X', 'https://x.zohorecruit.com').length === 0 &&
+      parseZohoHtml('<input id="jobs" value="not json">', 'X', 'https://x.zohorecruit.com').length === 0) {
+    pass('parseZohoHtml returns [] on missing input / non-JSON value (fail-safe)');
+  } else {
+    fail('parseZohoHtml should yield [] when the island is absent or unparseable');
+  }
+} catch (e) {
+  fail(`zohorecruit provider tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));

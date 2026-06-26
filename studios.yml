@@ -1003,6 +1003,39 @@ tracked_companies:
     notes: "herp-confirmed live (1 job, 2026-06-26) via /v1/dena board. Tokyo. Mobile-games publisher (Mobage); diversified. Only one stray new-grad eng role on this tenant. Was on rehm."
     enabled: true
 
+  # ── Zoho Recruit — multi-tenant ATS, see providers/zohorecruit.mjs ──
+  # Hosted career site at {origin}/jobs/Careers. Tenants run on a shared subdomain
+  # ({slug}.zohorecruit.com) OR a custom domain (careers.playsimple.in,
+  # jobs.bkom.com). The whole open-jobs list is one server-rendered entity-encoded
+  # JSON island in <input id="jobs"> — no XHR, no pagination. Host auto-detected
+  # for *.zohorecruit.com; custom domains carry /jobs/Careers in careers_url so
+  # they auto-detect too (provider line kept explicit for clarity). Off rehm now
+  # (zohorecruit is a covered ATS — source_ats==filename, dropped automatically).
+  - name: PlaySimple Games
+    provider: zohorecruit
+    careers_url: https://careers.playsimple.in/jobs/Careers
+    last_probe: 2026-06-26
+    notes: "zohorecruit-confirmed live (32 jobs, 2026-06-26) via /jobs/Careers island. Bangalore. Mobile word/trivia games (Daily Themed Crossword, Word Trip). Was on rehm."
+    enabled: true
+  - name: Puzzle
+    provider: zohorecruit
+    careers_url: https://puzzle.zohorecruit.com/jobs/Careers
+    last_probe: 2026-06-26
+    notes: "zohorecruit-confirmed live (10 jobs, 2026-06-26) via /jobs/Careers island. Ho Chi Minh City, Vietnam. Mobile puzzle studio. Was on rehm."
+    enabled: true
+  - name: Wooster Games
+    provider: zohorecruit
+    careers_url: https://spatial.zohorecruit.com/jobs/Careers
+    last_probe: 2026-06-26
+    notes: "zohorecruit-confirmed live (2 jobs, 2026-06-26) via /jobs/Careers island (tenant slug 'spatial'). Remote. Indie studio. Was on rehm."
+    enabled: true
+  - name: BKOM Studios
+    provider: zohorecruit
+    careers_url: https://jobs.bkom.com/jobs/Careers
+    last_probe: 2026-06-26
+    notes: "zohorecruit-confirmed live (5 jobs, 2026-06-26) via /jobs/Careers island; rehm only saw 3. Quebec City. Co-dev / full-dev service studio (Unreal). Was on rehm."
+    enabled: true
+
   # ══════════════════════════════════════════════════════════════════
   # -- Phenom (Phenom People) tenants — see providers/phenom.mjs.
   #    The Activision Blizzard family fronts its bot-protected Workday
