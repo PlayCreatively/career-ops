@@ -938,6 +938,112 @@ try {
   fail(`avature provider tests crashed: ${e.message}`);
 }
 
+// ── 12b2. PROVIDERS — HiBob ─────────────────────────────────────────
+
+console.log('\n12b2. Provider — hibob');
+
+try {
+  const hibob = (await import(pathToFileURL(join(ROOT, 'providers/hibob.mjs')).href)).default;
+  const { mapHibobJobAds } = await import(pathToFileURL(join(ROOT, 'providers/hibob.mjs')).href);
+
+  if (hibob.id === 'hibob') pass('hibob.id is "hibob"');
+  else fail(`hibob.id is ${JSON.stringify(hibob.id)}`);
+
+  // detect() — auto-claims *.careers.hibob.com hosts, ignores everything else.
+  const dHit = hibob.detect({ name: 'Nexus Mods', careers_url: 'https://nexusmods.careers.hibob.com' });
+  if (dHit && dHit.url === 'https://nexusmods.careers.hibob.com/jobs') {
+    pass('hibob.detect() auto-claims a *.careers.hibob.com host');
+  } else {
+    fail(`hibob.detect() returned ${JSON.stringify(dHit)}`);
+  }
+  if (hibob.detect({ name: 'X', careers_url: 'https://evil.hibob.com.example/jobs' }) === null) {
+    pass('hibob.detect() returns null for a look-alike host (suffix not matched)');
+  } else {
+    fail('hibob.detect() must not claim a host that only embeds careers.hibob.com');
+  }
+  if (hibob.detect({ name: 'X', careers_url: 'http://nexusmods.careers.hibob.com' }) === null) {
+    pass('hibob.detect() returns null for non-https');
+  } else {
+    fail('hibob.detect() should reject non-https careers_url');
+  }
+  if (hibob.detect({ name: 'X', careers_url: 99 }) === null) {
+    pass('hibob.detect() returns null for non-string careers_url');
+  } else {
+    fail('hibob.detect() should treat non-string careers_url as missing');
+  }
+
+  // mapHibobJobAds() — field mapping, dedup, structured workMode, location clean.
+  const details = [
+    {
+      id: '90844ed4', title: 'Senior App Developer', department: 'App Development',
+      site: 'UK - Remote', country: 'United Kingdom', workspaceTypeId: 'remote',
+      publishedAt: '2026-06-17T10:00:10.451356961Z',
+    },
+    {
+      id: 'abc-123', title: 'Lead Writer', department: 'Narrative',
+      site: 'Berlin (HQ)', country: 'Germany', workspaceTypeId: 'hybrid',
+      publishedAt: '2026-05-05T09:00:00.000Z',
+    },
+    { id: 'abc-123', title: 'Lead Writer DUP' }, // dup id → dropped
+    { id: 'no-title' },                          // missing title → dropped
+    { title: 'no-id' },                          // missing id → dropped
+  ];
+  const jobs = mapHibobJobAds(details, 'Nexus Mods', 'https://nexusmods.careers.hibob.com');
+  if (jobs.length === 2) pass('mapHibobJobAds keeps 2 valid rows (drops dup id + missing title/id)');
+  else fail(`mapHibobJobAds returned ${jobs.length}, expected 2`);
+
+  const j0 = jobs[0];
+  if (j0 && j0.url === 'https://nexusmods.careers.hibob.com/jobs?jobId=90844ed4'
+      && j0.title === 'Senior App Developer' && j0.company === 'Nexus Mods'
+      && j0.department === 'App Development' && j0.workMode === 'remote'
+      && j0.location === 'UK' && j0.postedDate === '2026-06-17T10:00:10.451Z') {
+    pass('mapHibobJobAds maps url/title/company/department, derives workMode, strips mode from location, truncates ns date');
+  } else {
+    fail(`mapHibobJobAds row 0 = ${JSON.stringify(j0)}`);
+  }
+  if (jobs[1]?.workMode === 'hybrid' && jobs[1]?.location === 'Berlin (HQ)') {
+    pass('mapHibobJobAds keeps a place-only site untouched and maps hybrid');
+  } else {
+    fail(`mapHibobJobAds row 1 = ${JSON.stringify(jobs[1])}`);
+  }
+  if (mapHibobJobAds(null, 'X', 'https://x.careers.hibob.com').length === 0
+      && mapHibobJobAds([], 'X', 'https://x.careers.hibob.com').length === 0) {
+    pass('mapHibobJobAds returns [] on null/empty input (fail-safe)');
+  } else {
+    fail('mapHibobJobAds should return [] for null/empty input');
+  }
+
+  // fetch() — sends a same-origin Referer, parses jobAdDetails, stays same-origin.
+  let sentReferer = null;
+  const fetched = await hibob.fetch(
+    { name: 'Nexus Mods', careers_url: 'https://nexusmods.careers.hibob.com' },
+    {
+      transport: 'http',
+      fetchJson: async (url, opts) => {
+        if (url !== 'https://nexusmods.careers.hibob.com/api/job-ad') throw new Error(`off-origin fetch: ${url}`);
+        sentReferer = opts && opts.headers && (opts.headers.referer || opts.headers.Referer);
+        return { filterGroups: {}, jobAdDetails: details };
+      },
+    },
+  );
+  if (fetched.length === 2 && sentReferer === 'https://nexusmods.careers.hibob.com/jobs') {
+    pass('hibob.fetch() hits /api/job-ad with a same-origin Referer and maps the list');
+  } else {
+    fail(`hibob.fetch() wrong: jobs=${fetched.length} referer=${sentReferer}`);
+  }
+
+  let threw = false;
+  await hibob.fetch(
+    { name: 'X', careers_url: 'https://x.careers.hibob.com' },
+    { transport: 'http', fetchJson: async () => ({ nope: true }) },
+  ).catch(() => { threw = true; });
+  if (threw) pass('hibob.fetch() throws on an unexpected API shape');
+  else fail('hibob.fetch() should throw when jobAdDetails is absent');
+
+} catch (e) {
+  fail(`hibob provider tests crashed: ${e.message}`);
+}
+
 // ── 12c. PROVIDERS — BambooHR ───────────────────────────────────────
 
 console.log('\n12c. Provider — bamboohr');

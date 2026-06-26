@@ -302,8 +302,10 @@ tracked_companies:
     enabled: true
 
   - name: Sumo Digital
-    careers_url: https://jobs.lever.co/sumo-digital
-    notes: "Sheffield UK + studios. Work-for-hire + own IP. 0 open when added — auto-updates."
+    provider: hibob
+    careers_url: https://sumodigitalltd.careers.hibob.com
+    last_probe: 2026-06-26
+    notes: "Sheffield UK + studios. Work-for-hire + own IP. Migrated off lever (jobs.lever.co/sumo-digital now empty) to HiBob — 6 live jobs (2026-06-26) via /api/job-ad. See providers/hibob.mjs."
     enabled: true
 
   - name: Crytek
@@ -951,6 +953,31 @@ tracked_companies:
     notes: "avature-confirmed live (403 jobs, 2026-06-26) via jobs.ea.com SearchJobs pager. One tenant covers EA + Respawn/Motive/DICE/Criterion/Ripple Effect/Maxis/Codemasters/BioWare (studio in department field). AAA publisher; first-party + co-dev."
     enabled: true
   # (King moved below — now reachable via its public Phenom site, no longer browser-only.)
+
+  # ── HiBob ("Bob") careers — see providers/hibob.mjs ──
+  # Per-tenant: each studio at {slug}.careers.hibob.com (host auto-detected, no
+  # `provider:` line needed; kept explicit for clarity). The careers SPA is JS-
+  # rendered but pulls every role from GET /api/job-ad in one shot — the only gate
+  # is a same-origin Referer header (verified 2026-06-26). Off rehm now (hibob is a
+  # covered ATS). Sumo Digital + Torpor Games are also HiBob — kept in place above.
+  - name: Nexus Mods
+    provider: hibob
+    careers_url: https://nexusmods.careers.hibob.com
+    last_probe: 2026-06-26
+    notes: "hibob-confirmed live (14 jobs, 2026-06-26) via /api/job-ad. UK, remote-first. Mod platform + game (was on rehm)."
+    enabled: true
+  - name: ustwo games
+    provider: hibob
+    careers_url: https://ustwo.careers.hibob.com
+    last_probe: 2026-06-26
+    notes: "hibob-confirmed live (5 jobs, 2026-06-26) via /api/job-ad. London. Monument Valley / Alba. Shares the ustwo HiBob tenant with the design studio — department/site fields distinguish."
+    enabled: true
+  - name: BIT ODD
+    provider: hibob
+    careers_url: https://bitoddoy.careers.hibob.com
+    last_probe: 2026-06-26
+    notes: "hibob-confirmed live (4 jobs, 2026-06-26) via /api/job-ad. Helsinki. Indie studio (was on rehm)."
+    enabled: true
 
   # ══════════════════════════════════════════════════════════════════
   # -- Phenom (Phenom People) tenants — see providers/phenom.mjs.
@@ -7656,10 +7683,10 @@ tracked_companies:
 
   # -- Tier-4 browser (feed likely exists; needs a Playwright pass to capture XHR) --
   - name: Torpor Games
-    careers_url: https://torporgames.careers.hibob.com/
-    recipe: { kind: browser, reason: "Runs HiBob careers (torporgames.careers.hibob.com) — an Angular SPA. The public jobs API is POST api.hibob.com/v1/objects/position/search with a request body; every GET path returns the app shell, not JSON. Open Network tab on the careers page to capture the positions XHR (URL+body), then make a recipe: json. HiBob is not yet a shared provider." }
-    last_probe: 2026-06-25
-    notes: "Berlin, Germany. Provocative/political narrative games. Resolve pass #8."
+    provider: hibob
+    careers_url: https://torporgames.careers.hibob.com
+    last_probe: 2026-06-26
+    notes: "Berlin, Germany. Provocative/political narrative games. HiBob is now a shared provider — the old 'POST api.hibob.com/v1/objects/position/search needs a browser' note was wrong: GET /api/job-ad returns the full list with a same-origin Referer (7 live jobs, 2026-06-26). See providers/hibob.mjs. Resolve pass #8."
   - name: Starfish Studios
     careers_url: https://jobs.talenthr.io/starfish
     recipe: { kind: browser, reason: "Runs TalentHR (jobs.talenthr.io/starfish), a Next.js SPA. SSR JSON exists at _next/data/{buildId}/starfish.json (pageProps.positions) but the buildId rotates on every TalentHR deploy, so the URL isn't stable to hardcode; no buildId-free public API found. Only posting is a generic 'General Application'. Capture the live positions XHR in a browser to pin a stable recipe." }
