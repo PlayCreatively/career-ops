@@ -8757,3 +8757,24 @@ tracked_companies:
     last_probe: 2026-06-26
     notes: "jobvite-confirmed live (74 jobs, 2026-06-26) via /jobs/positions (modern card board; the old /jobs path is an iframe wrapper that parsed to 0). Co-dev/outsourcing studio (Bucharest/global)."
     enabled: true
+  # ── eightfold (multi-tenant PCSX ATS) — reverse-engineered 2026-06-26 ──
+  # Netflix lists its WHOLE company on eightfold (~999 roles), so we pin the games
+  # `teams:` to pull ONLY the games orgs (~16 jobs) via the server-side Teams
+  # facet — the all-Netflix corporate leak is still blocklisted on the aggregator
+  # path (exclude_companies: "Netflix Game Studio"/"Netflix Games Studios"), but
+  # this curated direct feed is exempt from that gate. domain auto-scrapes from the
+  # careers page; pinned here to save a request. See providers/eightfold.mjs.
+  # (Hasbro is also eightfold but disables the public PCSX API and is off-theme
+  # toys — its real games arm, Wizards of the Coast, is already wired via greenhouse.)
+  - name: Netflix Games Studio
+    provider: eightfold
+    careers_url: https://explore.jobs.netflix.net/careers
+    eightfold_domain: netflix.com
+    teams:
+      - Netflix Games Studio
+      - Games
+      - Next Games
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "eightfold-confirmed live (16 game jobs, 2026-06-26) via /api/apply/v2/jobs Teams facet (Netflix Games Studio + Games + Next Games). Off rehm (eightfold now a covered ATS). AAA-publisher game studio; co-dev + first-party titles."
+    enabled: true
