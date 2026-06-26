@@ -4,13 +4,30 @@
 import { splitLocationMode } from './_util.mjs';
 
 // Jobvite provider — Jobvite career sites ("CareerWebSite"/CWS) live at
-// `jobs.jobvite.com/{slug}/jobs` and render the whole board server-side as a
-// set of category tables. There is no documented public JSON feed (the v2 API
-// is auth-gated), but the `/jobs` HTML page is keyless and ships every opening
-// as a `<td class="jv-job-list-name"><a href="/{slug}/job/{id}">Title</a>`
-// row paired with a `<td class="jv-job-list-location">` cell — so we parse that
-// list page directly. No auth, no headless browser. Per-company like
+// `jobs.jobvite.com/{slug}`. There is no documented public JSON feed (the v2
+// API is auth-gated), but the board is server-rendered keyless HTML — we parse
+// the list page directly. No auth, no headless browser. Per-company like
 // greenhouse/lever: one tracked_companies entry per studio.
+//
+// TWO board generations are in the wild, with different list markup AND a
+// different list URL — we handle both:
+//
+//   1. LEGACY TABLE boards serve every opening at `/{slug}/jobs` as
+//      `<td class="jv-job-list-name"><a href="/{slug}/job/{id}">Title</a></td>`
+//      paired with a `<td class="jv-job-list-location">` cell.
+//      (e.g. playground-games, probablymonsters)
+//   2. MODERN CARD boards turn `/{slug}/jobs` into a marketing wrapper that
+//      iframes the list, so it parses to ZERO rows. The real server-rendered
+//      list lives at `/{slug}/jobs/positions` as
+//      `<li class="job-item"><a href="/{slug}/job/{id}">…<div class="jv-job-list-name">Title</div>
+//      <div class="jv-job-list-location">Location</div>`.
+//      (e.g. amberstudiocareers — 74 jobs the old /jobs path showed as 0)
+//
+// So fetch() tries `/{slug}/jobs/positions` first (modern; the legacy boards
+// 303 it) and falls back to `/{slug}/jobs` (legacy). parseJobviteList handles
+// both markups. A few genuinely iframe-only legacy boards (no server-rendered
+// list at either path — e.g. capcomusa) yield zero here and must be sourced
+// from the rehm aggregator via `provider: rehm` + `studio:` instead.
 //
 // Routing: detect() claims any *.jobvite.com host (the careersite host is
 // `jobs.jobvite.com`). Custom-domain deployments can be pinned with explicit
@@ -21,9 +38,8 @@ import { splitLocationMode } from './_util.mjs';
 //     careers_url: https://jobs.jobvite.com/playground-games
 //
 // careers_url may be the board root, the `/jobs` page, or the older
-// `/careers/{slug}` form — the slug is taken from the path and the canonical
-// list URL `https://jobs.jobvite.com/{slug}/jobs` is derived from it. An empty
-// board (studio left Jobvite / no openings) yields zero rows, not an error.
+// `/careers/{slug}` form — the slug is taken from the path. An empty board
+// (studio left Jobvite / no openings) yields zero rows, not an error.
 //
 // The list page carries no posting date (only the per-job page does), so jobs
 // from this provider have no postedDate.
@@ -47,12 +63,15 @@ function slugOf(entry) {
   return segs[0];
 }
 
-// Derive the list endpoint. An explicit `feed_url` wins so an unusual deployment
-// can be pinned by hand.
-function resolveListUrl(entry) {
-  if (entry && typeof entry.feed_url === 'string' && entry.feed_url.trim()) return entry.feed_url.trim();
+// Derive the list endpoint(s) to try, in order. An explicit `feed_url` wins so
+// an unusual deployment can be pinned by hand (single URL, no fallback). For a
+// derived slug we try the modern `/jobs/positions` page first (legacy boards
+// 303 it) then the legacy `/jobs` page.
+function resolveListUrls(entry) {
+  if (entry && typeof entry.feed_url === 'string' && entry.feed_url.trim()) return [entry.feed_url.trim()];
   const slug = slugOf(entry);
-  return slug ? `https://${CWS_HOST}/${slug}/jobs` : null;
+  if (!slug) return [];
+  return [`https://${CWS_HOST}/${slug}/jobs/positions`, `https://${CWS_HOST}/${slug}/jobs`];
 }
 
 function strip(s) {
@@ -63,29 +82,31 @@ function strip(s) {
 }
 
 /**
- * Parse a Jobvite `/jobs` careersite page into job rows. Exported for unit tests.
- * Each opening is a name-cell anchor (relative `/{slug}/job/{id}` href) followed
- * by a location cell; the location often leads with a work-mode token
+ * Parse a Jobvite careersite list page into job rows. Handles BOTH board
+ * generations (see header): the legacy `<td class="jv-job-list-name">` table
+ * and the modern `<li class="job-item">` + `<div class="jv-job-list-name">`
+ * cards. Each opening is an anchor (relative `/{slug}/job/{id}` href) with a
+ * name and a location; the location often leads with a work-mode token
  * ("Hybrid Remote, Leamington Spa, UK") which splitLocationMode lifts out.
+ * Modern card boards also repeat a few openings in a "Featured Jobs" block
+ * (different markup) — those resolve to the same job URLs and are deduped out.
+ * Exported for unit tests.
  *
- * @param {string} html — the fetched `/jobs` page
+ * @param {string} html — the fetched list page
  * @param {string} fallbackCompany — written into job.company
  * @returns {Array<{title: string, url: string, company: string, location: string, workMode?: string}>}
  */
 export function parseJobviteList(html, fallbackCompany) {
   const jobs = [];
   const seen = new Set();
-  const re = /<td class="jv-job-list-name">\s*<a href="([^"]+)">([\s\S]*?)<\/a>\s*<\/td>\s*<td class="jv-job-list-location">([\s\S]*?)<\/td>/g;
-  let m;
-  while ((m = re.exec(String(html)))) {
-    const href = m[1];
-    const title = strip(m[2]);
-    if (!href || !title) continue;
+  const push = (href, rawTitle, rawLoc) => {
+    const title = strip(rawTitle);
+    if (!href || !title) return;
     let url;
-    try { url = new URL(href, `https://${CWS_HOST}`).href; } catch { continue; }
-    if (seen.has(url)) continue;
+    try { url = new URL(href, `https://${CWS_HOST}`).href; } catch { return; }
+    if (seen.has(url)) return;
     seen.add(url);
-    const { location, workMode } = splitLocationMode(strip(m[3]));
+    const { location, workMode } = splitLocationMode(strip(rawLoc));
     jobs.push({
       title,
       url,
@@ -93,7 +114,17 @@ export function parseJobviteList(html, fallbackCompany) {
       location,
       ...(workMode ? { workMode } : {}),
     });
-  }
+  };
+  const src = String(html);
+  // Legacy table shape.
+  const tableRe = /<td class="jv-job-list-name">\s*<a href="([^"]+)">([\s\S]*?)<\/a>\s*<\/td>\s*<td class="jv-job-list-location">([\s\S]*?)<\/td>/g;
+  let m;
+  while ((m = tableRe.exec(src))) push(m[1], m[2], m[3]);
+  // Modern card shape. Anchored to the `<li class="job-item">` row (not the
+  // Featured Jobs cards, which use jv-featured-job-* markup) so the lazy gap
+  // between the anchor and its name div can't pair across rows.
+  const cardRe = /<li class="job-item">\s*<a href="([^"]+)"[^>]*>\s*(?:<span>\s*)?<div class="jv-job-list-name">([\s\S]*?)<\/div>\s*<div class="jv-job-list-location">([\s\S]*?)<\/div>/g;
+  while ((m = cardRe.exec(src))) push(m[1], m[2], m[3]);
   return jobs;
 }
 
@@ -109,7 +140,7 @@ export default {
       return null;
     }
     if (host !== 'jobvite.com' && !host.endsWith('.jobvite.com')) return null;
-    const listUrl = resolveListUrl(entry);
+    const [listUrl] = resolveListUrls(entry);
     return listUrl ? { url: listUrl } : null;
   },
 
@@ -125,11 +156,28 @@ export default {
   },
 
   async fetch(entry, ctx) {
-    const listUrl = resolveListUrl(entry);
-    if (!listUrl) throw new Error(`jobvite: cannot derive list URL for ${entry && entry.name} — set careers_url with the slug in its path (https://jobs.jobvite.com/{slug}) or feed_url`);
-    // redirect:'error' guards against redirect-based SSRF; the host is the fixed
-    // jobs.jobvite.com careersite.
-    const html = await ctx.fetchText(listUrl, { redirect: 'error' });
-    return parseJobviteList(html, entry && entry.name);
+    const urls = resolveListUrls(entry);
+    if (!urls.length) throw new Error(`jobvite: cannot derive list URL for ${entry && entry.name} — set careers_url with the slug in its path (https://jobs.jobvite.com/{slug}) or feed_url`);
+    // Try modern /jobs/positions then legacy /jobs. redirect:'error' guards
+    // against redirect-based SSRF (and is how legacy boards reject the modern
+    // path — they 303 it, which we treat as "try the next URL"). A page that
+    // fetches OK but parses to zero rows is a legitimately empty/iframe-only
+    // board → return []; only throw if NONE of the endpoints was reachable.
+    let anyOk = false;
+    let lastErr;
+    for (const url of urls) {
+      let html;
+      try {
+        html = await ctx.fetchText(url, { redirect: 'error' });
+      } catch (err) {
+        lastErr = err;
+        continue;
+      }
+      anyOk = true;
+      const jobs = parseJobviteList(html, entry && entry.name);
+      if (jobs.length) return jobs;
+    }
+    if (!anyOk) throw lastErr || new Error(`jobvite: no reachable list endpoint for ${entry && entry.name}`);
+    return [];
   },
 };

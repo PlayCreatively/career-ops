@@ -8746,12 +8746,12 @@ tracked_companies:
     studio: capcom
     status: resolved
     last_probe: 2026-06-26
-    notes: "jobvite board is JS-rendered (no keyless feed); sourced from rehm aggregator. Confirmed 1 job (2026-06-26)."
+    notes: "jobvite board is a legacy iframe-only deployment — no server-rendered list at /jobs or /jobs/positions; sourced from rehm aggregator. Confirmed 1 job (2026-06-26)."
     enabled: true
   - name: Amber
-    provider: rehm
-    studio: amber
+    provider: jobvite
+    careers_url: https://jobs.jobvite.com/amberstudiocareers
     status: resolved
     last_probe: 2026-06-26
-    notes: "jobvite board is JS-rendered (no keyless feed); sourced from rehm aggregator. Confirmed 74 jobs (2026-06-26). Co-dev/outsourcing studio (Bucharest/global)."
+    notes: "jobvite-confirmed live (74 jobs, 2026-06-26) via /jobs/positions (modern card board; the old /jobs path is an iframe wrapper that parsed to 0). Co-dev/outsourcing studio (Bucharest/global)."
     enabled: true

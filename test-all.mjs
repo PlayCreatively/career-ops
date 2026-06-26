@@ -2488,6 +2488,78 @@ try {
   fail(`personio/rehm provider tests crashed: ${e.message}`);
 }
 
+// ── Provider — jobvite (legacy table + modern card markup) ──────────
+
+console.log('\n23. Provider — jobvite legacy + modern board markup');
+
+try {
+  const { parseJobviteList } = await import(pathToFileURL(join(ROOT, 'providers/jobvite.mjs')).href);
+
+  // Legacy table boards (e.g. playground-games): /jobs serves <td> rows.
+  const tableHtml = `
+    <table><tbody>
+      <tr>
+        <td class="jv-job-list-name"><a href="/playground-games/job/oABC">Game Designer</a></td>
+        <td class="jv-job-list-location">Hybrid, Leamington Spa, United Kingdom</td>
+      </tr>
+      <tr>
+        <td class="jv-job-list-name"><a href="/playground-games/job/oDEF">Media Lead</a></td>
+        <td class="jv-job-list-location">Leamington Spa, United Kingdom</td>
+      </tr>
+    </tbody></table>`;
+  const tj = parseJobviteList(tableHtml, 'Playground Games');
+  if (tj.length === 2 && tj[0].title === 'Game Designer' &&
+      tj[0].url === 'https://jobs.jobvite.com/playground-games/job/oABC' &&
+      tj[0].workMode === 'hybrid' && tj[0].location === 'Leamington Spa, United Kingdom' &&
+      tj[0].company === 'Playground Games') {
+    pass('parseJobviteList parses legacy <td> table rows (href, title, workMode, location, company)');
+  } else {
+    fail(`legacy table parse = ${JSON.stringify(tj)}`);
+  }
+
+  // Modern card boards (e.g. amberstudiocareers): /jobs/positions serves
+  // <li class="job-item"> cards, and repeats some openings in a Featured block
+  // (different markup, same job URL) which must dedupe out.
+  const cardHtml = `
+    <ul class="list-unstyled"><li class="jv-featured-job m1 flex-col flex-center">
+      <a href="/amberstudiocareers/job/oqFkAfwJ"><div class="jv-featured-job-title">2D Animator</div></a>
+    </li></ul>
+    <ul class="list-unstyled">
+      <li class="job-item">
+        <a href="/amberstudiocareers/job/oqFkAfwJ" class="jv-button jv-button--hollow">
+          <span>
+            <div class="jv-job-list-name">2D Animator</div>
+            <div class="jv-job-list-location">Remote<span>,</span> Bucharest, Romania</div>
+          </span>
+        </a>
+      </li>
+      <li class="job-item">
+        <a href="/amberstudiocareers/job/ouf0yfw1" class="jv-button">
+          <div class="jv-job-list-name">2D Illustrator</div>
+          <div class="jv-job-list-location">Manila, Philippines</div>
+        </a>
+      </li>
+    </ul>`;
+  const cj = parseJobviteList(cardHtml, 'Amber');
+  if (cj.length === 2 && cj[0].title === '2D Animator' &&
+      cj[0].url === 'https://jobs.jobvite.com/amberstudiocareers/job/oqFkAfwJ' &&
+      cj[0].workMode === 'remote' && cj[0].location === 'Bucharest, Romania' &&
+      cj[1].title === '2D Illustrator') {
+    pass('parseJobviteList parses modern <li class="job-item"> cards and dedupes the Featured block');
+  } else {
+    fail(`modern card parse = ${JSON.stringify(cj)}`);
+  }
+
+  if (parseJobviteList('', 'X').length === 0 &&
+      parseJobviteList('<div>no jobs here</div>', 'X').length === 0) {
+    pass('parseJobviteList returns [] on empty/iframe-only board (fail-safe)');
+  } else {
+    fail('parseJobviteList should yield [] when no rows present');
+  }
+} catch (e) {
+  fail(`jobvite provider tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));
