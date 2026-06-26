@@ -985,6 +985,36 @@ tracked_companies:
     enabled: true
 
   # ══════════════════════════════════════════════════════════════════
+  # -- Comeet tenants — see providers/comeet.mjs.
+  #    Israeli multi-tenant ATS common to Tel Aviv mobile/casual studios.
+  #    careers_url is the public board (comeet.com/jobs/<slug>/<uid>); the
+  #    provider scrapes the board's embedded API token, then pulls the
+  #    positions JSON (clean, zero-token). The <uid> after the slug is
+  #    Comeet's company id and is required — the API rejects the slug alone.
+  # ══════════════════════════════════════════════════════════════════
+  - name: Moon Active
+    provider: comeet
+    careers_url: https://www.comeet.com/jobs/moonactive/A2.00C
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Coin Master maker (Tel Aviv). ~30 jobs (2026-06-26)."
+    enabled: true
+  - name: SuperPlay
+    provider: comeet
+    careers_url: https://www.comeet.com/jobs/superplay/28.003
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Dice Dreams / Disney Solitaire (Tel Aviv, Playtika-owned). ~25 jobs (2026-06-26)."
+    enabled: true
+  - name: CrazyLabs
+    provider: comeet
+    careers_url: https://www.comeet.com/jobs/crazylabs/32.00E
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Top-3 hyper/hybrid-casual publisher (Tel Aviv). Self-hosts the Comeet widget on crazylabs.com; wired via the canonical comeet.com board. ~15 jobs (2026-06-26)."
+    enabled: true
+
+  # ══════════════════════════════════════════════════════════════════
   # -- Research pass #3 (2026-06-04): prior probe-ats.mjs "misses" that
   #    actually run on ATS we already support — they slipped through only
   #    because the probe checks Greenhouse/Lever/Ashby/Teamtailor-subdomain.
