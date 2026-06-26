@@ -1015,6 +1015,43 @@ tracked_companies:
     enabled: true
 
   # ══════════════════════════════════════════════════════════════════
+  # -- Greeting (그리팅) tenants — see providers/greetinghr.mjs.
+  #    Korean multi-tenant ATS common to Pangyo/Seoul game studios. careers_url
+  #    is the public board (<slug>.career.greetinghr.com); the provider reads the
+  #    openings list straight out of the page's __NEXT_DATA__ (one GET, zero
+  #    token). Some tenants front the board with their own domain (AButton →
+  #    careers.abutton.com), but the .career.greetinghr.com origin still resolves.
+  # ══════════════════════════════════════════════════════════════════
+  - name: Aimed
+    provider: greetinghr
+    careers_url: https://aimed.career.greetinghr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Mobile/casual maker (ex-GameBerry; Eclipse SLG, GameBerry Studio). Pangyo/Seoul. Feed mixes in MartiniAI martech roles — title filter handles relevance. ~30 openings (2026-06-26)."
+    enabled: true
+  - name: MadNgine
+    provider: greetinghr
+    careers_url: https://madngine.career.greetinghr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Night Crow studio (WeMade group), Pangyo. NX/Mono/Frontier studios. ~25 openings (2026-06-26)."
+    enabled: true
+  - name: BigFire Games
+    provider: greetinghr
+    careers_url: https://bigfiregames.career.greetinghr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "MMORPG studio, Pangyo. ~21 openings (2026-06-26)."
+    enabled: true
+  - name: AButton
+    provider: greetinghr
+    careers_url: https://abutton.career.greetinghr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "Game studio (Project EA, Guns & Dragons, 제우스), Pangyo. Board fronted by careers.abutton.com. ~19 openings (2026-06-26)."
+    enabled: true
+
+  # ══════════════════════════════════════════════════════════════════
   # -- Research pass #3 (2026-06-04): prior probe-ats.mjs "misses" that
   #    actually run on ATS we already support — they slipped through only
   #    because the probe checks Greenhouse/Lever/Ashby/Teamtailor-subdomain.
