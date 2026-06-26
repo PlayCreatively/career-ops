@@ -935,8 +935,21 @@ tracked_companies:
     notes: "Stockholm. VR/XR games."
     enabled: true
 
-  # Not yet covered (need a browser):
-  #   EA / DICE (Stockholm) — custom jobs.ea.com portal, not standard Workday
+  # ── Avature (per-tenant white-label ATS) — see providers/avature.mjs ──
+  # EA's jobs.ea.com IS reachable zero-token (the old "needs a browser" note was
+  # wrong — verified 2026-06-26: 403 live jobs via the server-rendered SearchJobs
+  # pager). It's a single Avature tenant, so ONE entry pulls EA core PLUS every
+  # first-party studio that posts there — Respawn (34), Motive (13), DICE Stockholm
+  # (9), Criterion (8), Ripple Effect (6), Maxis (5), Codemasters (2), BioWare (1),
+  # Frostbite. The `department` field preserves studio attribution. Off rehm now
+  # (ea-careers aliases to the avature provider — see providers/rehm.mjs).
+  - name: Electronic Arts (EA)
+    provider: avature
+    careers_url: https://jobs.ea.com/en_US/careers
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "avature-confirmed live (403 jobs, 2026-06-26) via jobs.ea.com SearchJobs pager. One tenant covers EA + Respawn/Motive/DICE/Criterion/Ripple Effect/Maxis/Codemasters/BioWare (studio in department field). AAA publisher; first-party + co-dev."
+    enabled: true
   # (King moved below — now reachable via its public Phenom site, no longer browser-only.)
 
   # ══════════════════════════════════════════════════════════════════

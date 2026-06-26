@@ -53,8 +53,18 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STUDIOS = path.join(HERE, '..', 'studios.yml');
 
+// rehm's source_ats slug differs from our provider FILENAME for some ATSes —
+// notably the white-labelled per-tenant builds where one provider serves a
+// vendor whose feed-slug is the customer's portal name. Map slug → provider id
+// so the covered-skip recognises them. (Same-named ATSes like eightfold/hrmos/
+// comeet need no entry.)
+const SOURCE_ATS_ALIAS = {
+  'ea-careers': 'avature', // EA's jobs.ea.com is an Avature tenant → providers/avature.mjs
+};
+
 // Provider ids we ship = the ATS names rehm marks as source_ats that we already
-// scan first-party. Derived from the providers/ directory at call time.
+// scan first-party. Derived from the providers/ directory at call time, then the
+// alias slugs are folded in so feed-specific names resolve to the provider file.
 function coveredAts() {
   const set = new Set();
   try {
@@ -62,6 +72,10 @@ function coveredAts() {
       if (f.endsWith('.mjs') && !f.startsWith('_') && f !== 'rehm.mjs') set.add(f.slice(0, -4));
     }
   } catch { /* unreadable dir — empty set means "nothing covered" (rehm emits all) */ }
+  // A feed slug counts as covered when its aliased provider file is present.
+  for (const [slug, provider] of Object.entries(SOURCE_ATS_ALIAS)) {
+    if (set.has(provider)) set.add(slug);
+  }
   return set;
 }
 
