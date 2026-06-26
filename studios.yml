@@ -1331,10 +1331,6 @@ tracked_companies:
     careers_url: https://careers.smartrecruiters.com/epochgames
     notes: "Winston-Salem, United States. ~10 roles (ASGC mining pass #4)."
     enabled: true
-  - name: Keywords Studios
-    careers_url: https://careers.smartrecruiters.com/KeywordsStudios
-    notes: "Pacific, Australia. ~34 roles (ASGC mining pass #4)."
-    enabled: true
   - name: Tonic DNA
     careers_url: https://careers.smartrecruiters.com/TonicDNA1
     notes: "Montreal, Canada. ~3 roles (ASGC mining pass #4)."
@@ -7046,11 +7042,6 @@ tracked_companies:
     status: unresolved
     careers_url: https://vertigo-games.com/
     notes: "DGA directory · Rotterdam · ~150+"
-  - name: VFXlabs
-    country: NL
-    status: unresolved
-    careers_url: https://vfxlabs.net/
-    notes: "DGA directory · Eindhoven-Area · ~1"
   - name: vievv
     country: NL
     status: unresolved
@@ -8226,3 +8217,509 @@ tracked_companies:
     careers_url: https://jobs.ashbyhq.com/partyhat
     status: resolved
     notes: "rehm-mined; ashby-confirmed live (29 jobs, 2026-06-25). Auto-added (high-confidence)."
+
+  # ── rehm-mined games studios the title-filter wrongly skipped (false-negatives) — wired 2026-06-26 ──
+  - name: Tango Gameworks
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/tangogameworks
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (14 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Smoking Gun Interactive
+    provider: workable
+    careers_url: https://apply.workable.com/smoking-gun-interactive-1
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (11 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: VRChat
+    provider: lever
+    careers_url: https://jobs.lever.co/vrchat
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; lever-confirmed live (10 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Krafton India
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/kraftonindia
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (9 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: 2K Madrid
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/2kmadrid
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (9 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: RisingWings
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/risingwings
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (7 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Agave Games
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/agavegames
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; ashby-confirmed live (6 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Forgotten Empires
+    provider: workable
+    careers_url: https://apply.workable.com/forgotten-empires
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (6 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Pine Games
+    provider: lever
+    careers_url: https://jobs.lever.co/pinegames
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; lever-confirmed live (6 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Haven Studios
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/haven
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (6 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Mythwright
+    provider: workable
+    careers_url: https://apply.workable.com/mythwright
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (4 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: GungHo Online Entertainment
+    provider: bamboohr
+    careers_url: https://gungho.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (4 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Soul Assembly
+    provider: bamboohr
+    careers_url: https://soulassembly.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (4 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: IGG Canada
+    provider: bamboohr
+    careers_url: https://igg.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (4 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: StoryToys
+    provider: workable
+    careers_url: https://apply.workable.com/storytoys
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Trailmix Games
+    provider: breezy
+    careers_url: https://trailmix.breezy.hr
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; breezy-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: KING Art
+    provider: personio
+    careers_url: https://king-art-gmbh.jobs.personio.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; personio-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Playrix
+    provider: recruitee
+    careers_url: https://playrix.recruitee.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; recruitee-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: SNK
+    provider: workable
+    careers_url: https://apply.workable.com/snk
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Play Perfect
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/play-perfect
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; smartrecruiters-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: OliveTree Games
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/olivetreegames
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Entity Games
+    provider: bamboohr
+    careers_url: https://entitygames.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Irongame Studios
+    provider: bamboohr
+    careers_url: https://igs.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Flyway Games
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/flywaygames
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: KRAFTON Americas
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/kraftonamericas
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (3 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Team17
+    provider: workable
+    careers_url: https://apply.workable.com/team-17-digital
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: AxesInMotion
+    provider: workable
+    careers_url: https://apply.workable.com/axesinmotion
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Lucid Games
+    provider: recruitee
+    careers_url: https://lucidgames.recruitee.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; recruitee-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Arkadium
+    provider: workable
+    careers_url: https://apply.workable.com/arkadium-1
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Cypher Games
+    provider: lever
+    careers_url: https://jobs.lever.co/cypher-games
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; lever-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: BeamNG
+    provider: workable
+    careers_url: https://apply.workable.com/beamng
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Artificial Agency
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/artificial.agency
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; ashby-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Travian Games
+    provider: personio
+    careers_url: https://traviangames.jobs.personio.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; personio-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: AccelByte
+    provider: bamboohr
+    careers_url: https://accelbyte.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Game Mode One
+    provider: bamboohr
+    careers_url: https://gamemodeone.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Audiokinetic
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/audiokinetic-en
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: BetaDwarf
+    provider: bamboohr
+    careers_url: https://betadwarfaps.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Gearbox Entertainment
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/gearbox
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Relic Entertainment
+    provider: bamboohr
+    careers_url: https://relicentertainment.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (2 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Carry1st
+    provider: workable
+    careers_url: https://apply.workable.com/carry1st
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: BulletFarm
+    provider: ashby
+    careers_url: https://jobs.ashbyhq.com/bulletfarm
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; ashby-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Owlchemy Labs
+    provider: workable
+    careers_url: https://apply.workable.com/owlchemy-labs
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Turbulent
+    provider: breezy
+    careers_url: https://turbulent.breezy.hr
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; breezy-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: KingsIsle Entertainment
+    provider: workable
+    careers_url: https://apply.workable.com/kingsisle-entertainment-inc
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Tier 9 Game Studios
+    provider: breezy
+    careers_url: https://tier-9-game-studios-ltd.breezy.hr
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; breezy-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Gamebreaking Studios
+    provider: breezy
+    careers_url: https://gamebreaking-studios-inc.breezy.hr
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; breezy-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Raid Base
+    provider: breezy
+    careers_url: https://raid-base-inc.breezy.hr
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; breezy-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Nvizzio Creations
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/nvizziocreations
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; smartrecruiters-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Brightrock Games
+    provider: workable
+    careers_url: https://apply.workable.com/brightrockgames
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Puzzle Cats
+    provider: breezy
+    careers_url: https://puzzle-cats.breezy.hr
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; breezy-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Longdue Games
+    provider: workable
+    careers_url: https://apply.workable.com/longdue-games
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; workable-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Mooncolony
+    provider: breezy
+    careers_url: https://mooncolony.breezy.hr
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; breezy-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Fire Hose Games
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/firehosegames
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; smartrecruiters-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Theorycraft Games
+    provider: lever
+    careers_url: https://jobs.lever.co/theorycraftgames
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; lever-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Playwing
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/playwing
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; smartrecruiters-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Genera Games
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/generagames1
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; smartrecruiters-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Reality Games
+    provider: smartrecruiters
+    careers_url: https://careers.smartrecruiters.com/realitygames
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; smartrecruiters-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Com2us
+    provider: personio
+    careers_url: https://gvc2u.jobs.personio.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; personio-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: PopReach
+    provider: bamboohr
+    careers_url: https://popreach.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: ReLU Games
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/relugames
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: inZOI Studio
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/inzoistudio
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Zaibatsu Interactive
+    provider: teamtailor
+    careers_url: https://zaibatsuinteractiveoy.teamtailor.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; teamtailor-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: DOTS Games
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/dots
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Swift Games
+    provider: teamtailor
+    careers_url: https://swiftgames.teamtailor.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; teamtailor-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Hyper Hippo Entertainment
+    provider: bamboohr
+    careers_url: https://hyperhippoproductions.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Kepler Interactive
+    provider: teamtailor
+    careers_url: https://awaceb.teamtailor.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; teamtailor-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: PM Studios
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/pmstudios
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Rockbite Games
+    provider: bamboohr
+    careers_url: https://rockbitegames.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Mundfish
+    provider: bamboohr
+    careers_url: https://mundfish.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Devolver Digital
+    provider: bamboohr
+    careers_url: https://devolverdigital.bamboohr.com
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; bamboohr-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: PlayQ
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/playq
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
+  - name: Undead Labs
+    provider: greenhouse
+    careers_url: https://job-boards.greenhouse.io/undeadlabsllc
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "rehm-mined; greenhouse-confirmed live (1 jobs, 2026-06-26). Real games studio missed by the title-only games filter."
+    enabled: true
