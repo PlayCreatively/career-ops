@@ -1013,6 +1013,13 @@ tracked_companies:
     last_probe: 2026-06-26
     notes: "Top-3 hyper/hybrid-casual publisher (Tel Aviv). Self-hosts the Comeet widget on crazylabs.com; wired via the canonical comeet.com board. ~15 jobs (2026-06-26)."
     enabled: true
+  - name: Overwolf
+    provider: comeet
+    careers_url: https://www.comeet.com/jobs/overwolf/B1.001
+    status: resolved
+    last_probe: 2026-06-26
+    notes: "In-game apps/overlays platform + Outplayed, Tebex, CurseForge (Ramat Gan, IL). Self-hosts the Comeet widget on careers.overwolf.com (company-uid B1.001); wired via the canonical comeet.com board. Found via rehm mining. ~12 jobs (2026-06-26)."
+    enabled: true
 
   # ══════════════════════════════════════════════════════════════════
   # -- Greeting (그리팅) tenants — see providers/greetinghr.mjs.
