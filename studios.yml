@@ -1036,6 +1036,27 @@ tracked_companies:
     notes: "zohorecruit-confirmed live (5 jobs, 2026-06-26) via /jobs/Careers island; rehm only saw 3. Quebec City. Co-dev / full-dev service studio (Unreal). Was on rehm."
     enabled: true
 
+  # ── Huntflow — multi-tenant ATS, see providers/huntflow.mjs ──
+  # Career sites at {slug}.global.huntflow.io OR {slug}.huntflow.io (a Nuxt SPA).
+  # Data comes from a same-origin JSON API: GET {origin}/api/vacancy?count=50&
+  # page=N&preview=false → {total(=page count), items:[{id,slug,position,division,
+  # city,archived_at}]}. count is capped ~50; we walk page=1..total. Apply URL =
+  # {origin}/vacancy/{slug}. company = entry name; division → department; no posted
+  # date. node fetch works (no CF wall). Any *.huntflow.io auto-detects. Off rehm
+  # now (huntflow is a covered ATS — source_ats==filename, dropped automatically).
+  - name: SayGames
+    provider: huntflow
+    careers_url: https://saygameshr.global.huntflow.io/
+    last_probe: 2026-06-27
+    notes: "huntflow-confirmed live (24 jobs, 2026-06-27) via /api/vacancy. Hybrid-casual mobile publisher (200+ games, 8B downloads); Warsaw/Limassol/Paphos. Sub-studios in division (H8Games, Hypernova, Pavetra, Playfocus). Was on rehm."
+    enabled: true
+  - name: Saber Interactive
+    provider: huntflow
+    careers_url: https://saberjobs.huntflow.io/
+    last_probe: 2026-06-27
+    notes: "huntflow-confirmed live (12 jobs, 2026-06-27) via /api/vacancy (tenant slug 'saberjobs', no .global). AA/AAA Unreal co-dev + own IP (World War Z, Warhammer 40K). Was on rehm."
+    enabled: true
+
   # ══════════════════════════════════════════════════════════════════
   # -- Phenom (Phenom People) tenants — see providers/phenom.mjs.
   #    The Activision Blizzard family fronts its bot-protected Workday

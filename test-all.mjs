@@ -2836,6 +2836,53 @@ try {
   fail(`zohorecruit provider tests crashed: ${e.message}`);
 }
 
+// ── Provider — huntflow (same-origin /api/vacancy JSON) ─────────────
+
+console.log('\n25. Provider — huntflow /api/vacancy');
+
+try {
+  const { parseHuntflowPage } = await import(pathToFileURL(join(ROOT, 'providers/huntflow.mjs')).href);
+
+  // A /api/vacancy page: {total(page count), page, items:[...]}. Each item has
+  // slug/position/division/city/archived_at. archived rows are closed.
+  const page = {
+    total: 1,
+    page: 1,
+    items: [
+      { id: 26840, slug: 'animator-1', position: 'Animator', division: null, city: null, archived_at: null },
+      { id: 25388, slug: 'lead-game-designer', position: 'Lead Game Designer', division: 'Game Design', city: null, archived_at: null },
+      { id: 26348, slug: 'unreal-engine-render-developer', position: 'Unreal Engine Graphics Programmer', division: null, city: 'Remote, Europe timezone', archived_at: null },
+      { id: 999, slug: 'old-role', position: 'Closed Role', division: null, city: null, archived_at: '2026-01-01T00:00:00Z' },
+    ],
+  };
+  const hj = parseHuntflowPage(page, 'Saber Interactive', 'https://saberjobs.huntflow.io');
+  if (hj.length === 3 &&
+      hj[0].title === 'Animator' &&
+      hj[0].url === 'https://saberjobs.huntflow.io/vacancy/animator-1' &&
+      hj[0].company === 'Saber Interactive' && hj[0].location === '' && !hj[0].workMode &&
+      hj[1].department === 'Game Design' &&
+      hj[2].location === 'Remote, Europe timezone' && hj[2].workMode === 'remote') {
+    pass('parseHuntflowPage maps slug→/vacancy/{slug}, division→department, infers remote from city, drops archived');
+  } else {
+    fail(`huntflow page parse = ${JSON.stringify(hj)}`);
+  }
+
+  // Dedup across pages via a shared seen-set; malformed payloads yield [].
+  const seen = new Set();
+  const a = parseHuntflowPage({ items: [{ slug: 'x', position: 'X' }] }, 'C', 'https://x.huntflow.io', seen);
+  const b = parseHuntflowPage({ items: [{ slug: 'x', position: 'X dup' }] }, 'C', 'https://x.huntflow.io', seen);
+  if (a.length === 1 && b.length === 0 &&
+      parseHuntflowPage(null, 'C', 'https://x.huntflow.io').length === 0 &&
+      parseHuntflowPage({ items: 'nope' }, 'C', 'https://x.huntflow.io').length === 0 &&
+      parseHuntflowPage({ items: [{ position: 'no slug' }] }, 'C', 'https://x.huntflow.io').length === 0) {
+    pass('parseHuntflowPage dedups by slug across pages and returns [] on missing/malformed payloads (fail-safe)');
+  } else {
+    fail('parseHuntflowPage should dedup and fail safe on bad input');
+  }
+} catch (e) {
+  fail(`huntflow provider tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));
