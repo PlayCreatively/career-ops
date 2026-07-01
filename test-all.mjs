@@ -2347,6 +2347,140 @@ try {
   fail(`games-jobs-direct provider tests crashed: ${e.message}`);
 }
 
+// ── Provider — ingame-job ────────────────────────────────────────
+
+console.log('\n17c. Provider — ingame-job');
+
+try {
+  const igj = (await import(pathToFileURL(join(ROOT, 'providers/ingamejob.mjs')).href)).default;
+  const { parseIngameJobPage, parseRelativePostedDate } = await import(pathToFileURL(join(ROOT, 'providers/ingamejob.mjs')).href);
+
+  if (igj.id === 'ingame-job') pass('ingame-job.id is "ingame-job"');
+  else fail(`ingame-job.id is ${JSON.stringify(igj.id)}`);
+
+  const hit = igj.detect({ careers_url: 'https://ingamejob.com/en/jobs' });
+  const subHit = igj.detect({ careers_url: 'https://gb.ingamejob.com/en/jobs' });
+  if (hit && hit.url === 'https://ingamejob.com/en/jobs' && subHit && subHit.url === 'https://gb.ingamejob.com/en/jobs') {
+    pass('ingame-job.detect() claims ingamejob.com and its regional subdomains');
+  } else {
+    fail(`ingame-job.detect() returned ${JSON.stringify(hit)} / ${JSON.stringify(subHit)}`);
+  }
+
+  if (
+    igj.detect({ careers_url: 'https://boards.greenhouse.io/x' }) === null &&
+    igj.detect({ careers_url: 'https://evil-ingamejob.com' }) === null &&
+    igj.detect({ careers_url: 'https://evil.example/ingamejob.com/jobs' }) === null &&
+    igj.detect({ careers_url: null }) === null
+  ) {
+    pass('ingame-job.detect() rejects lookalike hosts, path-spoofs, and non-string URLs');
+  } else {
+    fail('ingame-job.detect() must reject spoofed/invalid careers URLs');
+  }
+
+  // Relative-date parser — anchored to a fixed "now" so results are deterministic.
+  const NOW = Date.parse('2026-07-01T18:00:00.000Z');
+  if (
+    parseRelativePostedDate('Posted just now', NOW) === '2026-07-01T18:00:00.000Z' &&
+    parseRelativePostedDate('Posted 7 hours ago', NOW) === '2026-07-01T11:00:00.000Z' &&
+    parseRelativePostedDate('Posted a day ago', NOW) === '2026-06-30T18:00:00.000Z' &&
+    parseRelativePostedDate('Posted 2 days ago', NOW) === '2026-06-29T18:00:00.000Z' &&
+    parseRelativePostedDate('Posted 1 week ago', NOW) === '2026-06-24T18:00:00.000Z' &&
+    parseRelativePostedDate('whenever', NOW) === '' &&
+    parseRelativePostedDate('', NOW) === ''
+  ) {
+    pass('parseRelativePostedDate converts relative "Posted N unit ago" to ISO, empty when unparseable');
+  } else {
+    fail('parseRelativePostedDate is wrong');
+  }
+
+  // Two well-formed cards (one remote, one onsite w/ city) + one malformed card
+  // with no /en/job/ link that must be skipped.
+  const sampleHtml = `
+    <div class="employer-job-listing-single shadow-sm bg-white mb-3 p-3"><div class="listing-job-info container"><div class="row text-muted">
+      <div class="col-12 p-0"><h5><a href="https://ingamejob.com/en/job/middlesenior-unity-developer-27"> Senior/Lead Unity Developer </a></h5></div>
+      <div class="col-sm-6 p-0">
+        <p class="m-0"><strong><i class="la la-building-o"></i> Junkineering &amp; Co</strong></p>
+        <p class="m-0"><i class="text-muted la la-map-marker"></i> Remote </p>
+        <p class="m-0"><i class="la la-clock-o"></i> Posted 5 days ago</p>
+      </div></div></div></div>
+    <div class="employer-job-listing-single shadow-sm bg-white mb-3 p-3"><div class="listing-job-info container"><div class="row text-muted">
+      <div class="col-12 p-0"><h5><a href="https://ingamejob.com/en/job/senior-unity-developer-255"> Senior Unity Developer </a></h5></div>
+      <div class="col-sm-6 p-0">
+        <p class="m-0"><strong><i class="la la-building-o"></i> Plummy Games</strong></p>
+        <p class="m-0"><i class="text-muted la la-map-marker"></i> Remote, Warsaw </p>
+        <p class="m-0"><i class="la la-clock-o"></i> Posted 2 days ago</p>
+      </div></div></div></div>
+    <div class="employer-job-listing-single shadow-sm bg-white mb-3 p-3"><div class="listing-job-info container">
+      <p>No job link here</p>
+    </div></div>`;
+  const jobs = parseIngameJobPage(sampleHtml, NOW);
+  if (jobs.length === 2) pass('parseIngameJobPage keeps cards with an /en/job/ link, skips malformed');
+  else fail(`parseIngameJobPage returned ${jobs.length} jobs (expected 2)`);
+
+  if (
+    jobs[0]?.title === 'Senior/Lead Unity Developer' &&
+    jobs[0]?.url === 'https://ingamejob.com/en/job/middlesenior-unity-developer-27' &&
+    jobs[0]?.company === 'Junkineering & Co' &&        // entity-decoded
+    jobs[0]?.location === '' &&                        // "Remote" lifted out of location text
+    jobs[0]?.workMode === 'remote' &&
+    jobs[0]?.postedDate === '2026-06-26T18:00:00.000Z'
+  ) {
+    pass('parseIngameJobPage extracts title/url/company + lifts workMode from "Remote", decodes entities');
+  } else {
+    fail(`row 0 = ${JSON.stringify(jobs[0])}`);
+  }
+
+  if (jobs[1]?.location === 'Warsaw' && jobs[1]?.workMode === 'remote') {
+    pass('parseIngameJobPage splits "Remote, Warsaw" into location=Warsaw + workMode=remote');
+  } else {
+    fail(`row 1 = ${JSON.stringify(jobs[1])}`);
+  }
+
+  if (parseIngameJobPage(null).length === 0 && parseIngameJobPage('').length === 0) {
+    pass('parseIngameJobPage handles null/empty input without crashing');
+  } else {
+    fail('parseIngameJobPage should yield empty result for null/empty input');
+  }
+
+  // End-to-end: walks pages until an empty one, dedupes by URL across queries,
+  // and honors the custom host + per-query page cap.
+  const page1 = `<div class="employer-job-listing-single"><div><h5><a href="https://ingamejob.com/en/job/a-1"> A </a></h5></div>
+    <p><i class="la la-building-o"></i> Co A</p><p><i class="la la-map-marker"></i> Kyiv</p><p><i class="la la-clock-o"></i> Posted 1 day ago</p></div>`;
+  const dupPage = `<div class="employer-job-listing-single"><div><h5><a href="https://ingamejob.com/en/job/a-1"> A </a></h5></div>
+    <p><i class="la la-building-o"></i> Co A</p></div>`;
+  const reqs = [];
+  const ctx = {
+    async fetchText(url) {
+      reqs.push(url);
+      if (url.includes('p/unity-developer') && url.includes('page=1')) return page1;
+      if (url.includes('p/c-developer') && url.includes('page=1')) return dupPage; // same job, different query
+      return ''; // any page 2 (or other) is empty → stop
+    },
+  };
+  const e2e = await igj.fetch({ queries: ['p/unity-developer', 'p/c-developer'], host: 'gb.ingamejob.com' }, ctx);
+  if (
+    e2e.length === 1 &&                                            // deduped across queries by URL
+    e2e[0].url === 'https://ingamejob.com/en/job/a-1' &&
+    reqs.every((u) => u.startsWith('https://gb.ingamejob.com/')) && // custom host honored
+    reqs.some((u) => u.includes('/en/jobs/p/unity-developer?page=1'))
+  ) {
+    pass('ingame-job.fetch() walks to empty page, dedupes by URL across queries, honors custom host');
+  } else {
+    fail(`ingame-job e2e wrong: jobs=${JSON.stringify(e2e.map((j) => j.url))} reqs=${JSON.stringify(reqs)}`);
+  }
+
+  // Bad host config falls back to the global default (never points elsewhere).
+  const reqs2 = [];
+  await igj.fetch({ queries: [''], host: 'https://evil.example/' }, { async fetchText(u) { reqs2.push(u); return ''; } });
+  if (reqs2.every((u) => u.startsWith('https://ingamejob.com/'))) {
+    pass('ingame-job.fetch() falls back to global host when config host is not an ingamejob.com host');
+  } else {
+    fail(`bad-host fallback wrong: ${JSON.stringify(reqs2)}`);
+  }
+} catch (e) {
+  fail(`ingame-job provider tests crashed: ${e.message}`);
+}
+
 // ── Provider `probe` descriptor contract (probe-studios auto-discovery) ──
 
 console.log('\n18. Provider probe descriptors');

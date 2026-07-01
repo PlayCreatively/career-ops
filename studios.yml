@@ -164,6 +164,26 @@ tracked_companies:
       # - Operations
       # - Customer Services
 
+  - name: InGame Job
+    provider: ingame-job
+    # Games-industry-only board, Unity/C#-heavy — fills the gap the (mostly Unreal)
+    # big-studio ATS feeds leave open. Server-rendered, no feed/API; we walk
+    # /en/jobs/p/{profession}?page=N and parse the HTML cards. See providers/ingamejob.mjs.
+    notes: "Games-only board, Unity/C#-heavy. HTML-scraped, scoped by profession. See providers/ingamejob.mjs."
+    enabled: true
+    # Whole-industry + mobile/hypercasual heavy, so we scope to programmer/tools
+    # professions rather than walking the whole firehose. Each query is walked and
+    # merged/de-duped by URL. 47 profession slugs exist — add/remove freely.
+    queries:
+      - p/unity-developer     # core Unity/C#
+      - p/c-developer         # C++/C# gameplay & tools
+      - p/technical-artist    # tools/pipeline-adjacent
+      # Design-leaning (uncomment if you want them in the feed):
+      # - p/game-designer
+      # - p/level-designer
+    # host: ingamejob.com     # global default; set a regional subdomain to localise
+    # pages: 10               # per-query page cap (default: walk to empty, cap 50)
+
   - name: Rehm — uncovered ATS (games)
     provider: rehm
     # alexanderrehm.com curated games board (jobs.json). Scoped by DEFAULT to the

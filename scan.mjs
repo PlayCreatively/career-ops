@@ -300,7 +300,7 @@ export function postingId(url) {
 //      Epic-style pair of distinct same-title reqs is always preserved.
 //
 // The aggregator host list is configurable (portals.yml → snapshot_dedup).
-export function dedupeSnapshot(jobs, { aggregators = ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com', 'gamesjobsdirect.com'] } = {}) {
+export function dedupeSnapshot(jobs, { aggregators = ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com', 'gamesjobsdirect.com', 'ingamejob.com'] } = {}) {
   const aggs = aggregators.map(a => String(a).toLowerCase());
   const hostOf = (u) => {
     try { return new URL(u).hostname.replace(/^www\./, '').toLowerCase(); }
@@ -669,7 +669,7 @@ async function main() {
   // so it also resolves jobs surfaced via aggregators (whose `company` is the
   // real studio). Aggregator entries are skipped — their careers_url points at
   // the aggregator, not a studio.
-  const AGG_HOSTS = ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com', 'gamesjobsdirect.com'];
+  const AGG_HOSTS = ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com', 'gamesjobsdirect.com', 'ingamejob.com'];
   // When an entry carries a job_url_template, its hosted ATS board is dead (that's
   // the whole reason for the template — see providers/ashby.mjs, Supercell). The
   // careers_url then 404s, so DON'T link the studio label to it. Derive the live
@@ -961,7 +961,7 @@ async function main() {
     let snapJobs = snapshot;
     if (dedupCfg.enabled !== false) {
       const { jobs: deduped, collapsed, collapsedById, collapsedByHeuristic } = dedupeSnapshot(snapshot, {
-        aggregators: dedupCfg.aggregators || ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com', 'gamesjobsdirect.com'],
+        aggregators: dedupCfg.aggregators || ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com', 'gamesjobsdirect.com', 'ingamejob.com'],
       });
       snapJobs = deduped;
       if (collapsed > 0) {
