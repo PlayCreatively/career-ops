@@ -133,7 +133,12 @@
     // unknown → '' so the job falls through to the group's catch-all. Mirrors
     // rank.mjs fieldText (parity).
     if (field === 'workmode') return job.workMode || '';
-    if (field === 'any') return (job.title || '') + ' ' + (job.company || '') + ' ' + (job.location || '') + ' ' + (job.department || '');
+    // Source's own seniority label ("Junior-Associate" / "Mid-Senior Level" /
+    // "Director" from games-jobs-direct); '' when the provider doesn't expose one,
+    // so a Seniority group keyed on [experiencelevel, title] uses the real board
+    // value where present and falls back to the title elsewhere. Mirrors rank.mjs.
+    if (field === 'experiencelevel') return job.experienceLevel || '';
+    if (field === 'any') return (job.title || '') + ' ' + (job.company || '') + ' ' + (job.location || '') + ' ' + (job.department || '') + ' ' + (job.experienceLevel || '');
     return job.title || '';
   }
 

@@ -13,7 +13,8 @@
 #
 # ── Schema (see portals.personal.yml for a fully-tuned example) ───────────────
 # targeting.groups[] = { name, field, combine, weight, filters[] }
-#   field    title | company | location | any   (which job text to match)
+#   field    title | company | location | department | workmode | experiencelevel
+#            | any   (which job text to match; may be a [list] joined with spaces)
 #   combine  min | max | avg                     (how matched filters reduce)
 #   weight   cross-group importance for the fit  (normalized at use)
 # filter = { name, keywords[], weight, else }
@@ -67,7 +68,12 @@ targeting:
         - name: Other
           else: true
     - name: Level
-      field: title
+      # Match the source's own experience level FIRST, then the title. Some feeds
+      # (e.g. Games Jobs Direct) expose a real per-posting experience level
+      # (Junior-Associate / Mid-Senior Level / Director …); reading it ahead of
+      # the title rates those postings on the authoritative value rather than a
+      # title-word guess. Feeds without one contribute '' → the title still drives.
+      field: [experiencelevel, title]
       combine: min
       weight: 0.13
       filters:

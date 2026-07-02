@@ -218,7 +218,13 @@ export function fieldText(job, field) {
   // straight through the regex engine. Unknown → '' so the job falls through to
   // the group's catch-all rather than false-matching.
   if (field === 'workmode') return job.workMode || '';
-  if (field === 'any') return `${job.title || ''} ${job.company || ''} ${job.location || ''} ${job.department || ''}`;
+  // The source's own seniority label (e.g. games-jobs-direct's "Junior-Associate"
+  // / "Mid-Senior Level" / "Director"). Present only on providers that expose an
+  // explicit field; '' otherwise, so a Seniority group keyed on
+  // [experiencelevel, title] uses the authoritative board value where it exists
+  // and falls back to title-word guessing where it doesn't.
+  if (field === 'experiencelevel') return job.experienceLevel || '';
+  if (field === 'any') return `${job.title || ''} ${job.company || ''} ${job.location || ''} ${job.department || ''} ${job.experienceLevel || ''}`;
   return job.title || ''; // 'title' (default)
 }
 

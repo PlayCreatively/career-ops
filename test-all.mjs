@@ -1898,6 +1898,39 @@ try {
     fail(`fieldText(['location','workmode']) = ${JSON.stringify(fieldText(job, ['location', 'workmode']))}`);
   }
 
+  // experiencelevel field: reads the source's own seniority label, '' when absent.
+  if (
+    fieldText({ experienceLevel: 'Junior-Associate' }, 'experiencelevel') === 'Junior-Associate' &&
+    fieldText({ title: 'Senior Programmer' }, 'experiencelevel') === '' &&
+    fieldText({ title: 'Game Programmer', experienceLevel: 'Junior-Associate' }, ['experiencelevel', 'title']) === 'Junior-Associate Game Programmer'
+  ) {
+    pass('fieldText experiencelevel reads the board value; [experiencelevel, title] joins it ahead of the title');
+  } else {
+    fail(`experiencelevel field wrong: ${JSON.stringify(fieldText({ title: 'Game Programmer', experienceLevel: 'Junior-Associate' }, ['experiencelevel', 'title']))}`);
+  }
+
+  // A Seniority group keyed on [experiencelevel, title] rates a title-less "Game
+  // Programmer" as Junior when the board says so — the whole point of the wiring.
+  const senGroup = {
+    id: 'sen', name: 'Seniority', field: ['experiencelevel', 'title'], combine: 'max',
+    filters: [
+      { id: 'jr', name: 'Junior', keywords: ['Junior', 'Associate'], weight: 1.2 },
+      { id: 'sr', name: 'Senior', keywords: ['Senior'], weight: 0.5 },
+      { id: 'mid', name: 'Mid', else: true, weight: 0.7 },
+    ],
+  };
+  const boardJunior = { title: 'Game Programmer', experienceLevel: 'Junior-Associate' };
+  const boardless = { title: 'Game Programmer' }; // no board value → title-only, falls to Mid
+  const labels = (j) => matchGroup(j, senGroup).filter((f) => !f.else).map((f) => f.name);
+  if (
+    labels(boardJunior).includes('Junior') &&           // board value promotes it
+    labels(boardless).length === 0                        // no board value, no title word → Mid (else)
+  ) {
+    pass('Seniority group on [experiencelevel, title] uses the board value, falls back to title when absent');
+  } else {
+    fail(`seniority wiring wrong: junior=${JSON.stringify(labels(boardJunior))} boardless=${JSON.stringify(labels(boardless))}`);
+  }
+
   // Cross-field exclude only works when the group reads BOTH sources.
   const usOnlyRemote = { id: 'g', field: ['location', 'workmode'], combine: 'min',
     filters: [{ id: 'x', keywords: ['/^(?=.*remote)(?=.*\\bus)/'], weight: 0 }] };
