@@ -3103,8 +3103,10 @@ try {
 console.log('\n26. Provider — gamejobs-co sitemap + JSON-LD');
 
 try {
-  const { jobFromSlug, parseSitemapJobs, parseJobPostingLd } =
+  const { jobFromSlug, parseSitemapJobs } =
     await import(pathToFileURL(join(ROOT, 'providers/gamejobs.mjs')).href);
+  const { parseJobPostingLd } =
+    await import(pathToFileURL(join(ROOT, 'providers/_jsonld.mjs')).href);
 
   // Slug parse: split on the LAST "-at-", strip a trailing "-{n}" dedup suffix,
   // hyphens → spaces. No "-at-" → whole slug is the title, empty company.
@@ -3164,6 +3166,59 @@ try {
   }
 } catch (e) {
   fail(`gamejobs-co provider tests crashed: ${e.message}`);
+}
+
+// ── Provider — gamedevjobs.com (sitemap-index + JSON-LD enrichment) ─
+
+console.log('\n27. Provider — gamedevjobs sitemap-index + JSON-LD');
+
+try {
+  const { jobFromSlug, parseSitemapIndex, parseJobsSitemap } =
+    await import(pathToFileURL(join(ROOT, 'providers/gamedevjobs.mjs')).href);
+
+  // Slug parse: /jobs/{title}-{hexid} → title only (company/location come from the
+  // page). Strip the trailing 8+ hex id; seed postedDate from <lastmod>. Fail-safe
+  // on a URL that doesn't fit the pattern.
+  const s1 = jobFromSlug('https://gamedevjobs.com/jobs/senior-unity-c-developer-83170d42', '2026-06-30');
+  const s2 = jobFromSlug('https://gamedevjobs.com/jobs/lead-game-designer-75a24f0a');
+  if (s1.title === 'Senior Unity C Developer' && s1.company === '' &&
+      s1.postedDate === '2026-06-30T00:00:00.000Z' &&
+      s2.title === 'Lead Game Designer' && s2.postedDate === undefined) {
+    pass('gamedevjobs jobFromSlug strips hex id, title-only, seeds date from lastmod');
+  } else {
+    fail(`gamedevjobs jobFromSlug = ${JSON.stringify([s1, s2])}`);
+  }
+
+  // Sitemap index: keep only the jobs sub-sitemaps (skip pages.xml), dedupe.
+  const idx = `<?xml version="1.0"?><sitemapindex>
+    <sitemap><loc>https://gamedevjobs.com/sitemaps/pages.xml</loc></sitemap>
+    <sitemap><loc>https://gamedevjobs.com/sitemaps/jobs-0.xml</loc></sitemap>
+    <sitemap><loc>https://gamedevjobs.com/sitemaps/jobs-1.xml</loc></sitemap>
+  </sitemapindex>`;
+  const subs = parseSitemapIndex(idx);
+  if (subs.length === 2 && subs.every((u) => /jobs-\d+\.xml$/.test(u)) &&
+      parseSitemapIndex('').length === 0 && parseSitemapIndex(null).length === 0) {
+    pass('parseSitemapIndex keeps jobs-*.xml, drops pages.xml, fails safe');
+  } else {
+    fail(`parseSitemapIndex = ${JSON.stringify(subs)}`);
+  }
+
+  // Jobs sub-sitemap: one job per <url>, carry <lastmod> into postedDate, dedupe.
+  const jobsXml = `<?xml version="1.0"?><urlset>
+    <url><loc>https://gamedevjobs.com/jobs/gameplay-developer-79e1b187</loc><lastmod>2026-06-30</lastmod></url>
+    <url><loc>https://gamedevjobs.com/jobs/gameplay-developer-79e1b187</loc><lastmod>2026-06-30</lastmod></url>
+    <url><loc>https://gamedevjobs.com/jobs/ui-ux-designer-57d6fa6b</loc></url>
+  </urlset>`;
+  const sm = parseJobsSitemap(jobsXml);
+  if (sm.length === 2 && sm[0].title === 'Gameplay Developer' &&
+      sm[0].postedDate === '2026-06-30T00:00:00.000Z' && sm[1].postedDate === undefined &&
+      parseJobsSitemap('').length === 0 && parseJobsSitemap(null).length === 0) {
+    pass('parseJobsSitemap parses url+lastmod, dedupes, fails safe');
+  } else {
+    fail(`parseJobsSitemap = ${JSON.stringify(sm)}`);
+  }
+} catch (e) {
+  fail(`gamedevjobs provider tests crashed: ${e.message}`);
 }
 
 // ── SUMMARY ─────────────────────────────────────────────────────

@@ -196,6 +196,24 @@ tracked_companies:
     # enrich_concurrency: 6    # parallel detail fetches (default 6)
     # enrich: false            # slug-only, single request, no location/date
 
+  - name: GameDevJobs.com
+    provider: gamedevjobs
+    # Second global games aggregator (~650 postings), independent of GameJobs.co —
+    # ~half its companies aren't on GameJobs.co and each posting links to the
+    # studio's real source ATS, so it's a genuine second feed, not a mirror. Sitemap
+    # INDEX gives a title + posted date per job; company/location come from each
+    # posting's JSON-LD during enrichment (the slug carries only a title). Noisier
+    # than GameJobs.co (some non-game Unity/C# roles) — your targeting filter and the
+    # aggregator company blocklist handle that. See providers/gamedevjobs.mjs.
+    notes: "Global games aggregator (independent of GameJobs.co). Sitemap-index + JSON-LD enrichment. See providers/gamedevjobs.mjs."
+    enabled: true
+    # No source-level scoping by default: the whole board reaches your targeting
+    # filter (portals.yml). To pre-scope (title-only; company is unknown pre-enrich)
+    # add a `query:` keyword list, e.g. query: ["gameplay", "tools", "unity"].
+    # max_enrich: 500          # cap per-run enrichment fetches (default 500)
+    # enrich_concurrency: 6    # parallel detail fetches (default 6)
+    # enrich: false            # title+date only, single request, no company/location
+
   - name: Rehm — uncovered ATS (games)
     provider: rehm
     # alexanderrehm.com curated games board (jobs.json). Scoped by DEFAULT to the
