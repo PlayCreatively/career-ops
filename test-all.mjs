@@ -2278,8 +2278,8 @@ try {
     fail('buildSectorFilter blocklist/fail-safe behavior is wrong');
   }
 
-  // Country enrichment — bare-city cards get their country from the detail page.
-  const { needsCountryEnrichment, extractCountry } = await import(pathToFileURL(join(ROOT, 'providers/gamesjobsdirect.mjs')).href);
+  // Detail-page enrichment — location + experience level come from the detail page.
+  const { needsCountryEnrichment, extractCountry, extractLocation, extractExperienceLevel } = await import(pathToFileURL(join(ROOT, 'providers/gamesjobsdirect.mjs')).href);
 
   if (
     needsCountryEnrichment('Guildford') === true &&                  // bare city → look up
@@ -2306,13 +2306,42 @@ try {
     fail('extractCountry parsing is wrong');
   }
 
-  // End-to-end: only the bare-city card triggers a detail fetch; enrich_country:false skips all.
+  if (
+    extractLocation('<label class="control-label">Location</label> <p class="">Las Vegas, United States</p>') === 'Las Vegas, United States' &&
+    extractLocation('<label>Location</label>\n   <p id="">  Kraków,&nbsp;Poland </p>') === 'Kraków, Poland' &&
+    extractLocation('<p>no location field here</p>') === '' &&
+    extractLocation(null) === ''
+  ) {
+    pass('extractLocation reads the detail-page Location field (full "City, Country"), empty when absent');
+  } else {
+    fail('extractLocation parsing is wrong');
+  }
+
+  if (
+    extractExperienceLevel('<label class="control-label">Experience Level</label> <p class="" id="">Mid-Senior Level</p>') === 'Mid-Senior Level' &&
+    extractExperienceLevel('<label>Experience Level</label> <p>Junior-Associate</p>') === 'Junior-Associate' &&
+    extractExperienceLevel('<label>Experience Level</label> <p>  Not specified </p>') === '' && // placeholder → omitted
+    extractExperienceLevel('<p>no experience field</p>') === '' &&
+    extractExperienceLevel(null) === ''
+  ) {
+    pass('extractExperienceLevel reads the detail-page Experience Level field, drops "Not specified" placeholder');
+  } else {
+    fail('extractExperienceLevel parsing is wrong');
+  }
+
+  // End-to-end. Default now fetches EVERY posting's detail page (experience level
+  // lives only there) and grabs the authoritative location at the same time.
   const enrichListing = `<ul>
     <li class="list-group-item job-list "><div><p><a href="/job/skillsearch/experienced-programmer/345511" class="job-title" title="Experienced Programmer">Experienced Programmer</a></p>
       <p class="job-info"><span class="job-location">Guildford</span><span class="job-company">Skillsearch</span><span class="job-sector"> Programming</span></p></div></li>
     <li class="list-group-item job-list "><div><p><a href="/job/x/y/2" class="job-title" title="Artist">Artist</a></p>
       <p class="job-info"><span class="job-location">Daresbury, United Kingdom</span><span class="job-company">X</span><span class="job-sector"> Art</span></p></div></li>
     </ul>`;
+  // Detail responses keyed by URL slug so each posting can return distinct fields.
+  const detailByUrl = {
+    '345511': '<label class="control-label">Location</label> <p>Guildford, United Kingdom</p><label>Experience Level</label> <p>Junior-Associate</p>',
+    '/2': '<label class="control-label">Location</label> <p>Daresbury, United Kingdom</p><label>Experience Level</label> <p>Director</p>',
+  };
   const makeCtx = () => {
     const counts = { pages: 0, details: 0 };
     return {
@@ -2320,28 +2349,47 @@ try {
       async fetchText(url) {
         if (url.includes('/all-jobs')) { counts.pages++; return counts.pages === 1 ? enrichListing : ''; }
         counts.details++;
-        return '<label class="control-label">Country</label> <p class="">United Kingdom</p>';
+        const key = Object.keys(detailByUrl).find((k) => url.endsWith(k));
+        return key ? detailByUrl[key] : '';
       },
     };
   };
   const onCtx = makeCtx();
   const enriched = await gjd.fetch({ pages: 5 }, onCtx);
+  const prog = enriched.find((j) => j.title === 'Experienced Programmer');
+  const artist = enriched.find((j) => j.title === 'Artist');
   if (
-    onCtx.counts.details === 1 &&                                    // only the bare-city card fetched
-    enriched.find((j) => j.title === 'Experienced Programmer')?.location === 'Guildford, United Kingdom' &&
-    enriched.find((j) => j.title === 'Artist')?.location === 'Daresbury, United Kingdom' // untouched
+    onCtx.counts.details === 2 &&                          // every posting fetched (experience needs it)
+    prog?.location === 'Guildford, United Kingdom' &&      // bare city → authoritative detail location
+    prog?.experienceLevel === 'Junior-Associate' &&
+    artist?.location === 'Daresbury, United Kingdom' &&    // already full — detail confirms
+    artist?.experienceLevel === 'Director'
   ) {
-    pass('games-jobs-direct.fetch() enriches bare-city locations with country, leaves comma-locations alone');
+    pass('games-jobs-direct.fetch() grabs location + experience level from every detail page by default');
   } else {
-    fail(`country enrichment e2e wrong: details=${onCtx.counts.details} jobs=${JSON.stringify(enriched.map((j) => j.location))}`);
+    fail(`enrichment e2e wrong: details=${onCtx.counts.details} jobs=${JSON.stringify(enriched.map((j) => ({ l: j.location, x: j.experienceLevel })))}`);
   }
 
-  const offCtx = makeCtx();
-  const unenriched = await gjd.fetch({ pages: 5, enrich_country: false }, offCtx);
-  if (offCtx.counts.details === 0 && unenriched.find((j) => j.title === 'Experienced Programmer')?.location === 'Guildford') {
-    pass('games-jobs-direct.fetch() honors enrich_country:false (no detail fetches, city-only kept)');
+  // enrich_experience:false, enrich_country:true → only bare-city cards fetched (cheap location-only mode).
+  const locOnlyCtx = makeCtx();
+  const locOnly = await gjd.fetch({ pages: 5, enrich_experience: false }, locOnlyCtx);
+  if (
+    locOnlyCtx.counts.details === 1 &&                                                 // only the bare-city card
+    locOnly.find((j) => j.title === 'Experienced Programmer')?.location === 'Guildford, United Kingdom' &&
+    locOnly.every((j) => j.experienceLevel === undefined)                             // no experience level set
+  ) {
+    pass('games-jobs-direct.fetch() honors enrich_experience:false (location-only, bare-city fetches only)');
   } else {
-    fail(`enrich_country:false not honored: details=${offCtx.counts.details}`);
+    fail(`enrich_experience:false wrong: details=${locOnlyCtx.counts.details} jobs=${JSON.stringify(locOnly.map((j) => ({ l: j.location, x: j.experienceLevel })))}`);
+  }
+
+  // Both off → no detail fetches at all; listing locations kept as-is.
+  const offCtx = makeCtx();
+  const unenriched = await gjd.fetch({ pages: 5, enrich_country: false, enrich_experience: false }, offCtx);
+  if (offCtx.counts.details === 0 && unenriched.find((j) => j.title === 'Experienced Programmer')?.location === 'Guildford') {
+    pass('games-jobs-direct.fetch() skips all detail fetches when both enrichments are off (city-only kept)');
+  } else {
+    fail(`both-off not honored: details=${offCtx.counts.details}`);
   }
 } catch (e) {
   fail(`games-jobs-direct provider tests crashed: ${e.message}`);

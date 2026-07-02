@@ -31,6 +31,11 @@
  *                                  unknown. Normalise via providers/_util.mjs
  *                                  `normalizeWorkMode`.
  * @property {string}  [department]  Optional department/team label.
+ * @property {string}  [experienceLevel] Optional seniority/experience label, in
+ *                                  the source's own taxonomy (e.g. games-jobs-direct's
+ *                                  "Junior-Associate" / "Mid-Senior Level" / "Director").
+ *                                  Set only when the source exposes an explicit field;
+ *                                  omitted otherwise (do NOT infer it from the title).
  */
 
 /**

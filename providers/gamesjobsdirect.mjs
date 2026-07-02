@@ -18,26 +18,36 @@ import { toIsoDate, normalizeWorkMode } from './_util.mjs';
 //   - name: Games Jobs Direct
 //     provider: games-jobs-direct
 //     pages: 300              # optional — cap the pages walked (default: walk all)
-//     enrich_country: true    # optional — fill in the country per posting (default: on)
+//     enrich_country: true    # optional — grab the full location per posting (default: on)
+//     enrich_experience: true # optional — grab the experience level per posting (default: on)
 //     enrich_concurrency: 6   # optional — parallel detail fetches during enrichment
 //     exclude_sectors:        # optional — drop these board sectors (case-insensitive)
 //       - Finance
 //       - HR
 //       - Legal
 //
-// COUNTRY ENRICHMENT. The board's listing cards carry an inconsistent
-// `.job-location`: ~64% are already "City, Country" (e.g. "Daresbury, United
-// Kingdom"), but ~36% are a bare city ("Guildford", "Krakow", "Las Vegas") with
-// no country at all. Downstream targeting/ranking matches country names against
-// `job.location`, so those bare-city postings silently slip through any
-// country-level filter. The country only exists on each posting's own detail
-// page (a dedicated `Country` field — the listing HTML never sends it, and the
-// board has no JSON feed). So for the bare-city cards we fetch the detail page
-// once and append the country, turning "Guildford" into "Guildford, United
-// Kingdom". Cards that already carry a country (have a comma) or are themselves a
-// bare country are left untouched — no wasted request. Enrichment is fail-safe:
-// a failed detail fetch keeps the city-only location and never drops the posting.
-// Disable it with `enrich_country: false` to skip the extra requests entirely.
+// DETAIL-PAGE ENRICHMENT. Two useful fields live ONLY on each posting's detail
+// page, never in the listing HTML: the fully-qualified Location ("City, Country")
+// and the Experience Level (the board's own taxonomy — Junior-Associate,
+// Mid-Senior Level, Director…). The Experience Level is present on every posting,
+// so filling it in means fetching every posting's detail page (default on; opt
+// out with `enrich_experience: false`). Because we're already visiting every
+// posting for that, the authoritative Location is grabbed at the same time for
+// free (opt out with `enrich_country: false`). Each detail page is fetched at
+// most once and both fields are read from the single response. Enrichment is
+// fail-safe throughout: a failed detail fetch keeps the listing location, omits
+// the experience level, and never drops the posting.
+//
+// LOCATION. The board's listing cards carry an inconsistent `.job-location`:
+// ~64% are already "City, Country" (e.g. "Daresbury, United Kingdom"), but ~36%
+// are a bare city ("Guildford", "Krakow", "Las Vegas") with no country at all.
+// Downstream targeting/ranking matches country names against `job.location`, so
+// those bare-city postings silently slip through any country-level filter. The
+// full location only exists on each posting's own detail page (a dedicated
+// `Location` field — the listing HTML never sends it, and the board has no JSON
+// feed), which we already fetch for every posting during enrichment (see below),
+// so we replace the card location with the authoritative detail one. When
+// enrichment is disabled the bare cities stay as-is. See DETAIL-PAGE ENRICHMENT.
 //
 // Because this is a *whole-industry* board, its `/all-jobs` listing mixes
 // game-craft roles (Programming, Art, Animation, Design, Audio, Production, QA…)
@@ -151,15 +161,46 @@ export function needsCountryEnrichment(location) {
   return !COUNTRY_NAMES.has(loc.toLowerCase());
 }
 
-// Pull the country from a posting's detail page. The detail view renders a
-// dedicated field — `<label …>Country</label> <p …>United Kingdom</p>` — separate
-// from the combined Location line. Returns '' when absent (older layout, expired
-// posting), so the caller falls back to the city-only location.
-export function extractCountry(html) {
+// Pull the value of a `<label>Name</label> <p>value</p>` field from a posting's
+// detail page. The detail view renders each attribute this way (Location,
+// Country, Experience Level, …). Returns '' when absent (older layout, expired
+// posting). Shared by the field-specific extractors below.
+/** @param {unknown} html @param {string} label @returns {string} */
+function pickDetailField(html, label) {
   if (typeof html !== 'string') return '';
-  const m = html.match(/<label[^>]*>\s*Country\s*<\/label>\s*<p[^>]*>([\s\S]*?)<\/p>/i);
+  const m = html.match(
+    new RegExp(`<label[^>]*>\\s*${label}\\s*</label>\\s*<p[^>]*>([\\s\\S]*?)</p>`, 'i'),
+  );
   if (!m) return '';
   return decodeEntities(m[1].replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
+}
+
+// Pull the country from a posting's detail page. Returns '' when absent, so the
+// caller falls back to the city-only location.
+/** @param {unknown} html @returns {string} */
+export function extractCountry(html) {
+  return pickDetailField(html, 'Country');
+}
+
+// Pull the fully-qualified location from a posting's detail page. The detail
+// `Location` field is the authoritative "City, Country" string — complete even
+// for the bare-city cards the listing renders ("Las Vegas" → "Las Vegas, United
+// States"). Returns '' when absent, so the caller keeps the listing location.
+/** @param {unknown} html @returns {string} */
+export function extractLocation(html) {
+  return pickDetailField(html, 'Location');
+}
+
+// Pull the experience level from a posting's detail page — the board's own
+// taxonomy (Junior-Associate, Mid-Senior Level, Director, …). This lives ONLY on
+// the detail page; the listing card's `la-user` icon is a DIFFERENT, unreliable
+// signal (it disagrees with this field), so we never trust the card for it.
+// Returns '' when absent or the board's "Not specified" placeholder, so the
+// field is omitted rather than storing noise.
+/** @param {unknown} html @returns {string} */
+export function extractExperienceLevel(html) {
+  const v = pickDetailField(html, 'Experience Level');
+  return /^not specified$/i.test(v) ? '' : v;
 }
 
 export function parseGamesJobsDirectPage(html) {
@@ -183,9 +224,11 @@ export function parseGamesJobsDirectPage(html) {
     const dateText = (block.match(/class="job-posteddate"[^>]*>\s*Posted\s*-\s*([^<]+)</) || [])[1] || '';
     const postedDate = toIsoDate(dateText.trim());
 
-    // Work mode rides on a globe icon's tooltip (e.g. Remote / Hybrid). Job-level
-    // icons (la-user "Junior") use the same tooltip attr, so key strictly on the
-    // globe icon and normalise the value.
+    // Work mode rides on a globe icon's tooltip (e.g. Remote / Hybrid). Other
+    // job-level icons reuse the same tooltip attr — notably la-user, whose value
+    // is NOT the experience level (it disagrees with the detail page's Experience
+    // Level field), so we key strictly on the globe icon here and read the real
+    // experience level from the detail page during enrichment below.
     const modeTip = (block.match(/<i\s+class="la la-globe"[^>]*data-original-title="([^"]*)"/) || [])[1] || '';
     const workMode = normalizeWorkMode(modeTip);
 
@@ -247,12 +290,27 @@ export default {
       }
     }
 
-    // Fill in the country for bare-city postings from their detail pages, so
-    // country-level targeting/ranking stops silently missing them. Opt-out with
-    // `enrich_country: false`. Fail-safe throughout: a failed detail fetch keeps
-    // the city-only location and never drops the posting.
-    if (entry.enrich_country !== false && typeof ctx.fetchText === 'function') {
-      const targets = jobs.filter((j) => needsCountryEnrichment(j.location));
+    // Detail-page enrichment. Two fields only live on each posting's own detail
+    // page, never in the listing HTML:
+    //   • Experience Level — the board's taxonomy (Junior-Associate, Mid-Senior
+    //     Level, Director, …). Present on EVERY posting → wanting it means
+    //     fetching every detail page. Opt-out with `enrich_experience: false`.
+    //   • Location — the authoritative "City, Country" string, complete even for
+    //     the ~36% of cards the listing renders as a bare city ("Las Vegas").
+    //     Opt-out with `enrich_country: false`.
+    // We fetch each posting's detail page AT MOST ONCE and read whatever we're
+    // after out of the single response. When experience enrichment is on we're
+    // already visiting every posting, so location is grabbed for all of them for
+    // free; when it's off, location enrichment falls back to fetching only the
+    // bare-city cards (the cheap original behaviour). Fail-safe throughout: a
+    // failed detail fetch keeps the listing location, omits the experience
+    // level, and never drops the posting.
+    const wantExperience = entry.enrich_experience !== false;
+    const wantLocation = entry.enrich_country !== false;
+    if ((wantExperience || wantLocation) && typeof ctx.fetchText === 'function') {
+      const targets = jobs.filter((j) =>
+        wantExperience || (wantLocation && needsCountryEnrichment(j.location)),
+      );
       const concurrency = Number.isInteger(entry.enrich_concurrency) && entry.enrich_concurrency > 0
         ? entry.enrich_concurrency
         : DEFAULT_ENRICH_CONCURRENCY;
@@ -262,12 +320,24 @@ export default {
           const job = targets[next++];
           try {
             const html = await ctx.fetchText(job.url, { redirect: 'error' });
-            const country = extractCountry(html);
-            // Don't duplicate a country the listing line already mentions.
-            if (country && !job.location.toLowerCase().includes(country.toLowerCase())) {
-              job.location = job.location ? `${job.location}, ${country}` : country;
+            if (wantLocation) {
+              // Prefer the detail Location field (full "City, Country"); fall back
+              // to appending just the Country for older layouts that omit it.
+              const loc = extractLocation(html);
+              if (loc) {
+                job.location = loc;
+              } else {
+                const country = extractCountry(html);
+                if (country && !job.location.toLowerCase().includes(country.toLowerCase())) {
+                  job.location = job.location ? `${job.location}, ${country}` : country;
+                }
+              }
             }
-          } catch { /* keep city-only location */ }
+            if (wantExperience) {
+              const exp = extractExperienceLevel(html);
+              if (exp) job.experienceLevel = exp;
+            }
+          } catch { /* keep listing location, omit experience level */ }
         }
       };
       await Promise.all(

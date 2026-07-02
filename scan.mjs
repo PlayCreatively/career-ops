@@ -868,11 +868,13 @@ async function main() {
             location: job.location || '',
             // Optional provider metadata — only set when known, so jobs.json
             // stays lean. postedDate is ISO-8601; workMode is the tri-state
-            // remote/hybrid/onsite; department is a label. See providers/_types.js.
+            // remote/hybrid/onsite; department is a label; experienceLevel is a
+            // source-taxonomy seniority label. See providers/_types.js.
             ...(companyUrl ? { companyUrl } : {}),
             ...(job.postedDate ? { postedDate: job.postedDate } : {}),
             ...(job.workMode ? { workMode: job.workMode } : {}),
             ...(job.department ? { department: job.department } : {}),
+            ...(job.experienceLevel ? { experienceLevel: job.experienceLevel } : {}),
           });
         }
         if (seenUrls.has(job.url)) {
