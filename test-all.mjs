@@ -3246,6 +3246,69 @@ try {
   fail(`gamedevjobs provider tests crashed: ${e.message}`);
 }
 
+// ── Aggregator-host registry consistency ────────────────────────
+// Every multi-studio BOARD provider (one that serves its own URLs across many
+// studios) declares `aggregatorHosts` on its default export. Those hosts MUST be
+// in scan.mjs's DEFAULT_AGGREGATORS or snapshot dedup can't collapse the board's
+// mirrors of first-party postings — exactly the gap that let gamejobs.co +
+// gamedevjobs duplicate silently before they were listed. This guard makes the
+// next new board impossible to forget: declare the field, or the reverse check
+// flags an orphan list entry. (Direct ATS providers omit the field; rehm omits it
+// too because it emits each studio's real source_url, not a board URL.)
+
+console.log('\n28. Aggregator-host registry ⇄ scan.mjs dedup lists');
+
+try {
+  const { DEFAULT_AGGREGATORS, DEFAULT_LAST_RESORT } =
+    await import(pathToFileURL(join(ROOT, 'scan.mjs')).href);
+  const norm = (h) => String(h).toLowerCase().replace(/^www\./, '');
+  const aggSet = new Set(DEFAULT_AGGREGATORS.map(norm));
+  const lastSet = new Set(DEFAULT_LAST_RESORT.map(norm));
+
+  const dir = join(ROOT, 'providers');
+  const files = readdirSync(dir).filter(f => f.endsWith('.mjs') && !f.startsWith('_'));
+  const declared = new Set();      // every host declared by any provider
+  const lastDeclared = new Set();  // hosts declared by a lastResort provider
+  let forwardOk = true;
+  let lastOk = true;
+
+  for (const f of files) {
+    const p = (await import(pathToFileURL(join(dir, f)).href)).default;
+    if (!p || !Array.isArray(p.aggregatorHosts)) continue;
+    for (const raw of p.aggregatorHosts) {
+      const h = norm(raw);
+      declared.add(h);
+      // Forward: a declared board host must be in DEFAULT_AGGREGATORS.
+      if (!aggSet.has(h)) { forwardOk = false; fail(`${f}: aggregatorHost "${h}" missing from scan.mjs DEFAULT_AGGREGATORS`); }
+      if (p.lastResort === true) {
+        lastDeclared.add(h);
+        // A last-resort board's hosts must also be in DEFAULT_LAST_RESORT.
+        if (!lastSet.has(h)) { lastOk = false; fail(`${f}: lastResort host "${h}" missing from scan.mjs DEFAULT_LAST_RESORT`); }
+      }
+    }
+  }
+
+  if (forwardOk && declared.size >= 7) pass(`all ${declared.size} declared board hosts are in DEFAULT_AGGREGATORS`);
+  else if (declared.size < 7) fail(`expected >= 7 board providers declaring aggregatorHosts, found ${declared.size}`);
+
+  if (lastOk && lastDeclared.size >= 1) pass(`all ${lastDeclared.size} lastResort host(s) are in DEFAULT_LAST_RESORT`);
+  else if (lastDeclared.size < 1) fail('expected >= 1 provider declaring lastResort:true (gamedevjobs)');
+
+  // Reverse: no orphan host in DEFAULT_AGGREGATORS that no provider declares
+  // (catches a host left in the list after its provider was removed/renamed).
+  const orphans = [...aggSet].filter(h => !declared.has(h));
+  if (orphans.length === 0) pass('no orphan hosts in DEFAULT_AGGREGATORS (every entry is backed by a provider)');
+  else fail(`DEFAULT_AGGREGATORS has orphan host(s) with no declaring provider: ${orphans.join(', ')}`);
+
+  // Internal consistency: last-resort ⊆ aggregators (a last-resort host still wins-
+  // against by direct postings via the aggregator gate).
+  const notAgg = [...lastSet].filter(h => !aggSet.has(h));
+  if (notAgg.length === 0) pass('DEFAULT_LAST_RESORT ⊆ DEFAULT_AGGREGATORS');
+  else fail(`DEFAULT_LAST_RESORT host(s) not in DEFAULT_AGGREGATORS: ${notAgg.join(', ')}`);
+} catch (e) {
+  fail(`aggregator-host registry tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));

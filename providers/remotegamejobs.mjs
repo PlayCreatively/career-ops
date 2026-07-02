@@ -80,6 +80,9 @@ export function parseRemoteGameJobsFeed(xml) {
 export default {
   id: 'remote-game-jobs',
 
+  // Multi-studio board — hosts must be in scan.mjs DEFAULT_AGGREGATORS (see hitmarker).
+  aggregatorHosts: ['remotegamejobs.com'],
+
   detect(entry) {
     let host;
     try {

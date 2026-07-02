@@ -123,6 +123,9 @@ function normalizeQuery(query) {
 export default {
   id: 'gamejobs-co',
 
+  // Multi-studio board — hosts must be in scan.mjs DEFAULT_AGGREGATORS (see hitmarker).
+  aggregatorHosts: ['gamejobs.co'],
+
   // Opt-in via `provider: gamejobs-co`, but also claim entries whose careers_url
   // points at gamejobs.co so a pasted board URL routes here too.
   detect(entry) {

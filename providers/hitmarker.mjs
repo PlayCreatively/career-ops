@@ -84,6 +84,12 @@ async function fetchPage(ctx, { query, filterBy, page }) {
 export default {
   id: 'hitmarker',
 
+  // This is a multi-studio BOARD that serves its own URLs, so these hosts MUST be
+  // in scan.mjs's DEFAULT_AGGREGATORS for snapshot dedup to collapse its mirrors
+  // of first-party postings. test-all.mjs section 28 enforces that link. (Direct
+  // single-company ATS providers omit this — Pass-1 posting-ID dedup covers them.)
+  aggregatorHosts: ['hitmarker.net'],
+
   // Hitmarker is opt-in via `provider: hitmarker`, but also claim entries whose
   // careers_url points at hitmarker.net so a pasted board URL routes here too.
   detect(entry) {

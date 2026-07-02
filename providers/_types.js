@@ -91,6 +91,19 @@
  * @property {string} id                                                       Unique across all loaded providers.
  * @property {((entry: PortalEntry) => (DetectHit | null))} [detect]           Optional auto-detection.
  * @property {(entry: PortalEntry, ctx: Context) => Promise<Job[]>} fetch      Required.
+ * @property {string[]} [aggregatorHosts]                                      Set ONLY by multi-studio BOARD providers
+ *                                                                             that serve their own URLs (hitmarker,
+ *                                                                             gamejobs.co, …). Every host here MUST be in
+ *                                                                             scan.mjs DEFAULT_AGGREGATORS so snapshot dedup
+ *                                                                             collapses the board's mirrors of first-party
+ *                                                                             postings; test-all.mjs section 28 enforces it.
+ *                                                                             Direct single-company ATS providers OMIT this
+ *                                                                             (Pass-1 posting-ID dedup covers them), as does
+ *                                                                             rehm (it emits each studio's real source_url).
+ * @property {boolean} [lastResort]                                            When true, aggregatorHosts must ALSO be in
+ *                                                                             scan.mjs DEFAULT_LAST_RESORT — the board hides
+ *                                                                             the source link, so any other source wins over
+ *                                                                             its mirror.
  */
 
 /**

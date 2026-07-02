@@ -249,6 +249,9 @@ export function parseGamesJobsDirectPage(html) {
 export default {
   id: 'games-jobs-direct',
 
+  // Multi-studio board — hosts must be in scan.mjs DEFAULT_AGGREGATORS (see hitmarker).
+  aggregatorHosts: ['gamesjobsdirect.com'],
+
   // Opt-in via `provider: games-jobs-direct`, but also claim entries whose
   // careers_url points at gamesjobsdirect.com so a pasted board URL routes here.
   detect(entry) {

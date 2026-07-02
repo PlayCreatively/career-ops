@@ -152,6 +152,13 @@ function normalizeQuery(query) {
 export default {
   id: 'gamedevjobs',
 
+  // Multi-studio board — hosts must be in scan.mjs DEFAULT_AGGREGATORS (see hitmarker).
+  // `lastResort` additionally requires these hosts in DEFAULT_LAST_RESORT: the apply
+  // path hides behind /login and the JSON-LD carries no direct posting link, so any
+  // other source (a direct ATS OR a normal aggregator) wins over a GameDevJobs mirror.
+  aggregatorHosts: ['gamedevjobs.com'],
+  lastResort: true,
+
   // Opt-in via `provider: gamedevjobs`, but also claim entries whose careers_url
   // points at gamedevjobs.com so a pasted board URL routes here too.
   detect(entry) {

@@ -160,6 +160,9 @@ function resolveQueries(raw) {
 export default {
   id: 'ingame-job',
 
+  // Multi-studio board — hosts must be in scan.mjs DEFAULT_AGGREGATORS (see hitmarker).
+  aggregatorHosts: ['ingamejob.com'],
+
   // Opt-in via `provider: ingame-job`, but also claim entries whose careers_url
   // points at ingamejob.com (or a regional subdomain) so a pasted board URL routes
   // here.

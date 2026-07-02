@@ -112,6 +112,9 @@ async function mapConcurrent(items, limit, worker) {
 export default {
   id: 'work-with-indies',
 
+  // Multi-studio board — hosts must be in scan.mjs DEFAULT_AGGREGATORS (see hitmarker).
+  aggregatorHosts: ['workwithindies.com'],
+
   detect(entry) {
     let host;
     try {
