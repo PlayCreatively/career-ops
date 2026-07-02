@@ -312,16 +312,21 @@ export const DEFAULT_LAST_RESORT = ['gamedevjobs.com'];
 //      effectively impossible. Aggregators are excluded here — they reassign
 //      their own IDs, so an aggregator ID would never legitimately match a real
 //      req ID.
-//   2. Title/company/location heuristic, AGGREGATOR-GATED, two tiers. Within a
-//      group of rows sharing company + title + location:
-//        a. if a direct (non-aggregator) row exists, every aggregator mirror
-//           (Hitmarker / WorkWithIndies / GameJobs.co / GameDevJobs / …) is dropped;
+//   2. Title/company heuristic, AGGREGATOR-GATED, two tiers. Rows are grouped by
+//      company + a punctuation-folded title (NOT location — aggregators serve the
+//      same posting with an empty or reformatted location, so a raw-location key
+//      would never group a mirror with its direct twin). Location is used instead
+//      as a primary-city compatibility guard inside each group. Within a group:
+//        a. if a direct (non-aggregator) row exists, each aggregator mirror
+//           (Hitmarker / WorkWithIndies / GameJobs.co / GameDevJobs / …) whose
+//           primary city is compatible with a direct row is dropped;
 //        b. otherwise, among aggregator-only rows a LAST-RESORT one (GameDevJobs —
-//           login wall, no direct link) is dropped when a normal aggregator (which
-//           links out to the source) covers the same role.
+//           login wall, no direct link) is dropped when a location-compatible
+//           normal aggregator (which links out to the source) covers the same role.
 //      Direct rows are never merged with each other, so an Epic-style pair of
-//      distinct same-title reqs is always preserved; all-normal-aggregator and
-//      all-last-resort groups are also left untouched.
+//      distinct same-title reqs is always preserved; an aggregator row in a
+//      genuinely different city, and all-normal-aggregator / all-last-resort
+//      groups, are left untouched.
 //
 // The aggregator + last-resort host lists are configurable (portals.yml →
 // snapshot_dedup.aggregators / .last_resort).
@@ -363,8 +368,27 @@ export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastRe
     stage1.push(j);
   }
 
-  // ── Pass 2: title/company/location, aggregator-gated. ─────────────────────
-  const keyOf = (j) => `${norm(j.company)}::${norm(j.title)}::${norm(j.location)}`;
+  // ── Pass 2: title/company + primary-city, aggregator-gated. ───────────────
+  // The group key is company + a PUNCTUATION-STRIPPED title, deliberately NOT the
+  // location: aggregators routinely serve an empty or reformatted location for the
+  // same posting (GameJobs.co gives none; GameDevJobs expands "København, DK" to
+  // "København, Capital Region of Denmark, DK"), so keying on the raw location
+  // string would split real mirrors into separate groups and collapse nothing.
+  // normTitle folds "(Core Tech)" / "iOS/Cross-Platform" punctuation so a mirror's
+  // reformatted title still matches the direct one.
+  const normTitle = (s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  // Location is instead used as a COMPATIBILITY guard when deciding whether a
+  // specific row is a mirror. We compare only the primary city (first comma
+  // segment) so "København, DK" ~ "København, Capital Region of Denmark, DK", and
+  // treat an empty location on EITHER side as a wildcard. Fail-safe by design: if
+  // the primary cities genuinely differ (Aarhus vs København) the rows are kept
+  // apart — we never silently drop a distinct-location posting.
+  const primaryLoc = (s) => (s || '').toLowerCase().split(',')[0].replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const locCompatible = (a, b) => {
+    const pa = primaryLoc(a), pb = primaryLoc(b);
+    return !pa || !pb || pa === pb;
+  };
+  const keyOf = (j) => `${norm(j.company)}::${normTitle(j.title)}`;
   const groups = new Map();
   const order = [];
   for (const j of stage1) {
@@ -377,26 +401,36 @@ export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastRe
   for (const k of order) {
     const arr = groups.get(k);
     const directs = arr.filter(j => !isAgg(j.url));
-    // Tier 1: a direct (first-party) posting exists → drop every aggregator mirror
-    // (normal AND last-resort). All-direct groups are left untouched (Epic guard).
-    if (directs.length && directs.length < arr.length) {
-      result.push(...directs);
-      collapsedByHeuristic += arr.length - directs.length;
-      continue;
-    }
-    if (directs.length) { result.push(...arr); continue; } // all-direct → untouched
-    // No direct posting. Tier 2: among aggregator-only rows, a normal aggregator
-    // (which links out to the source) beats a last-resort one (login wall / no
-    // direct link) → drop the last-resort mirror. All-normal or all-last-resort
-    // groups are left untouched.
-    const normalAggs = arr.filter(j => !isLastResort(j.url));
-    const lastResortRows = arr.filter(j => isLastResort(j.url));
-    if (normalAggs.length && lastResortRows.length) {
-      result.push(...normalAggs);
-      collapsedByHeuristic += lastResortRows.length;
+    const keep = new Set(arr);
+    if (directs.length) {
+      // Tier 1: a direct (first-party) posting exists → drop each aggregator mirror
+      // whose primary city is compatible with SOME direct. Directs are never merged
+      // with each other (Epic guard); an aggregator row in a genuinely different
+      // city is kept (it's a distinct posting, not a mirror).
+      for (const j of arr) {
+        if (!isAgg(j.url)) continue;
+        if (directs.some(d => locCompatible(d.location, j.location))) {
+          keep.delete(j);
+          collapsedByHeuristic++;
+        }
+      }
     } else {
-      result.push(...arr);
+      // No direct posting. Tier 2: among aggregator-only rows, a normal aggregator
+      // (which links out to the source) beats a last-resort one (login wall / no
+      // direct link) → drop each last-resort mirror covered by a location-compatible
+      // normal aggregator. All-normal or all-last-resort groups are left untouched.
+      const normalAggs = arr.filter(j => !isLastResort(j.url));
+      if (normalAggs.length) {
+        for (const j of arr) {
+          if (!isLastResort(j.url)) continue;
+          if (normalAggs.some(n => locCompatible(n.location, j.location))) {
+            keep.delete(j);
+            collapsedByHeuristic++;
+          }
+        }
+      }
     }
+    result.push(...arr.filter(j => keep.has(j)));
   }
   return {
     jobs: result,

@@ -1849,6 +1849,47 @@ try {
   } else {
     fail('empty aggregator/last-resort lists should leave aggregator mirrors in place');
   }
+
+  // Real-world mirrors don't share a byte-identical location OR title: GameJobs.co
+  // serves an EMPTY location and strips punctuation ("(Core Tech)" → "Core Tech");
+  // GameDevJobs EXPANDS the city ("København, DK" → "København, Capital Region…").
+  // Pass 2 must still collapse them against the direct posting (title punctuation
+  // folded, primary-city compatible), while keeping an aggregator-only role that
+  // has no direct twin AND an aggregator row in a genuinely different city.
+  const messy = [
+    { title: 'Unity Tools Developer (Core Tech)', company: 'Triband', location: 'København, DK', url: 'https://careers.triband.net/jobs/7909263-unity-tools-developer-core-tech' },
+    { title: 'Unity Tools Developer Core Tech', company: 'Triband', location: '', url: 'https://gamejobs.co/Unity-Tools-Developer-Core-Tech-at-Triband' },
+    { title: 'Unity Tools Developer (Core Tech)', company: 'Triband', location: 'København, Capital Region of Denmark, DK', url: 'https://gamedevjobs.com/jobs/unity-tools-developer-core-tech-e1a1d239' },
+    { title: 'iOS/Cross-Platform Programmer', company: 'Triband', location: 'København, DK', url: 'https://careers.triband.net/jobs/7776227-ios-cross-platform-programmer' },
+    { title: 'iOS Cross Platform Programmer', company: 'Triband', location: '', url: 'https://gamejobs.co/iOS-Cross-Platform-Programmer-at-Triband' },
+    // Aggregator-only role (no direct twin) → kept.
+    { title: 'Capture Artist', company: 'Triband', location: '', url: 'https://gamejobs.co/Capture-Artist-at-Triband' },
+    // Same company + title as a direct posting but a DIFFERENT primary city → this
+    // is a distinct posting, not a mirror; the location guard must keep it.
+    { title: 'Senior Game Programmer', company: 'Triband', location: 'København, DK', url: 'https://careers.triband.net/jobs/7853335-senior-game-programmer' },
+    { title: 'Senior Game Programmer', company: 'Triband', location: 'Malmö, SE', url: 'https://gamejobs.co/Senior-Game-Programmer-at-Triband-Malmo' },
+  ];
+  const { jobs: mout, collapsedByHeuristic: mh } = dedupeSnapshot(messy);
+  const mkeep = (needle) => mout.filter(j => j.url.includes(needle)).length;
+  if (mh === 3) pass('messy mirrors: 3 collapsed (empty-loc + punctuation title, expanded city)');
+  else fail(`expected 3 messy mirrors collapsed, got ${mh}`);
+  if (mkeep('gamejobs.co/Unity') === 0 && mkeep('gamedevjobs.com/jobs/unity') === 0 && mkeep('careers.triband.net/jobs/7909263') === 1) {
+    pass('empty-loc + expanded-city mirrors of a direct posting are dropped despite title/location mismatch');
+  } else {
+    fail('Unity Tools mirrors should collapse to the single direct row');
+  }
+  if (mkeep('gamejobs.co/iOS') === 0 && mkeep('careers.triband.net/jobs/7776227') === 1) {
+    pass('punctuation-folded title ("iOS/Cross-Platform" ~ "iOS Cross Platform") collapses the mirror');
+  } else {
+    fail('iOS mirror should collapse against the direct row');
+  }
+  if (mkeep('Capture-Artist') === 1) pass('aggregator-only role (no direct twin) is kept');
+  else fail('Capture Artist has no direct twin and must survive');
+  if (mkeep('Senior-Game-Programmer-at-Triband-Malmo') === 1) {
+    pass('fail-safe: aggregator row in a different primary city is NOT dropped (distinct posting)');
+  } else {
+    fail('a different-city aggregator row must be kept — location guard prevents a silent drop');
+  }
 } catch (e) {
   fail(`snapshot dedup tests crashed: ${e.message}`);
 }
