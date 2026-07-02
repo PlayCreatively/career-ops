@@ -282,6 +282,25 @@ export function postingId(url) {
   return m ? m[1] : null;
 }
 
+// Aggregator boards: one tracked entry surfaces jobs across MANY studios (vs a
+// per-company ATS feed). Two consequences, both keyed off this list: a direct
+// first-party posting wins over an aggregator mirror in the snapshot dedup, and
+// the employer blocklist / company-resolution steps are gated to these hosts so
+// they can't touch a curated single-studio feed.
+export const DEFAULT_AGGREGATORS = [
+  'hitmarker.net', 'workwithindies.com', 'remotegamejobs.com',
+  'gamesjobsdirect.com', 'ingamejob.com', 'gamejobs.co', 'gamedevjobs.com',
+];
+
+// Last-resort aggregators — a strict sub-tier of the above. These route the actual
+// application behind a login wall / expose NO usable direct link to the source
+// posting, so a duplicate from ANY other source (a direct ATS *or* a normal
+// aggregator that does link out) wins over them. GameDevJobs.com gates /jobs/*/apply
+// behind /login and its JSON-LD carries only the careers ROOT, never the posting;
+// GameJobs.co, by contrast, embeds the real source URL (e.g. boards.greenhouse.io/…)
+// so it stays a normal aggregator.
+export const DEFAULT_LAST_RESORT = ['gamedevjobs.com'];
+
 // Collapse duplicate postings in the board snapshot. The same role is sometimes
 // discovered through two sources, producing two rows with different URLs. Two
 // independent, conservative passes — neither ever merges two genuinely distinct
@@ -293,20 +312,31 @@ export function postingId(url) {
 //      effectively impossible. Aggregators are excluded here — they reassign
 //      their own IDs, so an aggregator ID would never legitimately match a real
 //      req ID.
-//   2. Title/company/location heuristic, AGGREGATOR-GATED. Within a group of rows
-//      sharing company + title + location, an aggregator row (Hitmarker /
-//      WorkWithIndies) is dropped ONLY when a direct (non-aggregator) row for the
-//      same role also exists. Direct rows are never merged with each other, so an
-//      Epic-style pair of distinct same-title reqs is always preserved.
+//   2. Title/company/location heuristic, AGGREGATOR-GATED, two tiers. Within a
+//      group of rows sharing company + title + location:
+//        a. if a direct (non-aggregator) row exists, every aggregator mirror
+//           (Hitmarker / WorkWithIndies / GameJobs.co / GameDevJobs / …) is dropped;
+//        b. otherwise, among aggregator-only rows a LAST-RESORT one (GameDevJobs —
+//           login wall, no direct link) is dropped when a normal aggregator (which
+//           links out to the source) covers the same role.
+//      Direct rows are never merged with each other, so an Epic-style pair of
+//      distinct same-title reqs is always preserved; all-normal-aggregator and
+//      all-last-resort groups are also left untouched.
 //
-// The aggregator host list is configurable (portals.yml → snapshot_dedup).
-export function dedupeSnapshot(jobs, { aggregators = ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com', 'gamesjobsdirect.com', 'ingamejob.com'] } = {}) {
+// The aggregator + last-resort host lists are configurable (portals.yml →
+// snapshot_dedup.aggregators / .last_resort).
+export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastResort = DEFAULT_LAST_RESORT } = {}) {
   const aggs = aggregators.map(a => String(a).toLowerCase());
+  // Last-resort hosts are always treated as aggregators too (so a direct posting
+  // still wins over them), even if the caller left them out of `aggregators`.
+  const lasts = lastResort.map(a => String(a).toLowerCase());
   const hostOf = (u) => {
     try { return new URL(u).hostname.replace(/^www\./, '').toLowerCase(); }
     catch { return ''; }
   };
-  const isAgg = (u) => { const h = hostOf(u); return aggs.some(a => h === a || h.endsWith('.' + a)); };
+  const matchHost = (list, h) => list.some(a => h === a || h.endsWith('.' + a));
+  const isAgg = (u) => { const h = hostOf(u); return matchHost(aggs, h) || matchHost(lasts, h); };
+  const isLastResort = (u) => matchHost(lasts, hostOf(u));
   const norm = (s) => (s || '').toLowerCase();
 
   // ── Pass 1: company + posting ID. Aggregators get no ID (null) so they never
@@ -347,12 +377,23 @@ export function dedupeSnapshot(jobs, { aggregators = ['hitmarker.net', 'workwith
   for (const k of order) {
     const arr = groups.get(k);
     const directs = arr.filter(j => !isAgg(j.url));
-    const aggsIn = arr.filter(j => isAgg(j.url));
-    // Drop aggregator mirror(s) only when the same role exists as a direct posting.
-    // All-direct or all-aggregator groups are left untouched.
-    if (aggsIn.length && directs.length) {
+    // Tier 1: a direct (first-party) posting exists → drop every aggregator mirror
+    // (normal AND last-resort). All-direct groups are left untouched (Epic guard).
+    if (directs.length && directs.length < arr.length) {
       result.push(...directs);
-      collapsedByHeuristic += aggsIn.length;
+      collapsedByHeuristic += arr.length - directs.length;
+      continue;
+    }
+    if (directs.length) { result.push(...arr); continue; } // all-direct → untouched
+    // No direct posting. Tier 2: among aggregator-only rows, a normal aggregator
+    // (which links out to the source) beats a last-resort one (login wall / no
+    // direct link) → drop the last-resort mirror. All-normal or all-last-resort
+    // groups are left untouched.
+    const normalAggs = arr.filter(j => !isLastResort(j.url));
+    const lastResortRows = arr.filter(j => isLastResort(j.url));
+    if (normalAggs.length && lastResortRows.length) {
+      result.push(...normalAggs);
+      collapsedByHeuristic += lastResortRows.length;
     } else {
       result.push(...arr);
     }
@@ -669,7 +710,7 @@ async function main() {
   // so it also resolves jobs surfaced via aggregators (whose `company` is the
   // real studio). Aggregator entries are skipped — their careers_url points at
   // the aggregator, not a studio.
-  const AGG_HOSTS = ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com', 'gamesjobsdirect.com', 'ingamejob.com'];
+  const AGG_HOSTS = DEFAULT_AGGREGATORS;
   // When an entry carries a job_url_template, its hosted ATS board is dead (that's
   // the whole reason for the template — see providers/ashby.mjs, Supercell). The
   // careers_url then 404s, so DON'T link the studio label to it. Derive the live
@@ -963,7 +1004,8 @@ async function main() {
     let snapJobs = snapshot;
     if (dedupCfg.enabled !== false) {
       const { jobs: deduped, collapsed, collapsedById, collapsedByHeuristic } = dedupeSnapshot(snapshot, {
-        aggregators: dedupCfg.aggregators || ['hitmarker.net', 'workwithindies.com', 'remotegamejobs.com', 'gamesjobsdirect.com', 'ingamejob.com'],
+        aggregators: dedupCfg.aggregators || DEFAULT_AGGREGATORS,
+        lastResort: dedupCfg.last_resort || dedupCfg.lastResort || DEFAULT_LAST_RESORT,
       });
       snapJobs = deduped;
       if (collapsed > 0) {

@@ -1780,6 +1780,16 @@ try {
     // Remote Game Jobs aggregator mirror of a direct posting → drop the aggregator row.
     { title: '2D Animator', company: 'Pine Creek Games', location: 'Remote', url: 'https://pinecreekgames.teamtailor.com/jobs/9001-2d-animator' },
     { title: '2D Animator', company: 'Pine Creek Games', location: 'Remote', url: 'https://remotegamejobs.com/jobs/pine-creek-games-2d-animator-remote-job' },
+    // Last-resort demotion: GameDevJobs (login wall, no direct link) mirrors a
+    // NORMAL aggregator (GameJobs.co, which links out) with no direct twin → drop
+    // the GameDevJobs row, keep the GameJobs.co one.
+    { title: 'Gameplay Programmer', company: 'Triband', location: 'Copenhagen, DK', url: 'https://gamejobs.co/Gameplay-Programmer-at-Triband' },
+    { title: 'Gameplay Programmer', company: 'Triband', location: 'Copenhagen, DK', url: 'https://gamedevjobs.com/jobs/gameplay-programmer-abcd1234' },
+    // GameDevJobs mirror of a DIRECT posting → dropped by tier 1 like any aggregator.
+    { title: 'Tools Programmer', company: 'Sharkmob', location: 'Malmö, SE', url: 'https://sharkmob.teamtailor.com/jobs/5551-tools-programmer' },
+    { title: 'Tools Programmer', company: 'Sharkmob', location: 'Malmö, SE', url: 'https://gamedevjobs.com/jobs/tools-programmer-99887766' },
+    // All-last-resort group (only GameDevJobs) → untouched (nothing better exists).
+    { title: 'QA Tester', company: 'Indie Co', location: 'Remote', url: 'https://gamedevjobs.com/jobs/qa-tester-11112222' },
     // Two DISTINCT reqs: same title/company/location, different IDs, both direct,
     // no aggregator → keep BOTH (the Epic false-positive guard).
     { title: 'Gameplay Programmer', company: 'Epic Games', location: 'Cary, NC, USA', url: 'https://epicgames.com/careers/jobs/6001690004?gh_jid=6001690004' },
@@ -1793,11 +1803,11 @@ try {
   if (collapsedById === 1) pass('pass 1 collapses one same-company+ID mirror (across hosts, differing location)');
   else fail(`expected 1 collapsed by ID, got ${collapsedById}`);
 
-  if (collapsedByHeuristic === 2) pass('pass 2 drops two aggregator mirrors (Hitmarker + Remote Game Jobs) that have direct twins');
-  else fail(`expected 2 collapsed by heuristic, got ${collapsedByHeuristic}`);
+  if (collapsedByHeuristic === 4) pass('pass 2 drops four mirrors (Hitmarker + Remote Game Jobs direct-twins, GameDevJobs vs direct + vs normal aggregator)');
+  else fail(`expected 4 collapsed by heuristic, got ${collapsedByHeuristic}`);
 
-  if (collapsed === 3 && out.length === 6) pass('total: 9 → 6 (one ID dupe + two aggregator mirrors removed)');
-  else fail(`expected 6 jobs out (collapsed 3), got ${out.length} (collapsed ${collapsed})`);
+  if (collapsed === 5 && out.length === 9) pass('total: 14 → 9 (one ID dupe + four aggregator/last-resort mirrors removed)');
+  else fail(`expected 9 jobs out (collapsed 5), got ${out.length} (collapsed ${collapsed})`);
 
   const riot = out.filter(j => j.company === 'Riot Games');
   if (riot.length === 1 && riot[0].url.includes('riotgames.com')) pass('aggregator pass keeps the direct URL, drops Hitmarker');
@@ -1806,6 +1816,21 @@ try {
   const pine = out.filter(j => j.company === 'Pine Creek Games');
   if (pine.length === 1 && pine[0].url.includes('teamtailor.com')) pass('aggregator pass keeps the direct URL, drops Remote Game Jobs mirror');
   else fail('aggregator pass should keep the direct Pine Creek URL, drop the remotegamejobs.com mirror');
+
+  // Last-resort tier: GameDevJobs loses to a normal aggregator (no direct twin).
+  const triband = out.filter(j => j.company === 'Triband');
+  if (triband.length === 1 && triband[0].url.includes('gamejobs.co')) pass('last-resort: GameDevJobs dropped in favour of GameJobs.co (which links out)');
+  else fail(`Triband should keep only the GameJobs.co row, got ${JSON.stringify(triband.map(j => j.url))}`);
+
+  // Tier 1 still applies to GameDevJobs like any aggregator: direct twin wins.
+  const shark = out.filter(j => j.company === 'Sharkmob');
+  if (shark.length === 1 && shark[0].url.includes('teamtailor.com')) pass('GameDevJobs mirror of a direct posting is dropped by tier 1');
+  else fail(`Sharkmob should keep only the direct row, got ${JSON.stringify(shark.map(j => j.url))}`);
+
+  // All-last-resort group: nothing better exists → keep it (never silently dropped).
+  const indie = out.filter(j => j.company === 'Indie Co');
+  if (indie.length === 1) pass('all-last-resort group left untouched (GameDevJobs-only role survives)');
+  else fail(`Indie Co GameDevJobs-only role should survive, got ${indie.length}`);
 
   const epic = out.filter(j => j.company === 'Epic Games');
   if (epic.length === 2) pass('two distinct direct reqs are never merged (Epic false-positive guard)');
@@ -1818,11 +1843,11 @@ try {
   // Configurable aggregator list: flag Teamtailor's parent-group domain instead.
   // With the ID pass already collapsing Sandbox, prove the aggregator list is read
   // by making WorkWithIndies a no-op default still removes Hitmarker.
-  const { jobs: out2, collapsedByHeuristic: h2 } = dedupeSnapshot(jobs, { aggregators: [] });
+  const { jobs: out2, collapsedByHeuristic: h2 } = dedupeSnapshot(jobs, { aggregators: [], lastResort: [] });
   if (h2 === 0 && out2.filter(j => j.url.includes('hitmarker.net')).length === 1) {
-    pass('empty aggregator list disables pass 2 (Hitmarker mirror retained)');
+    pass('empty aggregator + last-resort lists disable pass 2 (Hitmarker mirror retained)');
   } else {
-    fail('empty aggregator list should leave aggregator mirrors in place');
+    fail('empty aggregator/last-resort lists should leave aggregator mirrors in place');
   }
 } catch (e) {
   fail(`snapshot dedup tests crashed: ${e.message}`);
