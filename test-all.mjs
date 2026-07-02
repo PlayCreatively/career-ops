@@ -3098,6 +3098,74 @@ try {
   fail(`huntflow provider tests crashed: ${e.message}`);
 }
 
+// ── Provider — gamejobs.co (sitemap slug-parse + JSON-LD enrichment) ─
+
+console.log('\n26. Provider — gamejobs-co sitemap + JSON-LD');
+
+try {
+  const { jobFromSlug, parseSitemapJobs, parseJobPostingLd } =
+    await import(pathToFileURL(join(ROOT, 'providers/gamejobs.mjs')).href);
+
+  // Slug parse: split on the LAST "-at-", strip a trailing "-{n}" dedup suffix,
+  // hyphens → spaces. No "-at-" → whole slug is the title, empty company.
+  const s1 = jobFromSlug('https://gamejobs.co/Senior-Producer-at-Triband');
+  const s2 = jobFromSlug('https://gamejobs.co/Product-Manager-at-MobilityWare-5431');
+  const s3 = jobFromSlug('https://gamejobs.co/Just-A-Title');
+  if (s1.title === 'Senior Producer' && s1.company === 'Triband' &&
+      s2.title === 'Product Manager' && s2.company === 'MobilityWare' &&
+      s3.title === 'Just A Title' && s3.company === '') {
+    pass('jobFromSlug splits on last -at-, strips dedup suffix, fails safe with no -at-');
+  } else {
+    fail(`jobFromSlug = ${JSON.stringify([s1, s2, s3])}`);
+  }
+
+  // Sitemap: keep only "-at-" job URLs (skip homepage + nested sitemaps), dedupe.
+  const xml = `<?xml version="1.0"?><urlset>
+    <url><loc>https://gamejobs.co</loc></url>
+    <url><loc>https://gamejobs.co/Tools-Programmer-at-Studio-X</loc></url>
+    <url><loc>https://gamejobs.co/Tools-Programmer-at-Studio-X</loc></url>
+    <url><loc>https://gamejobs.co/sitemap-2.xml</loc></url>
+  </urlset>`;
+  const sm = parseSitemapJobs(xml);
+  if (sm.length === 1 && sm[0].company === 'Studio X' &&
+      parseSitemapJobs('').length === 0 && parseSitemapJobs(null).length === 0) {
+    pass('parseSitemapJobs keeps -at- URLs, drops homepage/nested-sitemap, dedupes, fails safe');
+  } else {
+    fail(`parseSitemapJobs = ${JSON.stringify(sm)}`);
+  }
+
+  // JSON-LD: pick the JobPosting (even inside @graph), map org/location/date, and
+  // read a TELECOMMUTE flag as remote. address may be a string or PostalAddress.
+  const html = `<html><head>
+    <script type="application/ld+json">{"@type":"BreadcrumbList"}</script>
+    <script type="application/ld+json">{"@graph":[{"@type":"JobPosting",
+      "title":"Unity Tools Developer (Core Tech)",
+      "datePosted":"2026-06-23T10:58:13Z",
+      "hiringOrganization":{"@type":"Organization","name":"Triband"},
+      "jobLocation":{"@type":"Place","address":{"addressLocality":"Copenhagen","addressCountry":"DK"}},
+      "jobLocationType":"TELECOMMUTE"}]}</script>
+  </head></html>`;
+  const ld = parseJobPostingLd(html);
+  if (ld && ld.title === 'Unity Tools Developer (Core Tech)' && ld.company === 'Triband' &&
+      ld.location === 'Copenhagen, DK' && ld.workMode === 'remote' &&
+      ld.postedDate === '2026-06-23T10:58:13.000Z') {
+    pass('parseJobPostingLd reads JobPosting from @graph, maps org/address/date, TELECOMMUTE→remote');
+  } else {
+    fail(`parseJobPostingLd = ${JSON.stringify(ld)}`);
+  }
+
+  // Fail-safe: no JobPosting / unparseable / missing input → null, never throws.
+  if (parseJobPostingLd('<script type="application/ld+json">not json</script>') === null &&
+      parseJobPostingLd('<html>no ld</html>') === null &&
+      parseJobPostingLd('') === null && parseJobPostingLd(null) === null) {
+    pass('parseJobPostingLd returns null on missing/invalid/non-JobPosting input (fail-safe)');
+  } else {
+    fail('parseJobPostingLd should return null on bad input');
+  }
+} catch (e) {
+  fail(`gamejobs-co provider tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));

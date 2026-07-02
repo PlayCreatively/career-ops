@@ -178,6 +178,24 @@ tracked_companies:
     # host: ingamejob.com     # global default; set a regional subdomain to localise
     # pages: 10               # page cap (default: walk to empty, hard cap 50)
 
+  - name: GameJobs.co
+    provider: gamejobs-co
+    # Global games board (~6,700 postings). No feed/API, but a complete sitemap.xml
+    # gives title+company for every job with zero per-job fetches; we then enrich
+    # location + posted date from each posting's JSON-LD. See providers/gamejobs.mjs.
+    # This is exactly the broad aggregator that catches the long tail of studios we
+    # haven't wired first-party (Triband slipped through precisely because it wasn't
+    # in this file yet). Enrichment is capped (max_enrich) and fail-safe.
+    notes: "Global games aggregator. Sitemap-backed + JSON-LD enrichment. See providers/gamejobs.mjs."
+    enabled: true
+    # No source-level scoping by default: the whole board reaches your normal
+    # targeting filter (portals.yml), the one place that decides what's kept. To
+    # pre-scope (and bound enrichment to your roles) add a `query:` keyword list,
+    # e.g. query: ["gameplay", "tools", "unity", "junior", "designer"].
+    # max_enrich: 500          # cap per-run enrichment fetches (default 500)
+    # enrich_concurrency: 6    # parallel detail fetches (default 6)
+    # enrich: false            # slug-only, single request, no location/date
+
   - name: Rehm — uncovered ATS (games)
     provider: rehm
     # alexanderrehm.com curated games board (jobs.json). Scoped by DEFAULT to the
@@ -368,6 +386,12 @@ tracked_companies:
     provider: teamtailor
     careers_url: https://career.sharkmob.com
     notes: "Malmö / London. Exoborne, The Division devs."
+    enabled: true
+
+  - name: Triband
+    provider: teamtailor
+    careers_url: https://careers.triband.net
+    notes: "Copenhagen. WHAT THE GOLF? / WHAT THE CAR? / WHAT THE BAT? — ~30-person Unity comedy-games studio, no-crunch, in-editor hands-on. Roles ONLY on own Teamtailor site (not syndicated to Hitmarker/WWI). Clean games-only feed at careers.triband.net/jobs.json, no scoping needed."
     enabled: true
 
   - name: Coffee Stain
