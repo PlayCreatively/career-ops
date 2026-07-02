@@ -407,6 +407,10 @@
   td.role .dept { display: block; margin-top: 2px; color: var(--dim); font-size: 12px;
     line-height: 16px; }
   td.role .dept::before { content: "· "; }
+  /* Experience level chip — sits inline after the role title. */
+  td.role .explevel { display: inline-block; margin-left: 6px; padding: 0 6px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--chip);
+    color: var(--dim); font-size: 11px; line-height: 16px; vertical-align: middle; }
   /* Keep the dept in normal flow (so it reserves space and never spills into the
      row below), but balance it with an equal spacer above the title. The title
      then sits centred on the row's middle line instead of being pushed up. The
@@ -949,8 +953,13 @@ function prep(jobs) {
       postedDate: j.postedDate || "",
       workMode: j.workMode || "",   // 'anywhere' | 'remote' | 'hybrid' | 'onsite' | ''
       department: j.department || "",
+      // Source's own experience/seniority label (e.g. games-jobs-direct's
+      // "Junior-Associate"). Read by Rank.matchGroup via fieldText('experiencelevel'),
+      // so it MUST be carried here — the ranker scores these normalized objects,
+      // not the raw jobs. Dropping it silently reverts the Level group to title-only.
+      experienceLevel: j.experienceLevel || "",
       _posted: j.postedDate ? (Date.parse(j.postedDate) || 0) : 0,
-      _search: (title + " " + co + " " + loc + " " + (j.department || "")).toLowerCase(),
+      _search: (title + " " + co + " " + loc + " " + (j.department || "") + " " + (j.experienceLevel || "")).toLowerCase(),
       _mem: {},      // groupId -> [filterId,...] of VISIBLE (non-muted) matches
       _memFull: {},  // groupId -> [filterId,...] ignoring mute — for pill counts
     };
@@ -1270,6 +1279,10 @@ function render() {
       : coHl;
     // Department as a dim subtitle under the role title (only when known).
     var deptLine = j.department ? '<span class="dept">' + highlightCell(j.department, "department", j) + '</span>' : '';
+    // Experience level as a small chip after the title (only when the source
+    // exposes it — e.g. games-jobs-direct's "Junior-Associate"). Highlighted so
+    // it lights up when the active Level filter matched on it.
+    var expChip = j.experienceLevel ? ' <span class="explevel">' + highlightCell(j.experienceLevel, "experiencelevel", j) + '</span>' : '';
     // Work mode as a badge on its OWN line below the location text: 🌐 Anywhere /
     // 🏠 Remote / ⇄ Hybrid; onsite and unknown show no badge. The location string
     // is now place-only (work-mode tokens stripped during the scan), so no dup.
@@ -1280,7 +1293,7 @@ function render() {
     tr.innerHTML =
       '<td class="fit" style="color:' + fitColor(j._final) + '">' + acts + '<span class="fitval">' + j._final.toFixed(2) + '</span></td>' +
       '<td class="co">' + coCell + '</td>' +
-      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener" draggable="false">' + highlightCell(j.title, "title", j) + '</a>' + deptLine + '</td>' +
+      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener" draggable="false">' + highlightCell(j.title, "title", j) + '</a>' + expChip + deptLine + '</td>' +
       '<td class="loc">' + locCell + '</td>' +
       '<td class="tags"><div class="tagwrap">' + tags + '</div></td>' +
       '<td class="posted">' + postedCell(j.postedDate) + '</td>';
