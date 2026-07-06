@@ -58,16 +58,19 @@ function resolveTenant(entry) {
 export function mapComeetPositions(positions, companyName) {
   if (!Array.isArray(positions)) return [];
   const out = [];
-  const seen = new Set();
+  // A position linked to multiple locations is emitted once per location: the
+  // canonical base record with uid `<base>` plus per-location variants uid
+  // `<base>-<locUid>` (e.g. "A7.96E" + "A7.96E-96.508", same "Game Level
+  // Designer"). Comeet uids are dot-joined hex groups; the `-` only ever joins a
+  // location suffix, so the base uid is everything before the first `-`. Dedup on
+  // that base, and let the canonical base record win over a location variant.
+  const baseUid = (uid) => String(uid).split('-')[0];
+  const seen = new Map(); // baseUid -> index in `out`
   for (const rec of positions) {
     if (!rec || typeof rec !== 'object') continue;
     const title = typeof rec.name === 'string' ? rec.name.trim() : '';
     const url = rec.url_comeet_hosted_page || rec.url_active_page || rec.position_url || '';
     if (!title || !url) continue;
-    if (rec.uid != null) {
-      if (seen.has(rec.uid)) continue;
-      seen.add(rec.uid);
-    }
 
     const loc = rec.location && typeof rec.location === 'object' ? rec.location : null;
     const location = loc && typeof loc.name === 'string' ? loc.name.trim() : '';
@@ -79,7 +82,7 @@ export function mapComeetPositions(positions, companyName) {
     const postedDate = toIsoDate(rec.time_updated);
     const department = typeof rec.department === 'string' ? rec.department.trim() : '';
 
-    out.push({
+    const job = {
       title,
       url,
       company: companyName,
@@ -87,7 +90,21 @@ export function mapComeetPositions(positions, companyName) {
       ...(postedDate ? { postedDate } : {}),
       ...(workMode ? { workMode } : {}),
       ...(department ? { department } : {}),
-    });
+    };
+
+    if (rec.uid == null) {
+      out.push(job); // no uid to key on — never drop, it can't be proven a dupe
+      continue;
+    }
+    const base = baseUid(rec.uid);
+    if (!seen.has(base)) {
+      seen.set(base, out.length);
+      out.push(job);
+      continue;
+    }
+    // Already have this base. Keep the canonical base record (uid === base) over a
+    // location-suffixed variant; otherwise the first-seen one stays.
+    if (rec.uid === base) out[seen.get(base)] = job;
   }
   return out;
 }

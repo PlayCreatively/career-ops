@@ -3350,6 +3350,58 @@ try {
   fail(`aggregator-host registry tests crashed: ${e.message}`);
 }
 
+// ── Provider — comeet (location-variant collapse) ───────────────
+// Comeet emits a position once per LINKED location: the canonical base record
+// (uid "<base>") plus per-location variants (uid "<base>-<locUid>") that reuse
+// the same title. Both are first-party rows, so scan.mjs's aggregator-gated
+// dedup deliberately won't merge them (Epic guard) — the collapse HAS to happen
+// in the provider, on the base uid. This guards the exact CrazyLabs "Game Level
+// Designer" x2 dupe that motivated it.
+
+console.log('\n29. Provider — comeet base-uid dedup');
+
+try {
+  const { mapComeetPositions } = await import(pathToFileURL(join(ROOT, 'providers/comeet.mjs')).href);
+
+  const positions = [
+    // Same posting, two linked locations → collapse to one, canonical base wins.
+    { uid: 'A7.96E', name: 'Game Level Designer', location: { name: 'Remote', is_remote: true }, url_comeet_hosted_page: 'https://www.comeet.com/jobs/x/32.00E/game-level-designer/A7.96E' },
+    { uid: 'A7.96E-96.508', name: 'Game Level Designer', location: { name: 'Remote Europe', is_remote: true }, url_comeet_hosted_page: 'https://www.comeet.com/jobs/x/32.00E/game-level-designer/A7.96E-96.508' },
+    // Distinct base uids with the same title are genuinely separate reqs → kept.
+    { uid: 'A7.B69', name: 'Motion Designer', location: { name: 'Remote' }, url_comeet_hosted_page: 'https://www.comeet.com/jobs/x/32.00E/motion/A7.B69' },
+    { uid: 'E9.B61', name: 'Motion Designer', location: { name: 'Skopje' }, url_comeet_hosted_page: 'https://www.comeet.com/jobs/x/32.00E/motion/E9.B61' },
+  ];
+  const mapped = mapComeetPositions(positions, 'CrazyLabs');
+  const gld = mapped.filter(j => j.title === 'Game Level Designer');
+  const motion = mapped.filter(j => j.title === 'Motion Designer');
+  if (mapped.length === 3 &&
+      gld.length === 1 && gld[0].url.endsWith('/A7.96E') && gld[0].location === 'Remote' &&
+      motion.length === 2) {
+    pass('mapComeetPositions collapses base+location-variant, keeps distinct base uids and the canonical row');
+  } else {
+    fail(`comeet dedup = ${JSON.stringify(mapped)}`);
+  }
+
+  // Variant-first ordering: a suffixed row seen before its base still yields the
+  // canonical base once it appears. Records without a uid are never dropped.
+  const reordered = mapComeetPositions([
+    { uid: 'C3.369-96.508', name: 'Senior Game Designer', location: { name: 'Remote Europe' }, url_comeet_hosted_page: 'https://c/Senior/C3.369-96.508' },
+    { uid: 'C3.369', name: 'Senior Game Designer', location: { name: 'Remote' }, url_comeet_hosted_page: 'https://c/Senior/C3.369' },
+    { name: 'No UID Role', location: { name: 'Remote' }, url_comeet_hosted_page: 'https://c/nouid' },
+  ], 'CrazyLabs');
+  if (reordered.length === 2 &&
+      reordered.some(j => j.title === 'Senior Game Designer' && j.url.endsWith('/C3.369')) &&
+      !reordered.some(j => j.url.endsWith('-96.508')) &&
+      reordered.some(j => j.title === 'No UID Role') &&
+      mapComeetPositions(null, 'X').length === 0) {
+    pass('mapComeetPositions prefers canonical base regardless of order, keeps uid-less rows, fails safe');
+  } else {
+    fail(`comeet reorder dedup = ${JSON.stringify(reordered)}`);
+  }
+} catch (e) {
+  fail(`comeet provider tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));
