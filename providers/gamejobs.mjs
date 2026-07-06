@@ -159,10 +159,11 @@ export default {
       : all;
   },
 
-  // Detail runs on EVERY scan (not just --enrich): the slug gives only a rough
-  // title/company, so the JSON-LD overlay is what makes rows accurate. Bounded by
-  // max_enrich (default 500) with detailConcurrency parallel fetches.
-  detailDefault: true,
+  // PAID detail (a real per-page fetch): the sitemap gives only a rough
+  // slug-derived title/company, so the JSON-LD overlay is what makes rows
+  // accurate. Runs by default (--extra-fetch on); --no-extra-fetch falls back to
+  // the slug basics. Bounded by max_enrich (default 500) with detailConcurrency
+  // parallel fetches.
   detailConcurrency: DEFAULT_ENRICH_CONCURRENCY,
 
   // Fetch one posting page and read its schema.org JobPosting. `overlay` carries the

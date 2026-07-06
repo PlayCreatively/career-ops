@@ -3539,26 +3539,29 @@ try {
   fail(`rippling provider tests crashed: ${e.message}`);
 }
 
-// ── Phase-2 detail pass (enrichJobs) ────────────────────────────
-// The framework detail phase must: run only when detail is wanted (--enrich OR a
-// detailDefault provider), apply the provider `overlay` (core fields) + run
-// cross-cutting enrichers on the detail, isolate per-job failures (keep the job,
-// lose only its detail), and run the provider's optional postFetch afterwards.
+// ── Detail pass: FREE inline + PAID fetch (enrichJobs) ──────────
+// The framework detail phase must: process FREE inline detail (attached to
+// job[DETAIL] during fetch) on EVERY scan regardless of the flag; run the PAID
+// per-job fetchDetail only when --extra-fetch is on (the default); apply the
+// provider `overlay` (core fields) + run cross-cutting enrichers on the detail;
+// isolate per-job PAID failures (keep the job, lose only its detail); run the
+// provider's optional postFetch; and let entry.enrich:false disable both tiers.
 
-console.log('\n32. Framework — enrichJobs two-phase detail pass');
+console.log('\n32. Framework — enrichJobs FREE inline + PAID fetch detail');
 
 try {
   const { enrichJobs } = await import(pathToFileURL(join(ROOT, 'scan.mjs')).href);
+  const { attachDetail } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
   const enrichers = [{
     id: 'sponsorship', needs: 'text',
     enrich: (d) => (/unable to provide visa sponsorship/i.test(d.text) ? { sponsorship: 'none' } : null),
   }];
 
-  // A detailDefault provider: overlays company/location from detail, exposes text
-  // for the enricher, throws on one job (isolated), and merges via postFetch.
+  // A PAID provider (real per-job fetch): overlays company/location from detail,
+  // exposes text for the enricher, throws on one job (isolated), merges via
+  // postFetch. Runs because extraFetch is on.
   const provider = {
     id: 'fake',
-    detailDefault: true,
     async fetchDetail(job) {
       if (job.url.endsWith('/boom')) throw new Error('429 throttled');
       if (job.url.endsWith('/plain')) return { overlay: { company: 'Acme' }, text: 'nothing here' };
@@ -3572,7 +3575,7 @@ try {
     { title: 'DROP ME', url: 'https://x/c', company: '', location: '' },
     { title: 'C', url: 'https://x/boom', company: '', location: '' },
   ];
-  const res = await enrichJobs(jobs, provider, {}, {}, enrichers, { enrichEnabled: false });
+  const res = await enrichJobs(jobs, provider, {}, {}, enrichers, { extraFetch: true });
   const a = res.jobs.find((j) => j.title === 'A');
   const b = res.jobs.find((j) => j.title === 'B');
   const c = res.jobs.find((j) => j.title === 'C');
@@ -3581,27 +3584,82 @@ try {
       b.company === 'Acme' && b.sponsorship === undefined &&
       c.company === '' && c.sponsorship === undefined &&
       !res.jobs.some((j) => j.title === 'DROP ME')) {
-    pass('enrichJobs applies overlay + enrichers, isolates failures (keeps job), runs postFetch');
+    pass('enrichJobs applies overlay + enrichers, isolates PAID failures (keeps job), runs postFetch');
   } else {
-    fail(`enrichJobs default = ${JSON.stringify(res)}`);
+    fail(`enrichJobs PAID = ${JSON.stringify(res)}`);
   }
 
-  // Opt-in gating: a provider WITHOUT detailDefault is skipped unless --enrich.
+  // FREE tier: inline detail attached during fetch is processed even with
+  // extra-fetch OFF (costs no request), and the symbol is stripped afterwards so
+  // it never reaches the JSON snapshot.
+  const inlineJob = attachDetail(
+    { title: 'I', url: 'https://x/i', company: 'Studio' },
+    { text: 'We are unable to provide visa sponsorship.' },
+  );
+  const free = await enrichJobs([inlineJob], { id: 'freeprov' }, {}, {}, enrichers, { extraFetch: false });
+  if (free.jobs[0].sponsorship === 'none' && Object.getOwnPropertySymbols(free.jobs[0]).length === 0) {
+    pass('enrichJobs processes FREE inline detail with --no-extra-fetch; strips the symbol after');
+  } else {
+    fail(`enrichJobs FREE inline: ${JSON.stringify(free.jobs[0])} syms=${Object.getOwnPropertySymbols(free.jobs[0]).length}`);
+  }
+
+  // Gating: a PAID provider is skipped with extra-fetch off, runs with it on;
+  // entry.enrich:false disables BOTH tiers (inline included).
   const optIn = {
     id: 'optin',
     async fetchDetail() { return { overlay: { company: 'ShouldNotAppear' } }; },
   };
-  const off = await enrichJobs([{ title: 'X', url: 'https://x/x', company: '' }], optIn, {}, {}, enrichers, { enrichEnabled: false });
-  const on = await enrichJobs([{ title: 'X', url: 'https://x/x', company: '' }], optIn, {}, {}, enrichers, { enrichEnabled: true });
-  // entry.enrich === false disables detail even for a detailDefault provider.
-  const disabled = await enrichJobs([{ title: 'Y', url: 'https://x/y', company: '' }], provider, { enrich: false }, {}, enrichers, { enrichEnabled: true });
-  if (off.jobs[0].company === '' && on.jobs[0].company === 'ShouldNotAppear' && disabled.jobs[0].company === '') {
-    pass('enrichJobs gates opt-in providers behind --enrich; entry.enrich:false disables detail entirely');
+  const off = await enrichJobs([{ title: 'X', url: 'https://x/x', company: '' }], optIn, {}, {}, enrichers, { extraFetch: false });
+  const on = await enrichJobs([{ title: 'X', url: 'https://x/x', company: '' }], optIn, {}, {}, enrichers, { extraFetch: true });
+  const disabledJob = attachDetail({ title: 'Y', url: 'https://x/y', company: '' }, { text: 'We are unable to provide visa sponsorship.' });
+  const disabled = await enrichJobs([disabledJob], provider, { enrich: false }, {}, enrichers, { extraFetch: true });
+  if (off.jobs[0].company === '' && on.jobs[0].company === 'ShouldNotAppear' &&
+      disabled.jobs[0].company === '' && disabled.jobs[0].sponsorship === undefined) {
+    pass('enrichJobs gates PAID fetch behind --extra-fetch; entry.enrich:false disables both tiers');
   } else {
-    fail(`enrichJobs gating: off=${off.jobs[0].company} on=${on.jobs[0].company} disabled=${disabled.jobs[0].company}`);
+    fail(`enrichJobs gating: off=${off.jobs[0].company} on=${on.jobs[0].company} disabled=${JSON.stringify(disabled.jobs[0])}`);
   }
 } catch (e) {
   fail(`enrichJobs tests crashed: ${e.message}`);
+}
+
+// ── Free-tier providers attach inline sponsorship-readable detail ───
+// greenhouse/lever/ashby/recruitee/teamtailor/personio carry the description in
+// their LIST response and hang it on job[DETAIL] (non-enumerable) during fetch,
+// so the sponsorship enricher reads it with no per-job request and it never leaks
+// into the snapshot. Verified here through the exported parsers.
+console.log('\n33. Free-tier providers attach inline sponsorship detail');
+
+try {
+  const { DETAIL } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
+  const { detectSponsorship } = await import(pathToFileURL(join(ROOT, 'providers/enrichers/sponsorship.mjs')).href);
+  const { parseTeamtailorFeed } = await import(pathToFileURL(join(ROOT, 'providers/teamtailor.mjs')).href);
+  const { parseRecruiteeResponse } = await import(pathToFileURL(join(ROOT, 'providers/recruitee.mjs')).href);
+  const { parsePersonioFeed } = await import(pathToFileURL(join(ROOT, 'providers/personio.mjs')).href);
+  const line = 'At this time, we are unable to provide visa sponsorship.';
+
+  const tt = parseTeamtailorFeed({ version: 'https://jsonfeed.org/version/1.1', items: [
+    { title: 'Tools Programmer', url: 'https://c/jobs/1', content_html: `<p>Great role. ${line}</p>` },
+  ] }, 'Studio')[0];
+  const rc = parseRecruiteeResponse({ offers: [
+    { title: 'Gameplay Programmer', careers_url: 'https://s.recruitee.com/o/x', description: `<div>${line}</div>` },
+  ] }, 'Studio')[0];
+  const pe = parsePersonioFeed(
+    '<workzag-jobs><position><id>7</id><name>Engine Programmer</name><office>Berlin</office>' +
+    `<jobDescriptions><jobDescription><name>Role</name><value><![CDATA[<p>${line}</p>]]></value></jobDescription></jobDescriptions>` +
+    '</position></workzag-jobs>', 'https://s.jobs.personio.de', 'Studio')[0];
+
+  // enricher reads the inline text → 'none'; and the symbol is non-enumerable so
+  // a JSON snapshot of the job never mentions sponsorship.
+  const readable = (j) => !!(j && j[DETAIL] && detectSponsorship(j[DETAIL].text) === 'none');
+  const hidden = (j) => !JSON.stringify(j).toLowerCase().includes('sponsor');
+  if (readable(tt) && readable(rc) && readable(pe) && hidden(tt) && hidden(rc) && hidden(pe)) {
+    pass('teamtailor/recruitee/personio attach inline detail the sponsorship enricher reads; non-enumerable');
+  } else {
+    fail(`free-tier inline: tt=${readable(tt)} rc=${readable(rc)} pe=${readable(pe)} hidden=${hidden(tt)}/${hidden(rc)}/${hidden(pe)}`);
+  }
+} catch (e) {
+  fail(`free-tier inline tests crashed: ${e.message}`);
 }
 
 // ── SUMMARY ─────────────────────────────────────────────────────

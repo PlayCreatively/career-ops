@@ -1,10 +1,15 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate } from './_util.mjs';
+import { toIsoDate, stripHtml, decodeEntities, attachDetail } from './_util.mjs';
 
 // Greenhouse provider — hits the public boards-api JSON endpoint.
 // Handles both explicit `api:` URLs and auto-detection from `careers_url`.
+//
+// FREE-tier detail: the list endpoint returns the full posting body when asked
+// with `?content=true` (one extra query param, NO per-job fetch). The `content`
+// is entity-escaped HTML, so we decode+strip it to plain text and hang it on the
+// job for the cross-cutting enrichers (sponsorship). See providers/_util.mjs DETAIL.
 
 const ALLOWED_GREENHOUSE_HOSTS = new Set([
   'boards-api.greenhouse.io',
@@ -81,22 +86,29 @@ export default {
     const apiUrl = resolveApiUrl(entry);
     if (!apiUrl) throw new Error(`greenhouse: cannot derive API URL for ${entry.name}`);
     assertGreenhouseUrl(apiUrl);
+    // ?content=true makes the SAME list call return each posting's body, so the
+    // sponsorship enricher gets its text with no per-job fetch. Set it via the URL
+    // object so an explicit `api:` that already has query params keeps them.
+    const withContent = new URL(apiUrl);
+    withContent.searchParams.set('content', 'true');
     // redirect:'error' prevents SSRF via server-side redirects; combined with
     // assertGreenhouseUrl above it guarantees the final hostname stays in the allowlist.
-    const json = await ctx.fetchJson(apiUrl, { redirect: 'error' });
+    const json = await ctx.fetchJson(withContent.href, { redirect: 'error' });
     const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
     return jobs.filter(j => j.absolute_url).map(j => {
       // `first_published` is the true posting date; `updated_at` is the last
       // edit (re-published roles bump it). The basic /jobs feed exposes neither
       // a structured remote flag nor a department, so only postedDate is set.
       const postedDate = toIsoDate(j.first_published || j.updated_at);
-      return {
+      const job = {
         title: j.title || '',
         url: j.absolute_url,
         company: entry.name,
         location: j.location?.name || '',
         ...(postedDate ? { postedDate } : {}),
       };
+      // FREE inline detail: `content` is entity-escaped HTML → decode then strip.
+      return attachDetail(job, { text: stripHtml(decodeEntities(j.content || '')) });
     });
   },
 };

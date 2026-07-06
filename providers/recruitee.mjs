@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate } from './_util.mjs';
+import { toIsoDate, stripHtml, attachDetail } from './_util.mjs';
 
 // Recruitee provider — hits the public per-tenant offers API.
 // Auto-detects from careers_url pattern `https://<slug>.recruitee.com`.
@@ -123,7 +123,7 @@ export function parseRecruiteeResponse(json, companyName) {
     // Recruitee exposes three independent booleans rather than one field;
     // resolve them to the tri-state token (remote wins, then hybrid, then onsite).
     const workMode = j.remote ? 'remote' : j.hybrid ? 'hybrid' : j.on_site ? 'onsite' : '';
-    return {
+    const job = {
       title: j.title || '',
       url,
       location,
@@ -132,5 +132,8 @@ export function parseRecruiteeResponse(json, companyName) {
       ...(department ? { department } : {}),
       ...(workMode ? { workMode } : {}),
     };
+    // FREE inline detail: the /api/offers/ list already carries the (HTML)
+    // description → strip to text for the sponsorship enricher, no per-job fetch.
+    return attachDetail(job, { text: stripHtml(j.description) });
   });
 }

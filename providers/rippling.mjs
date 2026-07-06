@@ -18,8 +18,10 @@ import { normalizeWorkMode, stripHtml } from './_util.mjs';
 // present, so Rippling needs NO detail fetch to be usable. The ONLY thing the
 // detail adds is the description prose — which is where a posting states its visa
 // stance ("we are unable to provide visa sponsorship. Applicants must have the
-// right to work in the UK."). So detail is OPT-IN (runs under --enrich, not on
-// every scan) and low-concurrency, since it's the throttle-prone extra hop.
+// right to work in the UK."). Rippling's list carries NO description, so that
+// prose needs a real per-job fetch — the PAID tier: it runs by default (with
+// --extra-fetch on) and is skipped by --no-extra-fetch. Keep concurrency low,
+// since it's the throttle-prone extra hop.
 //
 // Wire a studio in studios.yml with its board URL:
 //
@@ -130,10 +132,11 @@ export default {
     return mapRipplingJobs(list, entry.name);
   },
 
-  // Optional (runs only under --enrich). The list is already complete; the detail
-  // exists solely to hand the description prose to enrichers (sponsorship). Keep
-  // concurrency low — this is the extra hop most likely to be throttled, and a
-  // per-job failure only costs that job's detail, never the posting.
+  // PAID detail (runs by default; skipped by --no-extra-fetch). The list is
+  // already complete; the detail exists solely to hand the description prose to
+  // enrichers (sponsorship). Keep concurrency low — this is the extra hop most
+  // likely to be throttled, and a per-job failure only costs that job's detail,
+  // never the posting.
   detailConcurrency: 2,
   async fetchDetail(job, ctx) {
     const ref = detailRefFrom(job.url);

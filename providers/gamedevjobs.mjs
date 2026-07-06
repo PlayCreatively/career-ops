@@ -245,10 +245,10 @@ export default {
       : all;
   },
 
-  // Detail runs on EVERY scan (not just --enrich): without it every posting has an
-  // empty company and the board is unusable. The scanner bounds it by max_enrich
-  // (default 500) and runs detailConcurrency in parallel.
-  detailDefault: true,
+  // PAID detail (a real per-page fetch): without it every posting has an empty
+  // company and the board is unusable, so it runs by default (--extra-fetch on);
+  // --no-extra-fetch falls back to slug title + sitemap date. The scanner bounds
+  // it by max_enrich (default 500) and runs detailConcurrency in parallel.
   detailConcurrency: DEFAULT_ENRICH_CONCURRENCY,
 
   // Fetch one posting page and read its schema.org JobPosting. `overlay` carries the

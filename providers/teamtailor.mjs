@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate } from './_util.mjs';
+import { toIsoDate, stripHtml, attachDetail } from './_util.mjs';
 
 // Teamtailor provider — hits the public JSON Feed every Teamtailor career site
 // ships at `{site-origin}/jobs.json` (JSON Feed 1.1). No auth, no scraping: the
@@ -62,13 +62,16 @@ export function parseTeamtailorFeed(json, fallbackCompany) {
       // schema.org `datePosted`); it does not expose a structured remote flag
       // or a department, so only postedDate is set.
       const postedDate = toIsoDate(it.date_published || posting.datePosted);
-      return {
+      const job = {
         title: String(it.title),
         url: String(it.url),
         company: typeof org === 'string' && org.trim() ? org.trim() : (fallbackCompany || ''),
         location: formatLocation(place),
         ...(postedDate ? { postedDate } : {}),
       };
+      // FREE inline detail: the JSON Feed item carries the posting body as
+      // `content_html` → strip to text for the sponsorship enricher, no per-job fetch.
+      return attachDetail(job, { text: stripHtml(it.content_html) });
     });
 }
 

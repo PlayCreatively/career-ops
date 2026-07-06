@@ -4,6 +4,66 @@
 // Files prefixed with _ are never loaded as providers by scan.mjs.
 
 /**
+ * Symbol key a provider's fetch() can hang an INLINE detail payload off a Job:
+ * `job[DETAIL] = { text }`. It's a Symbol so it never leaks into the JSON
+ * snapshot (`{...job}` spread and JSON.stringify both ignore symbol keys) and
+ * never collides with a real field. scan.mjs's enrich phase reads it, runs the
+ * enrichers over it with ZERO extra requests (the description already came back
+ * in the list response), then deletes it. This is the "free tier": ATSes whose
+ * list endpoint already carries the description (greenhouse ?content=true, lever
+ * descriptionPlain, ashby, recruitee, teamtailor, personio XML) attach it here
+ * instead of paying a per-job fetchDetail. See scan.mjs enrichJobs.
+ */
+export const DETAIL = Symbol('careerops.detail');
+
+/**
+ * Hang an inline DetailPayload off a job (free tier — see DETAIL). Defined
+ * NON-enumerable so it stays invisible to the JSON snapshot, `{...job}` spread,
+ * and `assert.deepStrictEqual` in the parser unit tests, yet `job[DETAIL]` reads
+ * it and `delete job[DETAIL]` (scan.mjs, after consuming) removes it. No-op when
+ * there's nothing to attach. Returns the job for chaining.
+ *
+ * @template {object} J
+ * @param {J} job
+ * @param {{text?: string, overlay?: object}} payload
+ * @returns {J}
+ */
+export function attachDetail(job, payload) {
+  if (job && payload && (payload.text || payload.overlay)) {
+    Object.defineProperty(job, DETAIL, { value: payload, enumerable: false, configurable: true, writable: true });
+  }
+  return job;
+}
+
+/**
+ * Decode the handful of HTML entities ATS payloads emit, in ONE pass (so a
+ * double-escaped `&amp;nbsp;` decodes to `&nbsp;`, not a space — stripHtml then
+ * finishes it). Handles the named set plus numeric (`&#39;` / `&#x2019;`).
+ * `&amp;` is decoded LAST so it can't cascade into the others. Used by providers
+ * whose "description" field is entity-escaped HTML (greenhouse `content`) before
+ * stripHtml removes the tags. Never throws; returns '' for non-strings.
+ *
+ * @param {unknown} s
+ * @returns {string}
+ */
+export function decodeEntities(s) {
+  if (typeof s !== 'string' || !s) return '';
+  const cp = (n) => {
+    try { return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : ''; }
+    catch { return ''; }
+  };
+  return s
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;/gi, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => cp(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => cp(parseInt(d, 10)))
+    .replace(/&amp;/gi, '&');
+}
+
+/**
  * Normalise a posting date from the many shapes ATS APIs use — ISO-8601 string
  * (greenhouse `first_published`, ashby `publishedAt`, smartrecruiters
  * `releasedDate`, teamtailor `date_published`), epoch milliseconds (lever

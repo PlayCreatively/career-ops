@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { stripHtml, decodeEntities, attachDetail } from './_util.mjs';
+
 // Personio provider — hits the public XML job feed every Personio career site
 // ships at `{site-origin}/xml` (the documented, keyless "workzag-jobs" feed used
 // for syndication). No auth, no scraping. Per-company like greenhouse/lever:
@@ -92,9 +94,29 @@ export function parsePersonioFeed(xml, origin, fallbackCompany) {
     // office is the canonical location field; some feeds also carry an <office>
     // per jobDescription, but the position-level one is the headline city.
     const location = tag(block, 'office');
-    jobs.push({ title, url, company: fallbackCompany || '', location });
+    const job = { title, url, company: fallbackCompany || '', location };
+    // FREE inline detail: the XML feed carries the full posting body as one or
+    // more <jobDescription><value> HTML blocks (CDATA-wrapped). Concatenate them
+    // as plain text for the sponsorship enricher — no per-job fetch. (The modern
+    // search.json fallback below carries no description, so it gets none.)
+    jobs.push(attachDetail(job, { text: descriptionText(block) }));
   }
   return jobs;
+}
+
+// Concatenate every <jobDescription><value> HTML block in a <position> into one
+// plain-text string. Values are usually CDATA-wrapped real HTML; a few feeds
+// entity-escape them, so decode then strip covers both.
+function descriptionText(block) {
+  const parts = [];
+  for (const vm of String(block).matchAll(/<value>([\s\S]*?)<\/value>/gi)) {
+    let v = vm[1].trim();
+    const cd = v.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/);
+    if (cd) v = cd[1];
+    const text = stripHtml(decodeEntities(v));
+    if (text) parts.push(text);
+  }
+  return parts.join(' ');
 }
 
 /** @type {Provider} */

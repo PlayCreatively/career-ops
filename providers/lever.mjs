@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate, normalizeWorkMode } from './_util.mjs';
+import { toIsoDate, normalizeWorkMode, stripHtml, attachDetail } from './_util.mjs';
 
 // Lever provider — hits the public postings endpoint.
 // Auto-detects from careers_url patterns:
@@ -73,7 +73,7 @@ export default {
       // `workplaceType` is 'remote' | 'hybrid' | 'on-site' | 'unspecified';
       // normalize to the tri-state token ('unspecified' → '' → omitted).
       const workMode = normalizeWorkMode(j.workplaceType);
-      return {
+      const job = {
         title: j.text || '',
         url: j.hostedUrl || '',
         company: entry.name,
@@ -82,6 +82,12 @@ export default {
         ...(department ? { department } : {}),
         ...(workMode ? { workMode } : {}),
       };
+      // FREE inline detail: the postings list already carries the description
+      // (descriptionPlain is ready plain text; description is HTML) → hand it to
+      // the sponsorship enricher with no per-job fetch.
+      const text = typeof j.descriptionPlain === 'string' && j.descriptionPlain
+        ? j.descriptionPlain : stripHtml(j.description);
+      return attachDetail(job, { text });
     });
   },
 };

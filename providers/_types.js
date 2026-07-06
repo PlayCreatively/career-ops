@@ -92,8 +92,14 @@
  */
 
 /**
- * Normalized per-job detail returned by `provider.fetchDetail()` in the optional
- * Phase-2 detail pass. Two roles:
+ * Normalized per-job detail — the enrich phase gets one per job from EITHER of
+ * two sources:
+ *   - FREE tier (no extra request): the provider's fetch() already had the
+ *     description in the list response and hung this off the job as
+ *     `job[DETAIL] = { text }` (see providers/_util.mjs DETAIL). Always processed.
+ *   - PAID tier: returned by `provider.fetchDetail(job, ctx)`, a real per-job
+ *     request, run only when the `--extra-fetch` flag is on (the default).
+ * Two roles:
  *   - cross-cutting enrichers read named fields off it (currently `text` — the
  *     posting's plain-text description body — which the `sponsorship` enricher
  *     scans). Add fields here as new enrichers need them.
@@ -131,18 +137,20 @@
  * @property {(entry: PortalEntry, ctx: Context) => Promise<Job[]>} fetch      Required. Phase 1: the "basics"
  *                                                                             list. A throttle here loses the job
  *                                                                             (as before); the detail pass never can.
- * @property {(job: Job, ctx: Context) => Promise<(DetailPayload|null)>} [fetchDetail]  Optional Phase 2: fetch one
- *                                                                             posting's detail. Per-job failures are
- *                                                                             isolated (the job keeps its Phase-1
- *                                                                             fields, only the detail is lost), so a
- *                                                                             throttling ATS degrades to less data,
- *                                                                             never fewer postings.
- * @property {boolean} [detailDefault]                                         When true the detail pass runs on EVERY
- *                                                                             scan (the aggregator boards need it to
- *                                                                             fill company/location). Default false —
- *                                                                             detail runs only under the `--enrich`
- *                                                                             flag, keeping the normal scan cheap.
- * @property {number} [detailConcurrency]                                      Parallel detail fetches within one
+ * @property {(job: Job, ctx: Context) => Promise<(DetailPayload|null)>} [fetchDetail]  Optional PAID Phase 2: a real
+ *                                                                             per-job request for one posting's detail,
+ *                                                                             run only when `--extra-fetch` is on (the
+ *                                                                             default; disable with `--no-extra-fetch`).
+ *                                                                             Per-job failures are isolated (the job
+ *                                                                             keeps its Phase-1 fields, only the detail
+ *                                                                             is lost), so a throttling ATS degrades to
+ *                                                                             less data, never fewer postings. Providers
+ *                                                                             whose LIST response already carries the
+ *                                                                             description skip this and attach the detail
+ *                                                                             inline via `job[DETAIL]` (free tier) —
+ *                                                                             processed on every scan regardless of the
+ *                                                                             flag, since it costs no request.
+ * @property {number} [detailConcurrency]                                      Parallel PAID detail fetches within one
  *                                                                             entry (default 4). A per-entry
  *                                                                             `enrich_concurrency` overrides it; drop
  *                                                                             it low for throttle-prone ATSes.

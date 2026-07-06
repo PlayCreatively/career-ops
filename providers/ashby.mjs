@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate, normalizeWorkMode, slugifyTitle } from './_util.mjs';
+import { toIsoDate, normalizeWorkMode, slugifyTitle, stripHtml, attachDetail } from './_util.mjs';
 
 // Ashby provider — hits the public posting-api endpoint.
 // Auto-detects from careers_url pattern `https://jobs.ashbyhq.com/<slug>`.
@@ -96,7 +96,7 @@ export default {
           const url = (tpl && j.id && j.title)
             ? tpl.replace(/\{id\}/g, j.id).replace(/\{slug\}/g, slugifyTitle(j.title))
             : (j.jobUrl || '');
-          return {
+          const job = {
             title: j.title || '',
             url,
             company: entry.name,
@@ -105,6 +105,12 @@ export default {
             ...(department ? { department } : {}),
             ...(workMode ? { workMode } : {}),
           };
+          // FREE inline detail: the job-board API already returns the full
+          // description (descriptionPlain is plain text; descriptionHtml is HTML)
+          // → hand it to the sponsorship enricher with no per-job fetch.
+          const text = typeof j.descriptionPlain === 'string' && j.descriptionPlain
+            ? j.descriptionPlain : stripHtml(j.descriptionHtml);
+          return attachDetail(job, { text });
         });
       } catch (e) {
         lastErr = e;

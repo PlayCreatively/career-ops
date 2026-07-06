@@ -27,6 +27,7 @@
  *   node scan.mjs --verify         # Playwright-check each new URL; drop expired postings
  *   node scan.mjs --reset          # clear pending pool + dedup history, then scan fresh
  *   node scan.mjs --no-filter      # bypass all targeting; store every role/location (board snapshot)
+ *   node scan.mjs --no-extra-fetch # skip PAID per-job detail fetches (keep only free inline detail)
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
@@ -36,7 +37,7 @@ import yaml from 'js-yaml';
 
 import { makeHttpCtx, classifyFetchError } from './providers/_http.mjs';
 import { mergeHealth } from './merge-health.mjs';
-import { splitLocationMode } from './providers/_util.mjs';
+import { splitLocationMode, DETAIL } from './providers/_util.mjs';
 import { scoreCategory, matchGroup, isExcluded, buildFilterIndex } from './rank.mjs';
 
 const parseYaml = yaml.load;
@@ -136,57 +137,78 @@ async function loadEnrichers(dir) {
   return enrichers;
 }
 
-// Phase-2 detail pass for ONE entry's jobs. Runs when the provider exposes
-// fetchDetail() AND (the provider marks detail essential via detailDefault, e.g.
-// the aggregator boards that fill company/location from each page) OR the user
-// passed --enrich. Per-job failure-isolated: a throttled/errored detail keeps the
-// job's Phase-1 fields and is simply not enriched — we never drop a posting for a
-// detail miss. Mutates jobs in place; returns { jobs, failures } (jobs may be
-// re-shaped by the provider's optional postFetch, e.g. gamedevjobs' office merge).
-export async function enrichJobs(jobs, provider, entry, ctx, enrichers, { enrichEnabled }) {
-  const wantDetail = typeof provider.fetchDetail === 'function'
-    && entry.enrich !== false
-    && (enrichEnabled || provider.detailDefault === true);
-  if (!wantDetail || jobs.length === 0) return { jobs, failures: 0 };
-
-  const cap = Number.isInteger(entry.max_enrich) && entry.max_enrich >= 0
-    ? entry.max_enrich : DEFAULT_ENRICH_CAP;
-  const targets = jobs.slice(0, cap); // references into jobs — mutated in place
-  const concurrency = Number.isInteger(entry.enrich_concurrency) && entry.enrich_concurrency > 0
-    ? entry.enrich_concurrency
-    : Number.isInteger(provider.detailConcurrency) && provider.detailConcurrency > 0
-      ? provider.detailConcurrency
-      : DEFAULT_ENRICH_CONCURRENCY;
-
-  let next = 0;
-  let failures = 0;
-  const worker = async () => {
-    while (next < targets.length) {
-      const job = targets[next++];
-      let detail;
-      try {
-        detail = await provider.fetchDetail(job, ctx);
-      } catch { failures++; continue; } // keep the job; lose only its detail
-      if (!detail || typeof detail !== 'object') continue;
-      // Provider-authoritative CORE overlay (aggregators fill company/location/…
-      // the list page couldn't expose). Only non-empty values overwrite.
-      if (detail.overlay && typeof detail.overlay === 'object') {
-        for (const [k, v] of Object.entries(detail.overlay)) {
-          if (v != null && v !== '') job[k] = v;
-        }
-      }
-      // Cross-cutting enrichers read named detail fields (e.g. 'text'). An
-      // enricher must never break a scan, so each is guarded independently.
-      for (const en of enrichers) {
-        if (en.needs && (detail[en.needs] == null || detail[en.needs] === '')) continue;
-        try {
-          const patch = en.enrich(detail, job);
-          if (patch && typeof patch === 'object') Object.assign(job, patch);
-        } catch { /* skip this enricher for this job */ }
-      }
+// Apply ONE job's detail payload in place: merge the provider-authoritative CORE
+// overlay (aggregators fill company/location/… the list page couldn't expose;
+// only non-empty values overwrite), then run every cross-cutting enricher over
+// the named detail fields (e.g. 'text'). An enricher must never break a scan, so
+// each is guarded independently.
+function applyDetail(job, detail, enrichers) {
+  if (!detail || typeof detail !== 'object') return;
+  if (detail.overlay && typeof detail.overlay === 'object') {
+    for (const [k, v] of Object.entries(detail.overlay)) {
+      if (v != null && v !== '') job[k] = v;
     }
-  };
-  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
+  }
+  for (const en of enrichers) {
+    if (en.needs && (detail[en.needs] == null || detail[en.needs] === '')) continue;
+    try {
+      const patch = en.enrich(detail, job);
+      if (patch && typeof patch === 'object') Object.assign(job, patch);
+    } catch { /* skip this enricher for this job */ }
+  }
+}
+
+// Detail/enrich pass for ONE entry's jobs. Each job's DetailPayload comes from
+// EITHER source (see providers/_types.js DetailPayload):
+//   - FREE tier: the provider hung it off `job[DETAIL]` during fetch() because
+//     the list response already carried the description (greenhouse ?content=true,
+//     lever, ashby, recruitee, teamtailor, personio XML). Costs no request, so
+//     it's processed on EVERY scan regardless of the flag.
+//   - PAID tier: provider.fetchDetail(job) — a real per-job request — run only
+//     when --extra-fetch is on (the default; --no-extra-fetch disables it) and
+//     the provider exposes fetchDetail (the aggregator boards, rippling).
+// Per-job failure-isolated: a throttled/errored PAID detail keeps the job's
+// Phase-1 fields and is simply not enriched — a posting is NEVER dropped for a
+// detail miss. `enrich: false` on the entry opts out of BOTH tiers. Mutates jobs
+// in place; returns { jobs, failures } (jobs may be re-shaped by postFetch, e.g.
+// gamedevjobs' office merge). A provider is one tier or the other, never both.
+export async function enrichJobs(jobs, provider, entry, ctx, enrichers, { extraFetch }) {
+  if (jobs.length === 0 || entry.enrich === false) return { jobs, failures: 0 };
+
+  // FREE tier — consume any inline detail the provider attached during fetch.
+  for (const job of jobs) {
+    const inline = job[DETAIL];
+    if (inline) {
+      applyDetail(job, inline, enrichers);
+      delete job[DETAIL]; // never let it reach the JSON snapshot (symbol, but tidy)
+    }
+  }
+
+  // PAID tier — a real per-job fetch, only when enabled and supported.
+  let failures = 0;
+  if (extraFetch && typeof provider.fetchDetail === 'function') {
+    const cap = Number.isInteger(entry.max_enrich) && entry.max_enrich >= 0
+      ? entry.max_enrich : DEFAULT_ENRICH_CAP;
+    const targets = jobs.slice(0, cap); // references into jobs — mutated in place
+    const concurrency = Number.isInteger(entry.enrich_concurrency) && entry.enrich_concurrency > 0
+      ? entry.enrich_concurrency
+      : Number.isInteger(provider.detailConcurrency) && provider.detailConcurrency > 0
+        ? provider.detailConcurrency
+        : DEFAULT_ENRICH_CONCURRENCY;
+
+    let next = 0;
+    const worker = async () => {
+      while (next < targets.length) {
+        const job = targets[next++];
+        let detail;
+        try {
+          detail = await provider.fetchDetail(job, ctx);
+        } catch { failures++; continue; } // keep the job; lose only its detail
+        applyDetail(job, detail, enrichers);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
+  }
 
   const out = typeof provider.postFetch === 'function' ? provider.postFetch(jobs, entry) : jobs;
   return { jobs: Array.isArray(out) ? out : jobs, failures };
@@ -767,12 +789,14 @@ async function main() {
   const verify = args.includes('--verify');
   const reset = args.includes('--reset');
   const noFilter = args.includes('--no-filter');
-  // Opt into the Phase-2 detail pass for OPTIONAL enrichers (e.g. sponsorship on
-  // list-only ATSes like Rippling). Providers that mark detail essential
-  // (detailDefault — the aggregator boards) enrich regardless; this flag only
-  // turns on the extra per-job detail fetch for the providers that skip it by
-  // default, keeping the normal scan cheap.
-  const enrichEnabled = args.includes('--enrich');
+  // The PAID detail pass (a real per-job fetch: the aggregator boards fill
+  // company/location from each posting page, rippling reads sponsorship) is ON by
+  // default. --no-extra-fetch turns it off — the scan then relies only on the
+  // FREE inline detail that list-carrying ATSes attach at no request cost (so
+  // greenhouse/lever/ashby/… still surface sponsorship, the aggregators fall back
+  // to their slug-derived basics). Use it to keep a run minimal or dodge a
+  // throttling source.
+  const extraFetch = !args.includes('--no-extra-fetch');
   const jsonIdx = args.indexOf('--json');
   const jsonPath = jsonIdx !== -1 ? args[jsonIdx + 1] : null;
   const companyFlag = args.indexOf('--company');
@@ -805,9 +829,9 @@ async function main() {
     console.error('Error: no providers loaded from providers/');
     process.exit(1);
   }
-  // Detail-phase enrichers (providers/enrichers/*). Loaded unconditionally —
-  // detailDefault providers use them every scan; --enrich extends them to the
-  // opt-in providers too.
+  // Detail-phase enrichers (providers/enrichers/*). Loaded unconditionally — they
+  // run over FREE inline detail every scan and over PAID fetchDetail results when
+  // --extra-fetch is on (the default).
   const enrichers = await loadEnrichers(ENRICHERS_DIR);
 
   // 2. Load config. Targeting/filters come from portals.yml (personal,
@@ -1009,7 +1033,7 @@ async function main() {
 
       // Phase 2 — optional per-job detail pass (enrichers + provider overlay/
       // postFetch). Failure-isolated: never drops a posting, only its detail.
-      const enriched = await enrichJobs(jobs, provider, company, ctx, enrichers, { enrichEnabled });
+      const enriched = await enrichJobs(jobs, provider, company, ctx, enrichers, { extraFetch });
       jobs = enriched.jobs;
       if (enriched.failures) totalEnrichFailures += enriched.failures;
 
