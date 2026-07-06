@@ -137,6 +137,44 @@ export function parseJobsSitemap(xml) {
   return jobs;
 }
 
+// One role advertised across several offices shows up as several postings —
+// same company, same title, different city — each with its own `-{hexid}` URL
+// (e.g. SRT Marine's "Senior Unity / C# Developer" in Cardiff, Birmingham AND
+// Bristol). Collapse those into ONE row whose location joins the distinct cities
+// ("Cardiff, … / Birmingham, … / Bristol, …"), keeping the first posting's URL.
+// Grouping is keyed on company + a punctuation-folded title, and — this is the
+// fail-safe — only rows with a NON-EMPTY company are ever merged: a generic
+// "Unity Developer" title with no company (past the enrichment cap / enrich:off)
+// can't be proven to be the same employer, so those pass through untouched. The
+// freshest postedDate in a group wins; the first row's other fields are kept.
+// Exported for unit tests.
+export function mergeSameRoleLocations(jobs) {
+  if (!Array.isArray(jobs)) return [];
+  const normTitle = (s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const groups = new Map(); // key -> merged job (first row, mutated)
+  const out = [];
+  for (const job of jobs) {
+    const company = (job.company || '').trim();
+    if (!company) { out.push(job); continue; } // no company → never merge (fail-safe)
+    const key = `${company.toLowerCase()}::${normTitle(job.title)}`;
+    const head = groups.get(key);
+    if (!head) {
+      groups.set(key, job);
+      out.push(job);
+      continue;
+    }
+    // Merge into the group head: union the locations, keep the freshest date.
+    const locs = String(head.location || '').split(' / ').map((s) => s.trim()).filter(Boolean);
+    const loc = (job.location || '').trim();
+    if (loc && !locs.some((l) => l.toLowerCase() === loc.toLowerCase())) locs.push(loc);
+    head.location = locs.join(' / ');
+    if (job.postedDate && (!head.postedDate || job.postedDate > head.postedDate)) {
+      head.postedDate = job.postedDate;
+    }
+  }
+  return out;
+}
+
 // Normalise `query` (string | string[]) into a lowercased keyword list, or null
 // when nothing usable is configured (caller then returns the whole board).
 function normalizeQuery(query) {
@@ -238,6 +276,8 @@ export default {
     };
     await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
 
-    return jobs;
+    // Now that companies are known, collapse a role split across offices into one
+    // row with joined locations (see mergeSameRoleLocations).
+    return mergeSameRoleLocations(jobs);
   },
 };

@@ -3239,7 +3239,7 @@ try {
 console.log('\n27. Provider — gamedevjobs sitemap-index + JSON-LD');
 
 try {
-  const { jobFromSlug, parseSitemapIndex, parseJobsSitemap } =
+  const { jobFromSlug, parseSitemapIndex, parseJobsSitemap, mergeSameRoleLocations } =
     await import(pathToFileURL(join(ROOT, 'providers/gamedevjobs.mjs')).href);
 
   // Slug parse: /jobs/{title}-{hexid} → title only (company/location come from the
@@ -3282,6 +3282,29 @@ try {
     pass('parseJobsSitemap parses url+lastmod, dedupes, fails safe');
   } else {
     fail(`parseJobsSitemap = ${JSON.stringify(sm)}`);
+  }
+
+  // One role across several offices → one row with joined locations, freshest
+  // date, first URL. Only rows with a NON-EMPTY company merge (fail-safe); a
+  // company-less generic title and a distinct company are both left alone.
+  const mrl = mergeSameRoleLocations([
+    { title: 'Senior Unity / C# Developer', company: 'SRT Marine Systems plc', location: 'Cardiff, Wales, United Kingdom', url: 'https://gamedevjobs.com/jobs/senior-unity-c-developer-83170d42', postedDate: '2026-06-30T00:00:00.000Z' },
+    { title: 'Senior Unity / C# Developer', company: 'SRT Marine Systems plc', location: 'Birmingham, United Kingdom', url: 'https://gamedevjobs.com/jobs/senior-unity-c-developer-d34f2a95', postedDate: '2026-07-02T00:00:00.000Z' },
+    { title: 'Senior Unity / C# Developer', company: 'SRT Marine Systems plc', location: 'Bristol, United Kingdom', url: 'https://gamedevjobs.com/jobs/senior-unity-c-developer-3cfd6010' },
+    { title: 'Unity Developer', company: '', location: '', url: 'https://gamedevjobs.com/jobs/unity-developer-aaaaaaaa' },
+    { title: 'Unity Developer', company: '', location: '', url: 'https://gamedevjobs.com/jobs/unity-developer-bbbbbbbb' },
+    { title: 'Producer', company: 'Other Co', location: 'London', url: 'https://gamedevjobs.com/jobs/producer-cccccccc' },
+  ]);
+  const srt = mrl.find((j) => j.company === 'SRT Marine Systems plc');
+  if (mrl.length === 4 && srt &&
+      srt.location === 'Cardiff, Wales, United Kingdom / Birmingham, United Kingdom / Bristol, United Kingdom' &&
+      srt.postedDate === '2026-07-02T00:00:00.000Z' &&
+      srt.url.endsWith('-83170d42') &&
+      mrl.filter((j) => j.title === 'Unity Developer').length === 2 &&
+      mergeSameRoleLocations(null).length === 0) {
+    pass('mergeSameRoleLocations joins per-office rows, keeps freshest date + first URL, leaves company-less rows split (fail-safe)');
+  } else {
+    fail(`mergeSameRoleLocations = ${JSON.stringify(mrl)}`);
   }
 } catch (e) {
   fail(`gamedevjobs provider tests crashed: ${e.message}`);
