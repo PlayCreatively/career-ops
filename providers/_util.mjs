@@ -65,6 +65,31 @@ export function slugifyTitle(title) {
 }
 
 /**
+ * Strip HTML to readable plain text — for detail-phase enrichers that scan a
+ * posting's description prose (e.g. sponsorship detection) rather than render it.
+ * Drops <script>/<style> bodies wholesale, turns block-ish tags into spaces so
+ * words don't fuse across tag boundaries, unescapes the common entities, and
+ * collapses whitespace. Best-effort and never throws; returns '' for non-strings.
+ *
+ * @param {unknown} html
+ * @returns {string}
+ */
+export function stripHtml(html) {
+  if (typeof html !== 'string' || !html) return '';
+  return html
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Normalise an ATS work-arrangement value into one of four tokens:
  * 'remote' | 'hybrid' | 'onsite' | 'anywhere'. Returns '' for anything
  * unrecognised or absent (ATS values like Lever's 'unspecified'), so the field

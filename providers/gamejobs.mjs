@@ -47,8 +47,7 @@ import { parseJobPostingLd } from './_jsonld.mjs';
 
 const BASE = 'https://gamejobs.co';
 const SITEMAP_URL = `${BASE}/sitemap.xml`;
-const DEFAULT_MAX_ENRICH = 500;        // cap per-page enrichment fetches per run
-const DEFAULT_ENRICH_CONCURRENCY = 6;  // parallel detail fetches during enrichment
+const DEFAULT_ENRICH_CONCURRENCY = 6;  // parallel detail fetches (scanner caps count via max_enrich)
 
 function decodeEntities(s) {
   return String(s == null ? '' : s)
@@ -148,50 +147,33 @@ export default {
     const all = parseSitemapJobs(xml);
 
     // Optional query scope — keeps only postings whose slug-derived text matches
-    // ANY keyword. Scopes both what's returned and what's enriched. No query →
-    // the whole board (nothing dropped).
+    // ANY keyword. No query → the whole board (nothing dropped). Phase 1 ends here:
+    // the scanner's detail phase (fetchDetail below) overlays the authoritative
+    // JSON-LD fields from each posting page.
     const keywords = normalizeQuery(entry.query);
-    const jobs = keywords
+    return keywords
       ? all.filter((j) => {
         const hay = `${j.title} ${j.company}`.toLowerCase();
         return keywords.some((k) => hay.includes(k));
       })
       : all;
+  },
 
-    if (entry.enrich === false || typeof ctx.fetchText !== 'function') return jobs;
+  // Detail runs on EVERY scan (not just --enrich): the slug gives only a rough
+  // title/company, so the JSON-LD overlay is what makes rows accurate. Bounded by
+  // max_enrich (default 500) with detailConcurrency parallel fetches.
+  detailDefault: true,
+  detailConcurrency: DEFAULT_ENRICH_CONCURRENCY,
 
-    // Enrichment: fetch each posting page and overlay the authoritative JSON-LD
-    // fields (title/company/location/date/workMode). Bounded by max_enrich so a
-    // query-less run can't storm the board; postings past the cap are still
-    // returned with their slug fields. Fail-safe: a failed page keeps the slug
-    // fields and is never dropped.
-    const cap = Number.isInteger(entry.max_enrich) && entry.max_enrich >= 0
-      ? entry.max_enrich
-      : DEFAULT_MAX_ENRICH;
-    const targets = jobs.slice(0, cap);
-    const concurrency = Number.isInteger(entry.enrich_concurrency) && entry.enrich_concurrency > 0
-      ? entry.enrich_concurrency
-      : DEFAULT_ENRICH_CONCURRENCY;
-
-    let next = 0;
-    const worker = async () => {
-      while (next < targets.length) {
-        const job = targets[next++];
-        try {
-          const html = await ctx.fetchText(job.url, { redirect: 'error' });
-          const ld = parseJobPostingLd(html);
-          if (ld) {
-            if (ld.title) job.title = ld.title;
-            if (ld.company) job.company = ld.company;
-            if (ld.location) job.location = ld.location;
-            if (ld.workMode) job.workMode = ld.workMode;
-            if (ld.postedDate) job.postedDate = ld.postedDate;
-          }
-        } catch { /* keep slug-derived fields; never drop */ }
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
-
-    return jobs;
+  // Fetch one posting page and read its schema.org JobPosting. `overlay` carries the
+  // authoritative title/company/location/workMode/date; `text` is the description
+  // body for cross-cutting enrichers (sponsorship). Fail-safe: a page that doesn't
+  // parse returns null and the scanner keeps the slug fields.
+  async fetchDetail(job, ctx) {
+    const html = await ctx.fetchText(job.url, { redirect: 'error' });
+    const ld = parseJobPostingLd(html);
+    if (!ld) return null;
+    const { description, ...overlay } = ld;
+    return { overlay, ...(description ? { text: description } : {}) };
   },
 };

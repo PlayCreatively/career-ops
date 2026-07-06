@@ -57,11 +57,18 @@ const SCAN_HISTORY_PATH = 'data/scan-history.tsv';
 const PIPELINE_PATH = 'data/pipeline.md';
 const APPLICATIONS_PATH = 'data/applications.md';
 const PROVIDERS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'providers');
+const ENRICHERS_DIR = path.join(PROVIDERS_DIR, 'enrichers');
 
 // Ensure required directories exist (fresh setup)
 mkdirSync('data', { recursive: true });
 
 const CONCURRENCY = 10;
+// Phase-2 detail defaults. A provider's detail pass fetches one posting per job
+// to feed enrichers; cap how many per entry so a huge aggregator board can't
+// storm a source, and how many run in parallel (throttle-prone sources drop it
+// lower via detailConcurrency / a per-entry enrich_concurrency).
+const DEFAULT_ENRICH_CAP = 500;
+const DEFAULT_ENRICH_CONCURRENCY = 4;
 
 // ── Provider loading ────────────────────────────────────────────────
 
@@ -93,6 +100,96 @@ async function loadProviders(dir) {
     providers.set(p.id, p);
   }
   return providers;
+}
+
+// ── Enricher loading ────────────────────────────────────────────────
+//
+// Detail-phase enrichers live in providers/enrichers/*.mjs, each default-exporting
+// { id, needs?, enrich }. They're cross-cutting (ATS-agnostic) — adding a new
+// signal is one drop-in file, no fetch/provider edits. Loaded like providers so
+// the registry stays convention-driven.
+async function loadEnrichers(dir) {
+  const enrichers = [];
+  if (!existsSync(dir)) return enrichers;
+  const files = readdirSync(dir).filter(f => f.endsWith('.mjs') && !f.startsWith('_')).sort();
+  const seen = new Set();
+  for (const file of files) {
+    let mod;
+    try {
+      mod = await import(pathToFileURL(path.join(dir, file)).href);
+    } catch (err) {
+      console.error(`⚠️  enrichers/${file}: failed to load — ${err.message}`);
+      continue;
+    }
+    const e = mod.default;
+    if (!e || typeof e.enrich !== 'function' || !e.id) {
+      console.error(`⚠️  enrichers/${file}: skipping — default export must be { id, enrich }`);
+      continue;
+    }
+    if (seen.has(e.id)) {
+      console.error(`⚠️  enrichers/${file}: duplicate enricher id "${e.id}" — keeping first`);
+      continue;
+    }
+    seen.add(e.id);
+    enrichers.push(e);
+  }
+  return enrichers;
+}
+
+// Phase-2 detail pass for ONE entry's jobs. Runs when the provider exposes
+// fetchDetail() AND (the provider marks detail essential via detailDefault, e.g.
+// the aggregator boards that fill company/location from each page) OR the user
+// passed --enrich. Per-job failure-isolated: a throttled/errored detail keeps the
+// job's Phase-1 fields and is simply not enriched — we never drop a posting for a
+// detail miss. Mutates jobs in place; returns { jobs, failures } (jobs may be
+// re-shaped by the provider's optional postFetch, e.g. gamedevjobs' office merge).
+export async function enrichJobs(jobs, provider, entry, ctx, enrichers, { enrichEnabled }) {
+  const wantDetail = typeof provider.fetchDetail === 'function'
+    && entry.enrich !== false
+    && (enrichEnabled || provider.detailDefault === true);
+  if (!wantDetail || jobs.length === 0) return { jobs, failures: 0 };
+
+  const cap = Number.isInteger(entry.max_enrich) && entry.max_enrich >= 0
+    ? entry.max_enrich : DEFAULT_ENRICH_CAP;
+  const targets = jobs.slice(0, cap); // references into jobs — mutated in place
+  const concurrency = Number.isInteger(entry.enrich_concurrency) && entry.enrich_concurrency > 0
+    ? entry.enrich_concurrency
+    : Number.isInteger(provider.detailConcurrency) && provider.detailConcurrency > 0
+      ? provider.detailConcurrency
+      : DEFAULT_ENRICH_CONCURRENCY;
+
+  let next = 0;
+  let failures = 0;
+  const worker = async () => {
+    while (next < targets.length) {
+      const job = targets[next++];
+      let detail;
+      try {
+        detail = await provider.fetchDetail(job, ctx);
+      } catch { failures++; continue; } // keep the job; lose only its detail
+      if (!detail || typeof detail !== 'object') continue;
+      // Provider-authoritative CORE overlay (aggregators fill company/location/…
+      // the list page couldn't expose). Only non-empty values overwrite.
+      if (detail.overlay && typeof detail.overlay === 'object') {
+        for (const [k, v] of Object.entries(detail.overlay)) {
+          if (v != null && v !== '') job[k] = v;
+        }
+      }
+      // Cross-cutting enrichers read named detail fields (e.g. 'text'). An
+      // enricher must never break a scan, so each is guarded independently.
+      for (const en of enrichers) {
+        if (en.needs && (detail[en.needs] == null || detail[en.needs] === '')) continue;
+        try {
+          const patch = en.enrich(detail, job);
+          if (patch && typeof patch === 'object') Object.assign(job, patch);
+        } catch { /* skip this enricher for this job */ }
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
+
+  const out = typeof provider.postFetch === 'function' ? provider.postFetch(jobs, entry) : jobs;
+  return { jobs: Array.isArray(out) ? out : jobs, failures };
 }
 
 // Resolve which provider handles a tracked_companies entry.
@@ -670,6 +767,12 @@ async function main() {
   const verify = args.includes('--verify');
   const reset = args.includes('--reset');
   const noFilter = args.includes('--no-filter');
+  // Opt into the Phase-2 detail pass for OPTIONAL enrichers (e.g. sponsorship on
+  // list-only ATSes like Rippling). Providers that mark detail essential
+  // (detailDefault — the aggregator boards) enrich regardless; this flag only
+  // turns on the extra per-job detail fetch for the providers that skip it by
+  // default, keeping the normal scan cheap.
+  const enrichEnabled = args.includes('--enrich');
   const jsonIdx = args.indexOf('--json');
   const jsonPath = jsonIdx !== -1 ? args[jsonIdx + 1] : null;
   const companyFlag = args.indexOf('--company');
@@ -702,6 +805,10 @@ async function main() {
     console.error('Error: no providers loaded from providers/');
     process.exit(1);
   }
+  // Detail-phase enrichers (providers/enrichers/*). Loaded unconditionally —
+  // detailDefault providers use them every scan; --enrich extends them to the
+  // opt-in providers too.
+  const enrichers = await loadEnrichers(ENRICHERS_DIR);
 
   // 2. Load config. Targeting/filters come from portals.yml (personal,
   //    gitignored); fall back to the example so a fresh clone without a personal
@@ -848,6 +955,7 @@ async function main() {
   let totalFilteredCompany = 0;
   let totalBlockedCompany = 0;
   let totalDupes = 0;
+  let totalEnrichFailures = 0; // Phase-2 detail fetches that failed (detail lost, posting kept)
   const newOffers = [];
   // Full current snapshot for --json: every job that passes the filters,
   // deduped within this run only (independent of scan-history.tsv), so the
@@ -898,6 +1006,13 @@ async function main() {
       if (!Array.isArray(jobs)) {
         throw new Error(`${provider.id}: fetch() did not return an array`);
       }
+
+      // Phase 2 — optional per-job detail pass (enrichers + provider overlay/
+      // postFetch). Failure-isolated: never drops a posting, only its detail.
+      const enriched = await enrichJobs(jobs, provider, company, ctx, enrichers, { enrichEnabled });
+      jobs = enriched.jobs;
+      if (enriched.failures) totalEnrichFailures += enriched.failures;
+
       totalFound += jobs.length;
 
       for (const job of jobs) {
@@ -950,6 +1065,9 @@ async function main() {
             ...(job.workMode ? { workMode: job.workMode } : {}),
             ...(job.department ? { department: job.department } : {}),
             ...(job.experienceLevel ? { experienceLevel: job.experienceLevel } : {}),
+            // Visa-sponsorship stance from the detail-phase enricher (only when
+            // the JD stated one): 'none' | 'offered'. See providers/enrichers/.
+            ...(job.sponsorship ? { sponsorship: job.sponsorship } : {}),
           });
         }
         if (seenUrls.has(job.url)) {
@@ -1085,6 +1203,9 @@ async function main() {
     console.log(`Blocked (non-game):    ${totalBlockedCompany} removed`);
   }
   console.log(`Duplicates:            ${totalDupes} skipped`);
+  if (totalEnrichFailures > 0) {
+    console.log(`Detail enrich misses:  ${totalEnrichFailures} (posting kept, detail skipped)`);
+  }
   if (verify) {
     console.log(`Expired (verified):    ${expiredOffers.length} dropped`);
     console.log(`No apply control:      ${droppedOffers.length} dropped`);

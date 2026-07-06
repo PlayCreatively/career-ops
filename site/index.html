@@ -411,6 +411,13 @@
   td.role .explevel { display: inline-block; margin-left: 6px; padding: 0 6px;
     border: 1px solid var(--line); border-radius: 10px; background: var(--chip);
     color: var(--dim); font-size: 11px; line-height: 16px; vertical-align: middle; }
+  /* Visa-sponsorship chip — only shown when the JD stated a stance. 'none' warns
+     (needs existing right to work); 'offered' reassures. Colour-only, no fill. */
+  td.role .sponsor { display: inline-block; margin-left: 6px; padding: 0 6px;
+    border: 1px solid currentColor; border-radius: 10px; font-size: 11px;
+    line-height: 16px; vertical-align: middle; white-space: nowrap; opacity: .9; }
+  td.role .sponsor.none { color: var(--warm); }
+  td.role .sponsor.offered { color: var(--accent2); }
   /* Keep the dept in normal flow (so it reserves space and never spills into the
      row below), but balance it with an equal spacer above the title. The title
      then sits centred on the row's middle line instead of being pushed up. The
@@ -952,6 +959,7 @@ function prep(jobs) {
       // ISO string; _posted caches its epoch ms (0 when absent) for O(1) sort.
       postedDate: j.postedDate || "",
       workMode: j.workMode || "",   // 'anywhere' | 'remote' | 'hybrid' | 'onsite' | ''
+      sponsorship: j.sponsorship || "",  // 'none' | 'offered' | '' — visa stance from the JD
       department: j.department || "",
       // Source's own experience/seniority label (e.g. games-jobs-direct's
       // "Junior-Associate"). Read by Rank.matchGroup via fieldText('experiencelevel'),
@@ -1283,6 +1291,13 @@ function render() {
     // exposes it — e.g. games-jobs-direct's "Junior-Associate"). Highlighted so
     // it lights up when the active Level filter matched on it.
     var expChip = j.experienceLevel ? ' <span class="explevel">' + highlightCell(j.experienceLevel, "experiencelevel", j) + '</span>' : '';
+    // Visa-sponsorship chip — only when the JD stated a stance. 'none' is the
+    // actionable warning (a role you'd need existing right-to-work for).
+    var sponsorChip = j.sponsorship === "none"
+      ? ' <span class="sponsor none" title="This posting states it will not sponsor a work visa">🛂 No visa sponsorship</span>'
+      : j.sponsorship === "offered"
+        ? ' <span class="sponsor offered" title="This posting states it offers visa sponsorship">🛂 Visa sponsorship</span>'
+        : '';
     // Work mode as a badge on its OWN line below the location text: 🌐 Anywhere /
     // 🏠 Remote / ⇄ Hybrid; onsite and unknown show no badge. The location string
     // is now place-only (work-mode tokens stripped during the scan), so no dup.
@@ -1293,7 +1308,7 @@ function render() {
     tr.innerHTML =
       '<td class="fit" style="color:' + fitColor(j._final) + '">' + acts + '<span class="fitval">' + j._final.toFixed(2) + '</span></td>' +
       '<td class="co">' + coCell + '</td>' +
-      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener" draggable="false">' + highlightCell(j.title, "title", j) + '</a>' + expChip + deptLine + '</td>' +
+      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener" draggable="false">' + highlightCell(j.title, "title", j) + '</a>' + expChip + sponsorChip + deptLine + '</td>' +
       '<td class="loc">' + locCell + '</td>' +
       '<td class="tags"><div class="tagwrap">' + tags + '</div></td>' +
       '<td class="posted">' + postedCell(j.postedDate) + '</td>';

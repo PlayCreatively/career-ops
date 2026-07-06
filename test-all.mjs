@@ -3209,6 +3209,7 @@ try {
     <script type="application/ld+json">{"@graph":[{"@type":"JobPosting",
       "title":"Unity Tools Developer (Core Tech)",
       "datePosted":"2026-06-23T10:58:13Z",
+      "description":"<p>Great role.</p><p>We are unable to provide visa sponsorship.</p>",
       "hiringOrganization":{"@type":"Organization","name":"Triband"},
       "jobLocation":{"@type":"Place","address":{"addressLocality":"Copenhagen","addressCountry":"DK"}},
       "jobLocationType":"TELECOMMUTE"}]}</script>
@@ -3216,8 +3217,9 @@ try {
   const ld = parseJobPostingLd(html);
   if (ld && ld.title === 'Unity Tools Developer (Core Tech)' && ld.company === 'Triband' &&
       ld.location === 'Copenhagen, DK' && ld.workMode === 'remote' &&
-      ld.postedDate === '2026-06-23T10:58:13.000Z') {
-    pass('parseJobPostingLd reads JobPosting from @graph, maps org/address/date, TELECOMMUTE→remote');
+      ld.postedDate === '2026-06-23T10:58:13.000Z' &&
+      ld.description === 'Great role. We are unable to provide visa sponsorship.') {
+    pass('parseJobPostingLd reads JobPosting from @graph, maps org/address/date, TELECOMMUTE→remote, strips description HTML');
   } else {
     fail(`parseJobPostingLd = ${JSON.stringify(ld)}`);
   }
@@ -3423,6 +3425,183 @@ try {
   }
 } catch (e) {
   fail(`comeet provider tests crashed: ${e.message}`);
+}
+
+// ── stripHtml + sponsorship enricher ────────────────────────────
+// No ATS exposes visa sponsorship as a structured field — it's always prose in
+// the JD. The detail-phase `sponsorship` enricher reads that prose. Precision is
+// the whole point: it must fire on explicit "won't sponsor" / "offers sponsor"
+// phrasing and stay silent (null) on boilerplate like a bare "right to work in X".
+
+console.log('\n30. Enricher — sponsorship detection + stripHtml');
+
+try {
+  const { stripHtml } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
+  const { detectSponsorship, default: enricher } =
+    await import(pathToFileURL(join(ROOT, 'providers/enrichers/sponsorship.mjs')).href);
+
+  // stripHtml: drop script/style bodies, tags → spaces (no word-fusion), unescape,
+  // collapse. Fail-safe on non-strings.
+  const st = stripHtml('<p>Hello<span>World</span></p><script>var x=1;</script> &amp; more');
+  if (st === 'Hello World & more' && stripHtml(null) === '' && stripHtml(42) === '') {
+    pass('stripHtml drops script bodies, spaces tags, unescapes, fails safe on non-strings');
+  } else {
+    fail(`stripHtml = ${JSON.stringify(st)}`);
+  }
+
+  // 'none' — the restrictive phrasings (checked first).
+  const none = [
+    'At this time, we are unable to provide visa sponsorship. Applicants must have the right to work in the UK.',
+    'Please note we do not offer visa sponsorship for this role.',
+    'Unfortunately we cannot sponsor visas at this time.',
+    'Visa sponsorship is not available for this position.',
+    'This role is not eligible for visa sponsorship.',
+    'You must be able to work in the US without sponsorship.',
+  ];
+  // 'offered' — affirmative phrasings.
+  const offered = [
+    'We offer visa sponsorship and relocation support.',
+    'Visa sponsorship available for the right candidate.',
+    'We can sponsor work visas for exceptional candidates.',
+  ];
+  // null — no stance stated; a bare right-to-work line is NOT a 'none' trigger.
+  const silent = [
+    'Applicants must have the right to work in the EU.',
+    'We are a remote-first studio building cozy games.',
+    'We support your growth with a generous learning budget.',
+    '', null, undefined,
+  ];
+  const noneOk = none.every((t) => detectSponsorship(t) === 'none');
+  const offeredOk = offered.every((t) => detectSponsorship(t) === 'offered');
+  const silentOk = silent.every((t) => detectSponsorship(t) === null);
+  if (noneOk && offeredOk && silentOk) {
+    pass('detectSponsorship: none/offered fire on explicit phrasing, silent on boilerplate + empty (precision)');
+  } else {
+    fail(`detectSponsorship none=${noneOk} offered=${offeredOk} silent=${silentOk}`);
+  }
+
+  // Enricher contract: needs 'text', returns { sponsorship } or null (no-op).
+  const p1 = enricher.enrich({ text: none[0] });
+  const p2 = enricher.enrich({ text: 'nothing relevant here' });
+  const p3 = enricher.enrich({});
+  if (enricher.id === 'sponsorship' && enricher.needs === 'text' &&
+      p1 && p1.sponsorship === 'none' && p2 === null && p3 === null) {
+    pass('sponsorship enricher declares needs:text, returns { sponsorship } or null');
+  } else {
+    fail(`sponsorship enricher = ${JSON.stringify([enricher.id, enricher.needs, p1, p2, p3])}`);
+  }
+} catch (e) {
+  fail(`sponsorship enricher tests crashed: ${e.message}`);
+}
+
+// ── Provider — rippling (list map + detail ref parsing) ─────────
+
+console.log('\n31. Provider — rippling list map + work-location parse');
+
+try {
+  const { mapRipplingJobs, parseWorkLocationLabel } =
+    await import(pathToFileURL(join(ROOT, 'providers/rippling.mjs')).href);
+
+  // "Mode (Place)" → clean place + normalized mode; bare mode word → mode only;
+  // a plain location with no mode → kept whole, no mode. Fail-safe on junk.
+  const w1 = parseWorkLocationLabel('Hybrid (Southampton, England, GB)');
+  const w2 = parseWorkLocationLabel('Remote (United States)');
+  const w3 = parseWorkLocationLabel('Remote');
+  const w4 = parseWorkLocationLabel('In-office (Berlin)');
+  const w5 = parseWorkLocationLabel('London, UK');
+  if (w1.location === 'Southampton, England, GB' && w1.workMode === 'hybrid' &&
+      w2.location === 'United States' && w2.workMode === 'remote' &&
+      w3.location === '' && w3.workMode === 'remote' &&
+      w4.location === 'Berlin' && w4.workMode === 'onsite' &&
+      w5.location === 'London, UK' && w5.workMode === '') {
+    pass('parseWorkLocationLabel splits Mode(Place), handles bare mode + plain location');
+  } else {
+    fail(`parseWorkLocationLabel = ${JSON.stringify([w1, w2, w3, w4, w5])}`);
+  }
+
+  // List map: name/url required; department.label + workLocation.label carried;
+  // records missing name or url skipped.
+  const mapped = mapRipplingJobs([
+    { uuid: '1', name: 'Junior Programmer', url: 'https://ats.rippling.com/kinetic-games-careers/jobs/1', department: { label: 'Programming' }, workLocation: { label: 'Hybrid (Southampton, GB)' } },
+    { uuid: '2', name: 'No URL Role', department: { label: 'X' } },
+    { uuid: '3', url: 'https://ats.rippling.com/x/jobs/3' },
+    { uuid: '4', name: 'Remote Designer', url: 'https://ats.rippling.com/x/jobs/4', workLocations: ['Remote (Anywhere)'] },
+  ], 'Kinetic Games');
+  const jp = mapped.find((j) => j.title === 'Junior Programmer');
+  if (mapped.length === 2 && jp && jp.company === 'Kinetic Games' &&
+      jp.location === 'Southampton, GB' && jp.workMode === 'hybrid' && jp.department === 'Programming' &&
+      mapRipplingJobs(null, 'X').length === 0) {
+    pass('mapRipplingJobs maps name/url/dept/workLocation, skips rows missing name or url, fails safe');
+  } else {
+    fail(`mapRipplingJobs = ${JSON.stringify(mapped)}`);
+  }
+} catch (e) {
+  fail(`rippling provider tests crashed: ${e.message}`);
+}
+
+// ── Phase-2 detail pass (enrichJobs) ────────────────────────────
+// The framework detail phase must: run only when detail is wanted (--enrich OR a
+// detailDefault provider), apply the provider `overlay` (core fields) + run
+// cross-cutting enrichers on the detail, isolate per-job failures (keep the job,
+// lose only its detail), and run the provider's optional postFetch afterwards.
+
+console.log('\n32. Framework — enrichJobs two-phase detail pass');
+
+try {
+  const { enrichJobs } = await import(pathToFileURL(join(ROOT, 'scan.mjs')).href);
+  const enrichers = [{
+    id: 'sponsorship', needs: 'text',
+    enrich: (d) => (/unable to provide visa sponsorship/i.test(d.text) ? { sponsorship: 'none' } : null),
+  }];
+
+  // A detailDefault provider: overlays company/location from detail, exposes text
+  // for the enricher, throws on one job (isolated), and merges via postFetch.
+  const provider = {
+    id: 'fake',
+    detailDefault: true,
+    async fetchDetail(job) {
+      if (job.url.endsWith('/boom')) throw new Error('429 throttled');
+      if (job.url.endsWith('/plain')) return { overlay: { company: 'Acme' }, text: 'nothing here' };
+      return { overlay: { company: 'Acme', location: 'London' }, text: 'We are unable to provide visa sponsorship.' };
+    },
+    postFetch: (jobs) => jobs.filter((j) => j.title !== 'DROP ME'),
+  };
+  const jobs = [
+    { title: 'A', url: 'https://x/a', company: '', location: '' },
+    { title: 'B', url: 'https://x/plain', company: '', location: '' },
+    { title: 'DROP ME', url: 'https://x/c', company: '', location: '' },
+    { title: 'C', url: 'https://x/boom', company: '', location: '' },
+  ];
+  const res = await enrichJobs(jobs, provider, {}, {}, enrichers, { enrichEnabled: false });
+  const a = res.jobs.find((j) => j.title === 'A');
+  const b = res.jobs.find((j) => j.title === 'B');
+  const c = res.jobs.find((j) => j.title === 'C');
+  if (res.jobs.length === 3 && res.failures === 1 &&
+      a.company === 'Acme' && a.location === 'London' && a.sponsorship === 'none' &&
+      b.company === 'Acme' && b.sponsorship === undefined &&
+      c.company === '' && c.sponsorship === undefined &&
+      !res.jobs.some((j) => j.title === 'DROP ME')) {
+    pass('enrichJobs applies overlay + enrichers, isolates failures (keeps job), runs postFetch');
+  } else {
+    fail(`enrichJobs default = ${JSON.stringify(res)}`);
+  }
+
+  // Opt-in gating: a provider WITHOUT detailDefault is skipped unless --enrich.
+  const optIn = {
+    id: 'optin',
+    async fetchDetail() { return { overlay: { company: 'ShouldNotAppear' } }; },
+  };
+  const off = await enrichJobs([{ title: 'X', url: 'https://x/x', company: '' }], optIn, {}, {}, enrichers, { enrichEnabled: false });
+  const on = await enrichJobs([{ title: 'X', url: 'https://x/x', company: '' }], optIn, {}, {}, enrichers, { enrichEnabled: true });
+  // entry.enrich === false disables detail even for a detailDefault provider.
+  const disabled = await enrichJobs([{ title: 'Y', url: 'https://x/y', company: '' }], provider, { enrich: false }, {}, enrichers, { enrichEnabled: true });
+  if (off.jobs[0].company === '' && on.jobs[0].company === 'ShouldNotAppear' && disabled.jobs[0].company === '') {
+    pass('enrichJobs gates opt-in providers behind --enrich; entry.enrich:false disables detail entirely');
+  } else {
+    fail(`enrichJobs gating: off=${off.jobs[0].company} on=${on.jobs[0].company} disabled=${disabled.jobs[0].company}`);
+  }
+} catch (e) {
+  fail(`enrichJobs tests crashed: ${e.message}`);
 }
 
 // ── SUMMARY ─────────────────────────────────────────────────────

@@ -36,6 +36,14 @@
  *                                  "Junior-Associate" / "Mid-Senior Level" / "Director").
  *                                  Set only when the source exposes an explicit field;
  *                                  omitted otherwise (do NOT infer it from the title).
+ * @property {('none'|'offered')} [sponsorship] Optional visa-sponsorship signal, set
+ *                                  by the detail-phase `sponsorship` enricher from the
+ *                                  posting's description prose. 'none' = the posting
+ *                                  states it will NOT sponsor / requires existing right
+ *                                  to work; 'offered' = it explicitly offers sponsorship.
+ *                                  Omitted when the description doesn't mention it — a
+ *                                  missing field NEVER means "will sponsor" (see
+ *                                  providers/enrichers/sponsorship.mjs).
  */
 
 /**
@@ -84,13 +92,64 @@
  */
 
 /**
+ * Normalized per-job detail returned by `provider.fetchDetail()` in the optional
+ * Phase-2 detail pass. Two roles:
+ *   - cross-cutting enrichers read named fields off it (currently `text` — the
+ *     posting's plain-text description body — which the `sponsorship` enricher
+ *     scans). Add fields here as new enrichers need them.
+ *   - `overlay` carries provider-authoritative CORE fields to merge back onto the
+ *     job (e.g. the aggregator boards fill company/location/title from each
+ *     posting's JSON-LD, which the list page couldn't expose). Only non-empty
+ *     values overwrite; absent keys leave the list value intact.
+ *
+ * @typedef {object} DetailPayload
+ * @property {string}         [text]     Plain-text description body for enrichers.
+ * @property {Partial<Job>}   [overlay]  Core job fields to overwrite (non-empty only).
+ */
+
+/**
+ * A detail-phase enricher — a small module in providers/enrichers/*.mjs that
+ * derives an optional Job field from the fetched detail, decoupled from any ATS.
+ * Registered by dropping the file in; scan.mjs loads them like providers. Adding
+ * a new signal (salary-from-prose, relocation, …) is one file, no fetch edits.
+ *
+ * @typedef {object} Enricher
+ * @property {string} id                                          Unique label (used in logs).
+ * @property {string} [needs]                                     DetailPayload key it reads (e.g. 'text').
+ *                                                                When set and that key is empty on the
+ *                                                                detail, the enricher is skipped for that job.
+ * @property {(detail: DetailPayload, job: Job) => (Partial<Job>|null|undefined)} enrich  Pure; returns fields to merge.
+ */
+
+/**
  * The provider contract — the default export of every providers/*.mjs file
  * (excluding _-prefixed shared helpers).
  *
  * @typedef {object} Provider
  * @property {string} id                                                       Unique across all loaded providers.
  * @property {((entry: PortalEntry) => (DetectHit | null))} [detect]           Optional auto-detection.
- * @property {(entry: PortalEntry, ctx: Context) => Promise<Job[]>} fetch      Required.
+ * @property {(entry: PortalEntry, ctx: Context) => Promise<Job[]>} fetch      Required. Phase 1: the "basics"
+ *                                                                             list. A throttle here loses the job
+ *                                                                             (as before); the detail pass never can.
+ * @property {(job: Job, ctx: Context) => Promise<(DetailPayload|null)>} [fetchDetail]  Optional Phase 2: fetch one
+ *                                                                             posting's detail. Per-job failures are
+ *                                                                             isolated (the job keeps its Phase-1
+ *                                                                             fields, only the detail is lost), so a
+ *                                                                             throttling ATS degrades to less data,
+ *                                                                             never fewer postings.
+ * @property {boolean} [detailDefault]                                         When true the detail pass runs on EVERY
+ *                                                                             scan (the aggregator boards need it to
+ *                                                                             fill company/location). Default false —
+ *                                                                             detail runs only under the `--enrich`
+ *                                                                             flag, keeping the normal scan cheap.
+ * @property {number} [detailConcurrency]                                      Parallel detail fetches within one
+ *                                                                             entry (default 4). A per-entry
+ *                                                                             `enrich_concurrency` overrides it; drop
+ *                                                                             it low for throttle-prone ATSes.
+ * @property {(jobs: Job[], entry: PortalEntry) => Job[]} [postFetch]          Optional provider-specific pass run
+ *                                                                             AFTER the detail phase (e.g. gamedevjobs
+ *                                                                             merges a role split across offices, now
+ *                                                                             that companies are known).
  * @property {string[]} [aggregatorHosts]                                      Set ONLY by multi-studio BOARD providers
  *                                                                             that serve their own URLs (hitmarker,
  *                                                                             gamejobs.co, …). Every host here MUST be in

@@ -10,7 +10,7 @@
 //
 // Files prefixed with _ are never loaded as providers by scan.mjs.
 
-import { toIsoDate, normalizeWorkMode, splitLocationMode } from './_util.mjs';
+import { toIsoDate, normalizeWorkMode, splitLocationMode, stripHtml } from './_util.mjs';
 
 // Compose a place-only location string from a schema.org jobLocation node. `address`
 // may be a plain string ("København 1123 DK") or a PostalAddress object; a country
@@ -66,6 +66,10 @@ export function parseJobPostingLd(html) {
       const wmStructured = node.jobLocationType === 'TELECOMMUTE' ? 'remote' : '';
       const workMode = normalizeWorkMode(wmStructured) || wmFromText;
       const postedDate = toIsoDate(node.datePosted);
+      // Plain-text description body — consumed by detail-phase enrichers
+      // (e.g. sponsorship detection), not shown on the board. schema.org stores
+      // it as escaped HTML; strip to readable prose. Omitted when absent.
+      const description = stripHtml(node.description);
 
       return {
         title: typeof node.title === 'string' ? node.title.trim() : '',
@@ -73,6 +77,7 @@ export function parseJobPostingLd(html) {
         location,
         ...(workMode ? { workMode } : {}),
         ...(postedDate ? { postedDate } : {}),
+        ...(description ? { description } : {}),
       };
     }
   }
