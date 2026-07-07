@@ -26,7 +26,7 @@
 const NONE = [
   /\bno\s+(?:visa\s+)?sponsorship\b/,
   /\b(?:visa\s+)?sponsorship\s+(?:is\s+|will\s+)?(?:not\s+(?:available|offered|provided|possible|considered|be\s+\w+)|unavailable)\b/,
-  /\bunable\s+to\s+(?:provide|offer|support|give)\s+(?:visa\s+|any\s+)?sponsor\w*/,
+  /\bunable\s+to\s+(?:provide|offer|support|give)\b[^.!?]{0,24}sponsor\w*/,
   /\bnot\s+able\s+to\s+(?:provide|offer|support|sponsor)\b[^.!?]{0,24}sponsor\w*/,
   /\b(?:cannot|can\s?not|can'?t|will\s+not|won'?t|do(?:es)?\s*n[o']?t|don'?t)\s+(?:currently\s+|presently\s+)?(?:provide|offer|support|give)\s+(?:visa\s+|any\s+)?sponsor\w*/,
   /\b(?:cannot|can\s?not|can'?t|will\s+not|won'?t|do(?:es)?\s*n[o']?t|don'?t)\s+sponsor\b/,

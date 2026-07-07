@@ -3457,6 +3457,9 @@ try {
     'Visa sponsorship is not available for this position.',
     'This role is not eligible for visa sponsorship.',
     'You must be able to work in the US without sponsorship.',
+    // Intervening clause between the verb and "sponsor" (Rebellion, live): the
+    // "unable to provide/offer …" pattern tolerates a bounded gap.
+    'We are unable to provide or take over visa sponsorship, either now or in the future.',
   ];
   // 'offered' — affirmative phrasings.
   const offered = [
@@ -3658,8 +3661,52 @@ try {
   } else {
     fail(`free-tier inline: tt=${readable(tt)} rc=${readable(rc)} pe=${readable(pe)} hidden=${hidden(tt)}/${hidden(rc)}/${hidden(pe)}`);
   }
+
+  // Comeet: with details=true the list carries a `details` array; mapComeetPositions
+  // concatenates the sections into inline text (free tier, same as above).
+  const { mapComeetPositions } = await import(pathToFileURL(join(ROOT, 'providers/comeet.mjs')).href);
+  const cm = mapComeetPositions([
+    { name: 'Level Designer', uid: 'A7.96E', url_comeet_hosted_page: 'https://www.comeet.com/jobs/s/1/x/A7.96E',
+      details: [{ name: 'Description', value: '<p>Build levels.</p>' }, { name: 'Requirements', value: `<p>${line}</p>` }] },
+  ], 'Studio')[0];
+  if (readable(cm) && hidden(cm)) {
+    pass('comeet maps details=true sections to inline sponsorship-readable detail; non-enumerable');
+  } else {
+    fail(`comeet inline: readable=${readable(cm)} hidden=${hidden(cm)}`);
+  }
 } catch (e) {
   fail(`free-tier inline tests crashed: ${e.message}`);
+}
+
+// ── Workable PAID fetchDetail (per-job markdown twin) ───────────────
+// The /jobs.md list carries no description; every job page has a `{url}.md`
+// twin. fetchDetail fetches it, flattens the markdown (so a bolded phrase can't
+// hide a match), and returns { text }. Off-domain URLs return null (SSRF guard).
+console.log('\n34. Workable PAID fetchDetail — per-job markdown twin');
+
+try {
+  const { detectSponsorship } = await import(pathToFileURL(join(ROOT, 'providers/enrichers/sponsorship.mjs')).href);
+  const { default: workable } = await import(pathToFileURL(join(ROOT, 'providers/workable.mjs')).href);
+  // Markdown body with a bolded sponsor phrase — the flattener must strip `**`
+  // so detectSponsorship still fires.
+  const md = '# Senior Artist\n> Studio · Oxford\n\n## Description\nWe are unable to provide or take over visa **sponsorship**.\n';
+  let requested = '';
+  const ctx = { fetchText: async (u) => { requested = u; return md; } };
+
+  const d = await workable.fetchDetail({ url: 'https://apply.workable.com/s/jobs/view/ABC123' }, ctx);
+  const fired = d && detectSponsorship(d.text) === 'none';
+  const clean = d && !/[*#>]/.test(d.text); // markdown markers flattened out
+  const twinUrl = requested === 'https://apply.workable.com/s/jobs/view/ABC123.md';
+  // SSRF guard + null-safety
+  const offdomain = await workable.fetchDetail({ url: 'https://evil.example.com/x' }, ctx);
+  const noUrl = await workable.fetchDetail({}, ctx);
+  if (fired && clean && twinUrl && offdomain === null && noUrl === null) {
+    pass('workable fetchDetail reads {url}.md twin, flattens markdown for the enricher, guards off-domain/no-url');
+  } else {
+    fail(`workable fetchDetail: fired=${fired} clean=${clean} twinUrl=${twinUrl} offdomain=${offdomain} noUrl=${noUrl}`);
+  }
+} catch (e) {
+  fail(`workable fetchDetail tests crashed: ${e.message}`);
 }
 
 // ── SUMMARY ─────────────────────────────────────────────────────

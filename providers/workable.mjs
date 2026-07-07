@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate } from './_util.mjs';
+import { toIsoDate, stripHtml, attachDetail } from './_util.mjs';
 
 // Workable provider — hits the public markdown feed at /<slug>/jobs.md.
 // Workable's documented JSON API requires an auth token; the markdown feed
@@ -113,7 +113,47 @@ export default {
     const data = await ctx.fetchJson(wUrl, { redirect: 'error' });
     return parseWorkableWidget(data, entry.name);
   },
+
+  // PAID detail (markdown path): the /jobs.md list carries no description, but
+  // every per-job page has a clean markdown twin at `{job.url}.md`. One fetch per
+  // job, gated by --extra-fetch (on by default) and the enrich cap/concurrency.
+  // Widget-fallback jobs already carry description inline (see parseWorkableWidget),
+  // so this only fires for the markdown listing — and never for off-domain URLs.
+  async fetchDetail(job, ctx) {
+    const url = typeof job?.url === 'string' ? job.url : '';
+    if (!url) return null;
+    // Guard: only the apply.workable.com job-view pages have a `.md` twin.
+    let mdUrl;
+    try {
+      const u = new URL(url);
+      if (u.protocol !== 'https:' || u.hostname !== 'apply.workable.com') return null;
+      mdUrl = `${u.href.replace(/\.md$/i, '')}.md`;
+    } catch {
+      return null;
+    }
+    assertWorkableUrl(mdUrl);
+    const md = await ctx.fetchText(mdUrl, { redirect: 'error' });
+    const text = markdownToText(md);
+    return text ? { text } : null;
+  },
 };
+
+// Flatten Workable's per-job markdown to plain prose for the sponsorship
+// enricher. Strips emphasis/heading/blockquote/code markers and link syntax so a
+// bolded phrase ("cannot **sponsor**") can't hide a match behind `**`.
+function markdownToText(md) {
+  if (typeof md !== 'string' || !md) return '';
+  return md
+    .replace(/```[\s\S]*?```/g, ' ')           // fenced code blocks
+    .replace(/`([^`]*)`/g, '$1')               // inline code
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')     // images
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')   // links → link text
+    .replace(/[*_~]{1,3}/g, '')                // bold/italic/strike markers
+    .replace(/^#{1,6}\s*/gm, '')               // ATX headings
+    .replace(/^\s{0,3}>\s?/gm, '')             // blockquotes
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 /**
  * Parse Workable's keyless widget JSON
@@ -147,14 +187,16 @@ export function parseWorkableWidget(data, companyName) {
     const location = [j.city, j.state, j.country].filter(s => typeof s === 'string' && s.trim()).join(', ');
     const postedDate = toIsoDate(typeof j.published_on === 'string' ? j.published_on : '');
     const department = typeof j.department === 'string' ? j.department.trim() : '';
-    jobs.push({
+    // FREE inline detail: the widget's details=true payload already carries the
+    // (HTML) description, so widget-sourced jobs skip the per-job fetchDetail.
+    jobs.push(attachDetail({
       title,
       url,
       location,
       company: companyName,
       ...(postedDate ? { postedDate } : {}),
       ...(department ? { department } : {}),
-    });
+    }, { text: stripHtml(j.description) }));
   }
   return jobs;
 }

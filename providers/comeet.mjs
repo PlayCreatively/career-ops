@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate, normalizeWorkMode } from './_util.mjs';
+import { toIsoDate, normalizeWorkMode, stripHtml, attachDetail } from './_util.mjs';
 
 // Comeet provider — the Israeli multi-tenant ATS behind Moon Active, SuperPlay,
 // CrazyLabs and many other (often Tel Aviv-based) game studios. Each tenant has
@@ -39,8 +39,11 @@ function resolveTenant(entry) {
     slug,
     uid,
     pageUrl: `https://www.comeet.com/jobs/${slug}/${uid}`,
+    // `details=true` makes the list endpoint carry each position's full body
+    // (a `details` array of {name, value:HTML} sections) inline — so the
+    // sponsorship enricher runs off the SAME request, no per-job fetch (free tier).
     apiUrl: (token) =>
-      `https://www.comeet.com/careers-api/2.0/company/${encodeURIComponent(uid)}/positions?token=${encodeURIComponent(token)}`,
+      `https://www.comeet.com/careers-api/2.0/company/${encodeURIComponent(uid)}/positions?token=${encodeURIComponent(token)}&details=true`,
   };
 }
 
@@ -82,7 +85,14 @@ export function mapComeetPositions(positions, companyName) {
     const postedDate = toIsoDate(rec.time_updated);
     const department = typeof rec.department === 'string' ? rec.department.trim() : '';
 
-    const job = {
+    // FREE inline detail: with details=true the list carries a `details` array
+    // of {name, value:HTML} sections (Description/Responsibilities/Requirements/…).
+    // Concatenate their stripped text for the sponsorship enricher — no per-job
+    // fetch. (Absent when a caller fetched without details=true → attach no-ops.)
+    const detailText = Array.isArray(rec.details)
+      ? rec.details.map(d => stripHtml(d && d.value)).filter(Boolean).join(' ')
+      : '';
+    const job = attachDetail({
       title,
       url,
       company: companyName,
@@ -90,7 +100,7 @@ export function mapComeetPositions(positions, companyName) {
       ...(postedDate ? { postedDate } : {}),
       ...(workMode ? { workMode } : {}),
       ...(department ? { department } : {}),
-    };
+    }, { text: detailText });
 
     if (rec.uid == null) {
       out.push(job); // no uid to key on — never drop, it can't be proven a dupe
