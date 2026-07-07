@@ -3467,18 +3467,26 @@ try {
     // Intervening clause between the verb and "sponsor" (Rebellion, live): the
     // "unable to provide/offer …" pattern tolerates a bounded gap.
     'We are unable to provide or take over visa sponsorship, either now or in the future.',
+    // Possessive holder between "without" and "sponsorship" (Riot Games, live).
+    "You need to be able to work legally in Singapore, without Riot Games' sponsorship, to be considered.",
   ];
   // 'offered' — affirmative phrasings.
   const offered = [
     'We offer visa sponsorship and relocation support.',
     'Visa sponsorship available for the right candidate.',
     'We can sponsor work visas for exceptional candidates.',
+    // Company-NAME subject + "will sponsor … work visa" (Riot Games, live).
+    'Riot Games offers comprehensive relocation assistance and will sponsor the appropriate work visa.',
   ];
-  // null — no stance stated; a bare right-to-work line is NOT a 'none' trigger.
+  // null — no stance stated; a bare right-to-work line is NOT a 'none' trigger,
+  // and "sponsorship" in its COMMERCIAL sense (revenue/plans/partnerships) must
+  // never classify — the visa/permit anchor is what keeps those silent.
   const silent = [
     'Applicants must have the right to work in the EU.',
     'We are a remote-first studio building cozy games.',
     'We support your growth with a generous learning budget.',
+    'You will lead efforts to secure new sponsorship revenue opportunities for our esports league.',
+    'Partner with finance and marketing teams to develop and execute sponsorship plans.',
     '', null, undefined,
   ];
   const noneOk = none.every((t) => detectSponsorship(t) === 'none');

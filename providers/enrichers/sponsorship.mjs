@@ -32,7 +32,14 @@ const NONE = [
   /\b(?:cannot|can\s?not|can'?t|will\s+not|won'?t|do(?:es)?\s*n[o']?t|don'?t)\s+sponsor\b/,
   /\bnot\s+(?:be\s+)?(?:in\s+a\s+position|able)\s+to\s+(?:provide|offer|support|sponsor)\b[^.!?]{0,24}sponsor\w*/,
   /\bnot\s+eligible\s+for\s+(?:visa\s+)?sponsor\w*/,
-  /\bwithout\s+(?:the\s+need\s+for\s+(?:visa\s+)?|requiring\s+(?:visa\s+)?)?sponsor\w*/,
+  // "You need to be able to work legally in Singapore, without Riot Games'
+  // sponsorship, to be considered." — also the plain "without sponsorship" and
+  // "without the need for visa sponsorship". The optional middle group allows a
+  // holder between "without" and "sponsor": a "visa"/"work authorization"
+  // qualifier, OR a short possessive noun phrase ending in 's ("Riot Games'").
+  // A non-possessive filler ("without our sponsorship revenue") has no apostrophe
+  // and so falls through to needing a bare "without sponsor" — it won't match.
+  /\bwithout\s+(?:the\s+need\s+for\s+|requiring\s+)?(?:(?:visa|work[\s-]?authoriz\w+)\s+|(?:[a-z][\w.&]*\s+){0,3}[\w.&]*['’]s?\s+)?sponsor\w*/,
 ];
 
 // A posting that explicitly OFFERS sponsorship. Kept tight — only affirmative
@@ -43,6 +50,15 @@ const OFFERED = [
   /\b(?:we|they|our\s+\w+|the\s+company)\s+(?:can\s+|will\s+|do\s+|are\s+(?:able|happy|pleased|willing)\s+to\s+)?(?:provide|offer|support|sponsor)\s+(?:visa\s+|work\s+visa\s+|relocation\s+and\s+(?:visa\s+)?)?sponsor\w*/,
   /\b(?:we|they)\s+(?:can|will|do)\s+sponsor\b/,
   /\bvisa\s+(?:sponsorship\s+and\s+)?(?:support|assistance)\s+(?:is\s+)?(?:available|provided|offered)\b/,
+  // "If you're relocating from another city or country, Riot Games offers
+  // comprehensive relocation assistance and will sponsor the appropriate work
+  // visa." — subject-agnostic (the subject here is a company NAME, not "we/they",
+  // so the patterns above miss it). Anchored on "<modal> sponsor … visa/permit":
+  // the affirmative modal keeps any negation OUTSIDE the match ("will not sponsor"
+  // leaves "not" between modal and verb; "unable/cannot sponsor" don't start with
+  // will/can/do — and NONE runs first regardless), and the visa/permit token
+  // keeps it clear of commercial "sponsorship" (revenue, plans, partnerships).
+  /\b(?:will|can|do|does)\s+sponsor\s+(?:the\s+|an?\s+|your\s+|their\s+)?(?:appropriate\s+|necessary\s+|relevant\s+|required\s+)?(?:work\s+|working\s+)?(?:visa|permit)s?\b/,
 ];
 
 /**
