@@ -7,8 +7,12 @@
  * Tests: syntax, scripts, dashboard, data contract, personal data, paths.
  *
  * Usage:
- *   node test-all.mjs           # Run all tests
- *   node test-all.mjs --quick   # Skip dashboard build (faster)
+ *   node test-all.mjs             # Run all tests (Go dashboard build skipped)
+ *   node test-all.mjs --dashboard # Also build the Go dashboard (needs a Go toolchain)
+ *
+ * The Go dashboard build is opt-in: it needs a Go toolchain that not every
+ * environment has, and a missing/mismatched Go was surfacing as a spurious
+ * failure on every run. Pass --dashboard to include it.
  */
 
 import { execSync, execFileSync } from 'child_process';
@@ -20,6 +24,9 @@ import { fileURLToPath, pathToFileURL } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
 const QUICK = process.argv.includes('--quick');
+// The Go dashboard build is opt-in (--dashboard). Off by default so a missing Go
+// toolchain doesn't fail every run. --quick still forces it off.
+const RUN_DASHBOARD = process.argv.includes('--dashboard') && !QUICK;
 const NODE = process.execPath;
 
 let passed = 0;
@@ -142,7 +149,7 @@ try {
 
 // ── 4. DASHBOARD BUILD ──────────────────────────────────────────
 
-if (!QUICK) {
+if (RUN_DASHBOARD) {
   console.log('\n4. Dashboard build');
   const goBuild = run('cd dashboard && go build -o /tmp/career-dashboard-test . 2>&1');
   if (goBuild !== null) {
@@ -151,7 +158,7 @@ if (!QUICK) {
     fail('Dashboard build failed');
   }
 } else {
-  console.log('\n4. Dashboard build (skipped --quick)');
+  console.log('\n4. Dashboard build (skipped — pass --dashboard to include)');
 }
 
 // ── 5. DATA CONTRACT ────────────────────────────────────────────
