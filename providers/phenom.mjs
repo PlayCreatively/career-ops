@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate, slugifyTitle, normalizeWorkMode } from './_util.mjs';
+import { toIsoDate, slugifyTitle, normalizeWorkMode, stripHtml, attachDetail } from './_util.mjs';
 
 // Phenom (Phenom People) provider — the career-site CMS behind careers.blizzard.com,
 // careers.activision.com, careers.infinityward.com and many others. Each tenant
@@ -114,7 +114,14 @@ function mapJob(rec, base, companyName) {
   const postedDate = toIsoDate(rec.postedDate || rec.dateCreated);
   const workMode = normalizeWorkMode(rec.checkRemote);
   const department = typeof rec.category === 'string' ? rec.category : '';
-  return {
+  // FREE fallback detail: the search-results record carries a short
+  // `descriptionTeaser` (a ~1-paragraph blurb, not the full JD). Attach it as
+  // inline detail so a job PAST the enrich cap — never reached by the PAID
+  // fetchDetail below — still gets a sponsorship read when the line happens to
+  // sit in the teaser. Harmless: the enricher is precision-first, and fetchDetail
+  // overwrites it with the full body for the jobs it does reach.
+  const teaser = stripHtml(rec.descriptionTeaser);
+  return attachDetail({
     title,
     url,
     company: companyName,
@@ -122,7 +129,53 @@ function mapJob(rec, base, companyName) {
     ...(postedDate ? { postedDate } : {}),
     ...(workMode ? { workMode } : {}),
     ...(department ? { department } : {}),
-  };
+  }, { text: teaser });
+}
+
+// Slice the balanced `{…}` object starting at the first `{` at or after `from`,
+// with a string-aware scanner (job descriptions embed stray braces and escaped
+// quotes, so a naive brace count mis-slices). Returns '' when none is found.
+function sliceObject(str, from) {
+  let i = str.indexOf('{', from);
+  if (i === -1) return '';
+  const start = i;
+  let depth = 0, inStr = false, esc = false;
+  for (; i < str.length; i++) {
+    const c = str[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === '\\') esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') inStr = true;
+    else if (c === '{') depth++;
+    else if (c === '}') { depth--; if (depth === 0) { i++; break; } }
+  }
+  return depth === 0 ? str.slice(start, i) : '';
+}
+
+/**
+ * Pull the full JD prose out of a Phenom JOB DETAIL page. The page server-embeds
+ * the requisition under `phApp.ddo … "jobDetail":{"status":200,…,"data":{"job":
+ * {…,"description":"<html>",…}}}`; we slice that one object (there are later
+ * `jobDetail` mentions that are analytics config, so we anchor on the `:{"status"`
+ * shape), JSON.parse it, and strip the description HTML to text. Exported for unit
+ * tests. Returns '' when the block is absent or unparseable (fetchDetail no-ops).
+ *
+ * @param {string} html
+ * @returns {string}
+ */
+export function extractPhenomDetail(html) {
+  if (typeof html !== 'string' || !html) return '';
+  const anchor = '"jobDetail":{"status"';
+  const k = html.indexOf(anchor);
+  if (k === -1) return '';
+  const obj = sliceObject(html, k + '"jobDetail":'.length);
+  if (!obj) return '';
+  let parsed;
+  try { parsed = JSON.parse(obj); } catch { return ''; }
+  const job = parsed && parsed.data && parsed.data.job;
+  if (!job || typeof job.description !== 'string') return '';
+  return stripHtml(job.description);
 }
 
 /** @type {Provider} */
@@ -175,5 +228,21 @@ export default {
     }
 
     return jobs;
+  },
+
+  // PAID detail (runs by default; skipped by --no-extra-fetch). The list gives
+  // only a teaser (attached inline above); the full JD lives on the job detail
+  // page, server-embedded in the same `phApp.ddo` blob the search page uses. One
+  // HTML GET per job, gated by the enrich cap/concurrency. Concurrency stays low:
+  // these tenants (Blizzard, Activision) sit behind bot protection that the plain
+  // fetch already skirts, so a burst is the most likely thing to trip it — and a
+  // per-job miss only costs that job's detail, never the posting.
+  detailConcurrency: 3,
+  async fetchDetail(job, ctx) {
+    const url = typeof job?.url === 'string' ? job.url : '';
+    if (!url) return null;
+    const html = await ctx.fetchText(url, { redirect: 'follow' });
+    const text = extractPhenomDetail(html);
+    return text ? { text } : null;
   },
 };

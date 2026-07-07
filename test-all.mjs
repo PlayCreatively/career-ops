@@ -3782,6 +3782,67 @@ try {
   fail(`aggregator inline-detail tests crashed: ${e.message}`);
 }
 
+// ── Workday + Phenom PAID fetchDetail (enterprise ATS) ──────────────
+// Neither list carries the JD. Workday parses the cxs detail endpoint from a
+// non-enumerable parse-time stash (the public url hides the tenant) and reads
+// jobPostingInfo.jobDescription; Phenom fetches the job page and slices the JD
+// out of the server-embedded phApp.ddo jobDetail blob. Both strip HTML to prose
+// the sponsorship enricher can read, and no-op safely on missing/garbage input.
+console.log('\n36. Workday + Phenom PAID fetchDetail — enterprise ATS');
+
+try {
+  const { detectSponsorship } = await import(pathToFileURL(join(ROOT, 'providers/enrichers/sponsorship.mjs')).href);
+  const { default: workday, parseWorkdayPage } = await import(pathToFileURL(join(ROOT, 'providers/workday.mjs')).href);
+  const { default: phenom, extractPhenomDetail } = await import(pathToFileURL(join(ROOT, 'providers/phenom.mjs')).href);
+
+  const NONE_LINE = 'You must have the right to work in the UK. We are unable to provide or take over visa sponsorship.';
+  const CXS = 'https://sega.wd3.myworkdayjobs.com/wday/cxs/sega/SEGA_Careers/job/Horsham/Gameplay-Programmer_R123';
+
+  // Workday: parse stashes the cxs endpoint non-enumerably (invisible to the
+  // snapshot); fetchDetail reads it, strips the jobDescription HTML.
+  const wjob = parseWorkdayPage(
+    { jobPostings: [{ title: 'Gameplay Programmer', externalPath: '/job/Horsham/Gameplay-Programmer_R123', locationsText: 'Horsham, UK' }] },
+    { host: 'sega.wd3.myworkdayjobs.com', tenant: 'sega', site: 'SEGA_Careers', company: 'SEGA' },
+  )[0];
+  const stashHidden = !JSON.stringify(wjob).toLowerCase().includes('cxs');
+  let wdReq = '';
+  const wdCtx = { fetchJson: async (u) => { wdReq = u; return { jobPostingInfo: { jobDescription: `<p>Build systems.</p><p>${NONE_LINE}</p>` } }; } };
+  const wd = await workday.fetchDetail(wjob, wdCtx);
+  const wdFired = wd && detectSponsorship(wd.text) === 'none' && !/[<>]/.test(wd.text);
+  const wdEndpoint = wdReq === CXS;
+  // url-fallback: a job with only its public url (standard host, no stash) still
+  // re-derives the same cxs endpoint.
+  wdReq = '';
+  const wdFb = await workday.fetchDetail({ url: 'https://sega.wd3.myworkdayjobs.com/SEGA_Careers/job/Horsham/Gameplay-Programmer_R123' }, wdCtx);
+  const wdFallback = wdFb && detectSponsorship(wdFb.text) === 'none' && wdReq === CXS;
+  // Custom-domain / off-Workday url with no stash → null, no fetch attempted.
+  wdReq = '';
+  const wdNull = (await workday.fetchDetail({ url: 'https://jobs.ea.com/ea_external/job/X' }, wdCtx)) === null && wdReq === '';
+
+  if (stashHidden && wdFired && wdEndpoint && wdFallback && wdNull) {
+    pass('workday fetchDetail reads cxs jobDescription via non-enumerable stash + url-fallback; guards off-domain');
+  } else {
+    fail(`workday fetchDetail: hidden=${stashHidden} fired=${wdFired} endpoint=${wdEndpoint} fallback=${wdFallback} null=${wdNull}`);
+  }
+
+  // Phenom: the JD sits in the phApp.ddo jobDetail blob; extract + strip to prose.
+  const ddo = `<script>phApp.ddo = {"jobDetail":{"status":200,"hits":1,"totalHits":1,"data":{"job":{"title":"Senior Artist","description":"<p>Make games.</p><p>${NONE_LINE}</p>"}}}};</script>`;
+  const pt = extractPhenomDetail(ddo);
+  const ptFired = detectSponsorship(pt) === 'none' && !/[<>]/.test(pt);
+  const phCtx = { fetchText: async () => ddo };
+  const pd = await phenom.fetchDetail({ url: 'https://careers.blizzard.com/global/en/job/SEQ/senior-artist' }, phCtx);
+  const pdFired = pd && detectSponsorship(pd.text) === 'none';
+  const phGuards = extractPhenomDetail('<html>no ddo</html>') === '' && (await phenom.fetchDetail({}, phCtx)) === null;
+
+  if (ptFired && pdFired && phGuards) {
+    pass('phenom fetchDetail slices the JD from the embedded jobDetail blob for the enricher; guards absent/no-url');
+  } else {
+    fail(`phenom fetchDetail: extract=${ptFired} fetch=${pdFired} guards=${phGuards}`);
+  }
+} catch (e) {
+  fail(`enterprise ATS fetchDetail tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));

@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { stripHtml } from './_util.mjs';
+
 // Workday provider — hits the public "cxs" job-search JSON API that every
 // Workday career site exposes at:
 //
@@ -59,6 +61,15 @@
 const PER_PAGE = 20;
 const MAX_PAGES = 25; // hard cap: 25 * 20 = 500 postings per tenant, plenty.
 
+// Non-enumerable stash for the per-job cxs DETAIL endpoint, set during parse and
+// read by fetchDetail. It can't be re-derived from the public job.url alone: the
+// url is `{host}/{site}{externalPath}` and carries no tenant, which custom
+// domains (jobs.ea.com, tenant "ea") don't expose in the host. Module-local and
+// non-enumerable, so it never reaches the JSON snapshot, a `{...job}` spread, or
+// the parser unit tests' deepStrictEqual. See attachDetail in _util for the same
+// pattern applied to inline detail text.
+const DETAIL_ENDPOINT = Symbol('workday.detailEndpoint');
+
 // A Workday path may carry a locale prefix (en-US, en_US, fr-FR). The site id is
 // the first path segment that isn't a locale.
 const LOCALE_RE = /^[a-z]{2}([-_][A-Za-z]{2})?$/;
@@ -90,18 +101,29 @@ export function resolveWorkday(entry) {
   return { host, tenant, site };
 }
 
-export function parseWorkdayPage(json, { host, site, company }) {
+export function parseWorkdayPage(json, { host, tenant, site, company }) {
   const postings = Array.isArray(json?.jobPostings) ? json.jobPostings : [];
   return postings
     .filter(p => p && p.title && p.externalPath)
-    .map(p => ({
-      title: String(p.title),
-      // externalPath is site-relative and starts with "/job/..."; the public
-      // job URL is {origin}/{site}{externalPath}.
-      url: `https://${host}/${site}${p.externalPath}`,
-      company: company || '',
-      location: typeof p.locationsText === 'string' ? p.locationsText : '',
-    }));
+    .map(p => {
+      const job = {
+        title: String(p.title),
+        // externalPath is site-relative and starts with "/job/..."; the public
+        // job URL is {origin}/{site}{externalPath}.
+        url: `https://${host}/${site}${p.externalPath}`,
+        company: company || '',
+        location: typeof p.locationsText === 'string' ? p.locationsText : '',
+      };
+      // Stash the cxs DETAIL endpoint for fetchDetail (PAID tier). Same host as
+      // the list, tenant/site from the entry, externalPath from the posting.
+      if (tenant) {
+        Object.defineProperty(job, DETAIL_ENDPOINT, {
+          value: `https://${host}/wday/cxs/${tenant}/${site}${p.externalPath}`,
+          enumerable: false, configurable: true, writable: true,
+        });
+      }
+      return job;
+    });
 }
 
 /** @type {Provider} */
@@ -154,7 +176,7 @@ export default {
         redirect: 'error',
       });
       if (page === 0 && Number.isFinite(json?.total) && json.total > 0) knownTotal = json.total;
-      const batch = parseWorkdayPage(json, { host, site, company: entry.name });
+      const batch = parseWorkdayPage(json, { host, tenant, site, company: entry.name });
       jobs.push(...batch);
       // Stop on a short/empty page, or once we've pulled the first-page total.
       if (batch.length < PER_PAGE) break;
@@ -175,4 +197,44 @@ export default {
     }
     return jobs;
   },
+
+  // PAID detail (runs by default; skipped by --no-extra-fetch). The list carries
+  // no description; each posting's cxs detail endpoint returns it as
+  // jobPostingInfo.jobDescription (HTML). One GET per job, gated by the enrich
+  // cap/concurrency. Keep concurrency modest — big publishers (SEGA, Spin Master,
+  // WBD) sit behind CDNs that throttle bursts, and a per-job miss only costs that
+  // job's detail, never the posting. Endpoint comes from the parse-time stash;
+  // for a standard *.myworkdayjobs.com host we can also re-derive it from job.url
+  // (tenant = first host label) as a fail-safe when the stash is absent.
+  detailConcurrency: 3,
+  async fetchDetail(job, ctx) {
+    let endpoint = job && job[DETAIL_ENDPOINT];
+    if (!endpoint) endpoint = detailEndpointFromUrl(job && job.url);
+    if (!endpoint) return null;
+    const json = await ctx.fetchJson(endpoint, {
+      headers: { accept: 'application/json' },
+      redirect: 'follow',
+    });
+    const desc = json?.jobPostingInfo?.jobDescription;
+    const text = stripHtml(desc);
+    return text ? { text } : null;
+  },
 };
+
+// Fail-safe endpoint recovery for standard hosts: a public Workday job URL is
+// `https://{tenant}.{dc}.myworkdayjobs.com/{site}{externalPath}`, and on these
+// hosts the tenant IS the first host label — so the cxs detail endpoint is
+// recoverable without the stash. Custom domains (jobs.ea.com) hide the tenant in
+// the host and so rely on the stash; here we return '' and fetchDetail no-ops.
+function detailEndpointFromUrl(url) {
+  let u;
+  try { u = new URL(url || ''); } catch { return ''; }
+  const host = u.hostname.toLowerCase();
+  if (u.protocol !== 'https:' || !host.endsWith('.myworkdayjobs.com')) return '';
+  const tenant = host.split('.')[0];
+  const segments = u.pathname.split('/').filter(Boolean);
+  const site = segments.shift();
+  const externalPath = segments.length ? `/${segments.join('/')}` : '';
+  if (!tenant || !site || !externalPath) return '';
+  return `https://${host}/wday/cxs/${tenant}/${site}${externalPath}`;
+}
