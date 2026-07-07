@@ -3716,6 +3716,64 @@ try {
   fail(`workable fetchDetail tests crashed: ${e.message}`);
 }
 
+// ── Aggregator FREE inline detail (Hitmarker + Work With Indies) ────
+// Both are multi-studio boards. Hitmarker's Typesense document already carries
+// the JD as `jobDescription` (and an HTML twin) in the SAME multi_search page;
+// WWI's full JD is in the job-page HTML its closed-check already fetches. Neither
+// costs an extra request — this proves the detail attaches and reads.
+console.log('\n35. Aggregator FREE inline detail — Hitmarker + Work With Indies');
+
+try {
+  const { detectSponsorship } = await import(pathToFileURL(join(ROOT, 'providers/enrichers/sponsorship.mjs')).href);
+  const { DETAIL } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
+  const { parseHitmarkerResponse } = await import(pathToFileURL(join(ROOT, 'providers/hitmarker.mjs')).href);
+  const { parseWorkWithIndiesFeed, extractJobBody } = await import(pathToFileURL(join(ROOT, 'providers/workwithindies.mjs')).href);
+
+  const NONE_LINE = 'You must have the right to work in the UK. We are unable to provide or take over visa sponsorship.';
+  const readable = (j) => !!(j && j[DETAIL] && detectSponsorship(j[DETAIL].text) === 'none');
+  const hidden = (j) => !JSON.stringify(j).toLowerCase().includes('sponsor');
+
+  // Hitmarker: plain jobDescription is used when present; HTML twin is the fallback.
+  const hmPlain = parseHitmarkerResponse({ results: [{ hits: [{ document: {
+    title: 'Gameplay Programmer', url: 'https://hitmarker.net/jobs/x-1', postDate: 1750000000,
+    jobCompany: { title: 'Rebellion' }, jobDescription: `Build systems. ${NONE_LINE}`,
+    jobDescriptionHtml: '<p>ignored when plain is present</p>',
+  } }] }] })[0];
+  const hmHtml = parseHitmarkerResponse({ results: [{ hits: [{ document: {
+    title: 'Tools Engineer', url: 'https://hitmarker.net/jobs/x-2', postDate: 1750000000,
+    jobCompany: { title: 'Studio' }, jobDescription: '',
+    jobDescriptionHtml: `<p>Make tools.</p><p>${NONE_LINE}</p>`,
+  } }] }] })[0];
+  if (readable(hmPlain) && hidden(hmPlain) && readable(hmHtml)) {
+    pass('hitmarker attaches jobDescription (HTML twin fallback) as sponsorship-readable inline detail; non-enumerable');
+  } else {
+    fail(`hitmarker inline: plain=${readable(hmPlain)} hidden=${hidden(hmPlain)} htmlFallback=${readable(hmHtml)}`);
+  }
+
+  // WWI: RSS <description> blurb attaches as the free fallback (parse phase).
+  const xml = `<rss><channel><item>` +
+    `<title>Rebellion is hiring a Gameplay Programmer to work from Oxford, UK</title>` +
+    `<link>https://www.workwithindies.com/careers/rebellion-gameplay-programmer</link>` +
+    `<description>${NONE_LINE} Tags: [Programming] [Full Time]</description>` +
+    `<pubDate>Fri, 03 Jul 2026 00:00:00 GMT</pubDate>` +
+    `</item></channel></rss>`;
+  const wwi = parseWorkWithIndiesFeed(xml)[0];
+
+  // extractJobBody depth-matches the Webflow rich-text container and strips to
+  // prose; nested block tags inside it don't cut it short; absent → ''.
+  const page = `<html><body><div class="job-description-container"><div class="job-description w-richtext">` +
+    `<p>Make games.</p><ul><li>${NONE_LINE}</li></ul></div></div><div class="footer">unrelated</div></body></html>`;
+  const body = extractJobBody(page);
+  const bodyReads = detectSponsorship(body) === 'none' && !body.includes('unrelated') && !body.includes('footer');
+  if (readable(wwi) && hidden(wwi) && bodyReads && extractJobBody('<div>no richtext here</div>') === '') {
+    pass('work-with-indies attaches RSS blurb; extractJobBody isolates the richtext body for the enricher');
+  } else {
+    fail(`wwi inline: blurb=${readable(wwi)} hidden=${hidden(wwi)} bodyReads=${bodyReads}`);
+  }
+} catch (e) {
+  fail(`aggregator inline-detail tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));

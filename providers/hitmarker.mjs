@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate } from './_util.mjs';
+import { toIsoDate, stripHtml, attachDetail } from './_util.mjs';
 
 // Hitmarker provider — the largest games / esports job board.
 //
@@ -50,13 +50,21 @@ export function parseHitmarkerResponse(json) {
       // `postDate` is a Unix epoch in SECONDS. No structured remote flag or
       // department in the Typesense document, so only postedDate is set.
       const postedDate = toIsoDate(doc.postDate);
-      return {
+      // FREE inline detail: the Typesense document already carries the full JD as
+      // `jobDescription` (plain text; `jobDescriptionHtml` is the same body with
+      // markup). It ships in this SAME multi_search response — the search key
+      // doesn't exclude it — so the sponsorship enricher runs with no per-job
+      // fetch. Prefer the plain field; fall back to stripping the HTML twin.
+      const detailText = typeof doc.jobDescription === 'string' && doc.jobDescription.trim()
+        ? doc.jobDescription
+        : stripHtml(doc.jobDescriptionHtml);
+      return attachDetail({
         title: String(doc.title),
         url: String(doc.url),
         company: doc.jobCompany?.title ? String(doc.jobCompany.title) : '',
         location: formatLocation(Array.isArray(doc.jobLocation) ? doc.jobLocation[0] : null),
         ...(postedDate ? { postedDate } : {}),
-      };
+      }, { text: detailText });
     });
 }
 

@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate } from './_util.mjs';
+import { toIsoDate, stripHtml, attachDetail } from './_util.mjs';
 
 // Work With Indies provider — an AGGREGATOR board (like Hitmarker), not a single
 // company. One tracked_companies entry yields jobs across many indie studios.
@@ -52,10 +52,15 @@ export function parseWorkWithIndiesFeed(xml) {
     if (!url || !rawTitle) continue;
     // RFC-2822 pubDate (e.g. "Sat, 13 Jun 2026 00:00:00 GMT") → ISO-8601.
     const postedDate = toIsoDate(pickTag(block, 'pubDate'));
+    // The RSS <description> is a one-line teaser (+ a "Tags: [...]" suffix), too
+    // shallow for a visa-sponsorship line — those live deep in the JD. Attach it
+    // as a FREE fallback anyway (harmless: the enricher is precision-first). The
+    // closed-check in fetch() then upgrades kept jobs to the full page body.
+    const blurb = stripHtml(decodeEntities(pickTag(block, 'description')));
     const m = rawTitle.match(TITLE_RE);
     if (m) {
       const [, company, role, fromLoc, remote] = m;
-      jobs.push({
+      jobs.push(attachDetail({
         title: role.trim(),
         url,
         company: company.trim(),
@@ -63,11 +68,11 @@ export function parseWorkWithIndiesFeed(xml) {
         location: (fromLoc || '').trim(),
         ...(remote ? { workMode: 'remote' } : {}),
         ...(postedDate ? { postedDate } : {}),
-      });
+      }, { text: blurb }));
     } else {
       // Fail-safe: keep the posting with the raw title so it can still match
       // the title filter and reach the pipeline.
-      jobs.push({ title: rawTitle, url, company: '', location: '', ...(postedDate ? { postedDate } : {}) });
+      jobs.push(attachDetail({ title: rawTitle, url, company: '', location: '', ...(postedDate ? { postedDate } : {}) }, { text: blurb }));
     }
   }
   return jobs;
@@ -92,6 +97,29 @@ export function isClosedPosting(html) {
     if (!/\bw-condition-invisible\b/.test(m[1])) return true;
   }
   return false;
+}
+
+// Extract the plain-text JD body from a WWI job page. The description lives in a
+// Webflow rich-text container `<div class="job-description w-richtext">…</div>`;
+// we depth-match the surrounding <div> so nested block tags don't cut it short,
+// then strip to prose. The closed-check already fetched this HTML, so reading the
+// body here is FREE — no extra request. Exported for unit tests. Returns '' when
+// the container is absent (fail-safe: the RSS blurb detail stays in place).
+export function extractJobBody(html) {
+  if (typeof html !== 'string' || !html) return '';
+  const anchor = html.indexOf('job-description w-richtext');
+  if (anchor === -1) return '';
+  const open = html.lastIndexOf('<div', anchor);
+  if (open === -1) return '';
+  const re = /<\/?div\b[^>]*>/gi;
+  re.lastIndex = open;
+  let depth = 0, end = -1, m;
+  while ((m = re.exec(html))) {
+    if (m[0][1] === '/') { depth--; if (depth === 0) { end = m.index; break; } }
+    else depth++;
+  }
+  if (end === -1) return '';
+  return stripHtml(html.slice(open, end));
 }
 
 // Run async `worker` over `items` with a fixed concurrency cap, preserving order.
@@ -147,7 +175,11 @@ export default {
     const open = await mapConcurrent(jobs, VERIFY_CONCURRENCY, async (job) => {
       try {
         const html = await ctx.fetchText(job.url, { timeoutMs: 8000 });
-        return isClosedPosting(html) ? null : job;
+        if (isClosedPosting(html)) return null;
+        // Same fetch, no extra request: upgrade the shallow RSS blurb to the full
+        // page body so the sponsorship enricher sees the requirements section.
+        const body = extractJobBody(html);
+        return body ? attachDetail(job, { text: body }) : job;
       } catch {
         return job; // unreachable page → keep it, the next scan can re-check
       }
