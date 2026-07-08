@@ -63,8 +63,10 @@ targeting:
           keywords: [united kingdom, '/\bUK\b/', '/\bGB\b/', england, scotland, wales, northern ireland, london, guildford, brighton, manchester, cambridge, oxford, leamington, edinburgh, glasgow, bristol, leeds, sheffield, dundee, liverpool, nottingham, newcastle]
         - name: North America
           keywords: [united states, '/\bUSA\b/', '/\bUS\b/', canada, california, new york, texas, washington, seattle, san francisco, los angeles, austin, raleigh, cary, north carolina, massachusetts, boston, florida, chicago, montreal, montréal, toronto, vancouver, quebec, québec, ontario, alberta, oregon, colorado, georgia, utah, arizona, nevada, san diego, carlsbad, novato, redmond, irvine, san mateo, burnaby]
-        - name: Asia/Pacific
-          keywords: [japan, tokyo, china, shanghai, beijing, singapore, korea, seoul, india, bangalore, bengaluru, hong kong, taiwan, australia, sydney, melbourne, brisbane, new zealand, auckland, philippines, manila, vietnam, malaysia, kuala lumpur, thailand, indonesia, jakarta, united arab emirates, dubai, israel, tel aviv]
+        - name: Asia
+          keywords: [japan, tokyo, china, shanghai, beijing, singapore, korea, seoul, india, bangalore, bengaluru, hong kong, taiwan, philippines, manila, vietnam, malaysia, kuala lumpur, thailand, indonesia, jakarta, united arab emirates, dubai, israel, tel aviv]
+        - name: Pacific
+          keywords: [australia, sydney, melbourne, brisbane, perth, adelaide, canberra, new zealand, auckland, wellington, '/\boceania\b/']
         - name: Other
           else: true
     - name: Level
