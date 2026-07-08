@@ -3186,7 +3186,7 @@ console.log('\n26. Provider — gamejobs-co sitemap + JSON-LD');
 try {
   const { jobFromSlug, parseSitemapJobs } =
     await import(pathToFileURL(join(ROOT, 'providers/gamejobs.mjs')).href);
-  const { parseJobPostingLd } =
+  const { parseJobPostingLd, cleanLdAddress } =
     await import(pathToFileURL(join(ROOT, 'providers/_jsonld.mjs')).href);
 
   // Slug parse: split on the LAST "-at-", strip a trailing "-{n}" dedup suffix,
@@ -3246,6 +3246,26 @@ try {
     pass('parseJobPostingLd returns null on missing/invalid/non-JobPosting input (fail-safe)');
   } else {
     fail('parseJobPostingLd should return null on bad input');
+  }
+
+  // cleanLdAddress: some employers (King) fold a team/game name into the address'
+  // FIRST segment — "Candy Crush Soda Saga in Stockholm, …" — which otherwise
+  // becomes the primary city and blocks snapshot dedup from collapsing the mirror
+  // against the clean first-party twin. Strip the "<name> in " prefix; leave
+  // normal locations (no " in " in the head) untouched.
+  if (cleanLdAddress('Candy Crush Soda Saga in Stockholm, Stockholm County, Sweden') === 'Stockholm, Stockholm County, Sweden' &&
+      cleanLdAddress('Catalog Games in Barcelona, Spain') === 'Barcelona, Spain' &&
+      cleanLdAddress('Some Team in Dublin') === 'Dublin' &&
+      cleanLdAddress('Stockholm, Stockholm County, Sweden') === 'Stockholm, Stockholm County, Sweden' &&
+      cleanLdAddress('San Francisco, CA, USA') === 'San Francisco, CA, USA' &&
+      cleanLdAddress('Berlin, Made in Germany region') === 'Berlin, Made in Germany region' &&
+      cleanLdAddress('Remote') === 'Remote' && cleanLdAddress('') === '') {
+    pass('cleanLdAddress strips "<team> in <city>" prefix (King) while leaving normal locations untouched');
+  } else {
+    fail(`cleanLdAddress = ${JSON.stringify([
+      cleanLdAddress('Candy Crush Soda Saga in Stockholm, Stockholm County, Sweden'),
+      cleanLdAddress('Berlin, Made in Germany region'),
+    ])}`);
   }
 } catch (e) {
   fail(`gamejobs-co provider tests crashed: ${e.message}`);

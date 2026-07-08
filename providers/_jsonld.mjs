@@ -12,6 +12,28 @@
 
 import { toIsoDate, normalizeWorkMode, splitLocationMode, stripHtml } from './_util.mjs';
 
+// Strip a "<team/game name> in " prefix that some employers fold into the FIRST
+// segment of a plain-string schema.org address. King, for one, emits e.g.
+// "Candy Crush Soda Saga in Stockholm, Stockholm County, Sweden" — the team name
+// glued in front of the real city. Left as-is it becomes the "primary city" and
+// makes the posting's location incompatible with its clean first-party twin, so
+// snapshot dedup keeps both (a visible duplicate on the board). We only touch the
+// segment BEFORE the first comma, and only when it contains " in " (real city
+// names never do — "San Francisco", "København", "Stockholm" have no " in "), so
+// legitimate locations pass through untouched. Keep everything AFTER the last
+// " in " in that segment (the actual place), plus the region/country tail.
+export function cleanLdAddress(addr) {
+  const s = String(addr == null ? '' : addr).trim();
+  if (!s) return '';
+  const comma = s.indexOf(',');
+  const head = comma === -1 ? s : s.slice(0, comma);
+  const tail = comma === -1 ? '' : s.slice(comma); // includes the leading comma
+  const m = head.match(/^(?:.*\s)?in\s+(\S.*)$/i);
+  if (!m) return s;
+  const city = m[1].trim();
+  return city ? `${city}${tail}` : s;
+}
+
 // Compose a place-only location string from a schema.org jobLocation node. `address`
 // may be a plain string ("København 1123 DK") or a PostalAddress object; a country
 // may be a bare code/string or a Country object. jobLocation itself may be an array
@@ -19,10 +41,10 @@ import { toIsoDate, normalizeWorkMode, splitLocationMode, stripHtml } from './_u
 export function formatLdLocation(jobLocation) {
   let loc = Array.isArray(jobLocation) ? jobLocation[0] : jobLocation;
   if (!loc) return '';
-  if (typeof loc === 'string') return loc.trim();
+  if (typeof loc === 'string') return cleanLdAddress(loc);
   if (typeof loc !== 'object') return '';
   const a = loc.address;
-  if (typeof a === 'string') return a.trim();
+  if (typeof a === 'string') return cleanLdAddress(a);
   if (a && typeof a === 'object') {
     const val = (x) =>
       typeof x === 'string' ? x.trim()
