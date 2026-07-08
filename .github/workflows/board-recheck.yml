@@ -1,0 +1,86 @@
+name: Weekly staleness recheck
+
+# Same fresh scan + deploy as the daily board refresh, but with --recheck: after
+# building the snapshot it curl-rechecks the AGED tail (postings older than
+# recheck.min_age_days in portals.yml) and drops only the ones with a positive
+# dead signal ("no longer available", HTTP 404/410, …). Browserless and
+# conservative — anything it can't confirm dead is kept.
+#
+# Why a SEPARATE weekly job instead of folding --recheck into the daily refresh:
+# the recheck adds one GET per aged posting, so running it every day would hammer
+# ATS hosts with re-fetches of the same stale tail. Weekly is enough — a dead
+# posting is gone within 7 days of dying, at a fraction of the request cost. The
+# daily board.yml stays lean; this one does the pruning.
+#
+# The board is stateless (data is gitignored; the deployed artifact IS the state),
+# so this simply publishes a de-staled snapshot over the same GitHub Pages target.
+
+on:
+  schedule:
+    - cron: '43 6 * * 1'   # weekly, Mondays ~06:43 UTC (after the daily 06:17 run)
+  workflow_dispatch: {}      # manual "Run workflow" button
+
+# Share the daily board's concurrency group so a recheck and a refresh never
+# deploy over each other.
+concurrency:
+  group: job-board
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  issues: write
+
+jobs:
+  recheck:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install scanner deps
+        run: npm install --no-audit --no-fund
+
+      - name: Fetch previous health tally from the live board
+        run: |
+          URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data/health.json"
+          curl -sf "$URL" -o prev-health.json && echo "Loaded prior tally." || echo "No prior tally (first run / unreachable) — starting fresh."
+
+      - name: Scan + recheck stale tail + regenerate snapshot (THE GATE)
+        # Identical to the daily gate plus --recheck: a crash / broken provider /
+        # provider blackout still exits non-zero and the deploy below never runs,
+        # so the live board keeps its last good state. --recheck only curl-checks
+        # the aged tail and drops confirmed-dead postings from the snapshot.
+        run: node scan.mjs --no-filter --json site/data/jobs.json --dry-run --recheck --health-in prev-health.json --health-out site/data/health.json
+
+      - name: Validate snapshot is sane
+        run: |
+          node -e "const j=require('./site/data/jobs.json'); const n=Array.isArray(j.jobs)?j.jobs.length:0; if(n<100){console.error('Snapshot too small ('+n+' jobs) — refusing to publish.');process.exit(1);} console.log('Snapshot OK: '+n+' jobs');"
+
+      - name: Project board default filters
+        run: node project-targeting.mjs targeting.default.yml site/data/targeting.json
+
+      - name: Upload Pages artifact (only the board, not the repo)
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v5
+
+      - name: Sync departed-ATS alert issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node health-alert.mjs site/data/health.json || echo "health-alert ran into a non-fatal error; board already deployed."

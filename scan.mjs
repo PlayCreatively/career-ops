@@ -28,6 +28,7 @@
  *   node scan.mjs --reset          # clear pending pool + dedup history, then scan fresh
  *   node scan.mjs --no-filter      # bypass all targeting; store every role/location (board snapshot)
  *   node scan.mjs --no-extra-fetch # skip PAID per-job detail fetches (keep only free inline detail)
+ *   node scan.mjs --recheck        # curl-recheck the snapshot's aged tail; drop confirmed-expired (weekly)
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
@@ -38,6 +39,7 @@ import yaml from 'js-yaml';
 import { makeHttpCtx, classifyFetchError } from './providers/_http.mjs';
 import { mergeHealth } from './merge-health.mjs';
 import { splitLocationMode, DETAIL } from './providers/_util.mjs';
+import { classifyLiveness } from './liveness-core.mjs';
 import { scoreCategory, matchGroup, isExcluded, buildFilterIndex } from './rank.mjs';
 
 const parseYaml = yaml.load;
@@ -568,8 +570,17 @@ function loadSeenUrls() {
   if (existsSync(SCAN_HISTORY_PATH)) {
     const lines = readFileSync(SCAN_HISTORY_PATH, 'utf-8').split('\n');
     for (const line of lines.slice(1)) { // skip header
-      const url = line.split('\t')[0];
-      if (url) seen.add(url);
+      const cols = line.split('\t');
+      const url = cols[0];
+      if (!url) continue;
+      // A URL recorded as expired is NOT a permanent tombstone. If the same URL
+      // later goes live again (a reopened req reusing its slug), blocking it here
+      // would silently drop a real posting — the exact failure we forbid for new
+      // offers. So skip `skipped_expired` rows: the URL becomes eligible to
+      // resurface, and if it's still dead the recheck just re-expires it (one
+      // cheap GET). status lives in column 5 (see appendToScanHistory).
+      if (cols[5] === 'skipped_expired') continue;
+      seen.add(url);
     }
   }
 
@@ -627,8 +638,11 @@ function resetScanState() {
 
 // ── Pipeline writer ─────────────────────────────────────────────────
 
-function appendToPipeline(offers) {
+function appendToPipeline(offers, { note = '' } = {}) {
   if (offers.length === 0) return;
+  // Optional trailing flag appended to each checkbox line (e.g. an "unverified"
+  // marker). Kept AFTER the title so loadSeenUrls' URL regex is unaffected.
+  const suffix = note ? `  ${note}` : '';
 
   // Create the pipeline file on first use so a fresh clone (where data/ is
   // gitignored and pipeline.md doesn't exist yet) doesn't crash with ENOENT.
@@ -646,7 +660,7 @@ function appendToPipeline(offers) {
     const procIdx = text.indexOf('## Procesadas');
     const insertAt = procIdx === -1 ? text.length : procIdx;
     const block = `\n${marker}\n\n` + offers.map(o =>
-      `- [ ] ${o.url} | ${o.company} | ${o.title}`
+      `- [ ] ${o.url} | ${o.company} | ${o.title}${suffix}`
     ).join('\n') + '\n\n';
     text = text.slice(0, insertAt) + block + text.slice(insertAt);
   } else {
@@ -656,7 +670,7 @@ function appendToPipeline(offers) {
     const insertAt = nextSection === -1 ? text.length : nextSection;
 
     const block = '\n' + offers.map(o =>
-      `- [ ] ${o.url} | ${o.company} | ${o.title}`
+      `- [ ] ${o.url} | ${o.company} | ${o.title}${suffix}`
     ).join('\n') + '\n';
     text = text.slice(0, insertAt) + block + text.slice(insertAt);
   }
@@ -725,16 +739,20 @@ async function verifyOffers(offers) {
     );
   }
 
-  // Three permanent buckets + one transient passthrough:
+  // Buckets:
   //   verified  → active pages and transient nav errors (retry next scan)
   //   expired   → classifier-confirmed dead postings (HTTP 4xx, redirect markers,
-  //               body patterns, listing pages, insufficient content)
-  //   dropped   → page loaded but classifier saw no Apply control. --verify is an
-  //               opt-in stricter filter; keeping these defeats the purpose.
+  //               body patterns, listing pages, insufficient content). ONLY these
+  //               are dropped — a positive dead signal.
+  //   unverified→ page loaded with real content but no recognizable Apply control.
+  //               NOT dropped: a live posting whose apply control we simply failed
+  //               to detect must never silently vanish (new offers are the whole
+  //               point of a scan). Surfaced to pipeline.md flagged instead, so the
+  //               user decides rather than the classifier deleting it.
   //   invalid   → up-front URL guard rejections (malformed / non-http / private)
   const verified = [];
   const expired = [];
-  const dropped = [];
+  const unverified = [];
   const invalid = [];
 
   try {
@@ -752,11 +770,13 @@ async function verifyOffers(offers) {
         invalid.push({ ...offer, code, reason });
         console.log(`  ⛔ invalid   ${offer.company} | ${offer.title} (${reason})`);
       } else if (result === 'uncertain' && code === 'no_apply_control') {
-        // Page loaded but classifier could not find an Apply control. Treat like
-        // expired for routing — drop from pipeline AND record in scan-history so
-        // we don't burn a verify cycle on the same URL next scan.
-        dropped.push({ ...offer, reason });
-        console.log(`  ⚠️ no-apply  ${offer.company} | ${offer.title} (${reason})`);
+        // Page loaded with real content but no recognizable Apply control. We do
+        // NOT drop it — that would silently discard a possibly-live posting. Surface
+        // it to pipeline.md flagged so the user can eyeball it. It still gets a
+        // scan-history row (as `added`, written by the caller with verifiedOffers)
+        // so it's dedup-tracked normally on future scans.
+        unverified.push({ ...offer, reason });
+        console.log(`  ⚠️ unverified ${offer.company} | ${offer.title} (${reason})`);
       } else {
         // 'active' or 'uncertain' due to navigation_error (transient — retry next scan)
         verified.push(offer);
@@ -768,7 +788,88 @@ async function verifyOffers(offers) {
     await browser.close();
   }
 
-  return { verified, expired, dropped, invalid };
+  return { verified, expired, unverified, invalid };
+}
+
+// ── Staleness recheck (cheap, curl-only, no Playwright) ──────────────
+//
+// Re-verify the AGED tail of an existing snapshot and drop only postings with a
+// POSITIVE dead signal. Unlike --verify (which Playwright-renders new offers),
+// this is a plain GET + classifyLiveness over the raw HTML: the "no longer
+// available / position filled / applications closed" banner that kills a job is
+// almost always server-rendered text (proven on apply.ioi.dk), so a browser
+// isn't needed. This makes it safe to run in the browserless CI board pipeline.
+//
+// CONSERVATIVE BY DESIGN — the mirror of the new-offer rule: only `result:
+// 'expired'` removes a job. `active`, `uncertain` (SPA whose banner needs JS, a
+// timeout, a soft 200) and any fetch error all KEEP the posting. We never delete
+// a live job just because a cheap GET couldn't confirm it; a truly-dead one gets
+// re-checked (and removed) on the next weekly pass.
+
+const RECHECK_DEFAULTS = { minAgeDays: 45, concurrency: 6, timeoutMs: 10_000 };
+
+// Fetch a URL's status + raw body WITHOUT throwing on 4xx (a 404/410 is itself a
+// dead signal we want to classify, not an exception to swallow). Returns null on
+// a network/timeout failure so the caller keeps the posting (transient ≠ dead).
+async function fetchRawForRecheck(url, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; career-ops/1.3)' },
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+    const bodyText = await res.text().catch(() => '');
+    return { status: res.status, finalUrl: res.url || url, bodyText };
+  } catch {
+    return null; // timeout / DNS / TLS — treat as "unknown", keep the job
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Given the full snapshot, curl-recheck every job older than minAgeDays and
+// return the subset confirmed expired (to be removed from the snapshot). Never
+// throws; a per-URL failure just keeps that job.
+async function recheckStaleSnapshot(jobs, opts = {}) {
+  const { minAgeDays, concurrency, timeoutMs } = { ...RECHECK_DEFAULTS, ...opts };
+  const cutoffMs = Date.now() - minAgeDays * 86_400_000;
+
+  // Only the aged tail with a usable postedDate and http(s) URL is a candidate.
+  const candidates = jobs.filter((j) => {
+    if (!j || typeof j.url !== 'string' || !/^https?:\/\//i.test(j.url)) return false;
+    const t = j.postedDate ? Date.parse(j.postedDate) : NaN;
+    return Number.isFinite(t) && t < cutoffMs;
+  });
+
+  console.log(`Recheck: ${candidates.length} posting(s) older than ${minAgeDays}d (of ${jobs.length}) — curl-only, no Playwright.`);
+
+  const expiredUrls = new Set();
+  let checked = 0;
+  const queue = candidates.slice();
+  async function worker() {
+    while (queue.length) {
+      const job = queue.shift();
+      const raw = await fetchRawForRecheck(job.url, timeoutMs);
+      checked++;
+      if (!raw) continue; // transient — keep
+      const { result, reason } = classifyLiveness({
+        status: raw.status,
+        finalUrl: raw.finalUrl,
+        bodyText: raw.bodyText,
+        applyControls: [], // no JS render; rely on status/URL/body signals only
+      });
+      if (result === 'expired') {
+        expiredUrls.add(job.url);
+        console.log(`  ❌ expired   ${job.company} | ${job.title} (${reason})`);
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, candidates.length) }, worker));
+
+  console.log(`Recheck: ${checked} checked, ${expiredUrls.size} confirmed expired (removed from snapshot).`);
+  return expiredUrls;
 }
 
 // Stable codes from liveness-browser's up-front URL guard. Routing dispatches
@@ -789,6 +890,11 @@ async function main() {
   const verify = args.includes('--verify');
   const reset = args.includes('--reset');
   const noFilter = args.includes('--no-filter');
+  // --recheck: after building the snapshot, curl-recheck its AGED tail and drop
+  // only confirmed-expired postings (positive dead signal). Cheap, browserless,
+  // safe for CI. Intended for a WEEKLY staleness pass, separate from the daily
+  // board refresh. Age cutoff comes from portals.yml `recheck.min_age_days`.
+  const recheck = args.includes('--recheck');
   // The PAID detail pass (a real per-job fetch: the aggregator boards fill
   // company/location from each posting page, rippling reads sponsorship) is ON by
   // default. --no-extra-fetch turns it off — the scan then relies only on the
@@ -1126,17 +1232,20 @@ async function main() {
 
   await parallelFetch(tasks, CONCURRENCY);
 
-  // 5.5. Optional liveness verification — drop expired and guard-rejected postings
+  // 5.5. Optional liveness verification — drop only confirmed-expired postings.
+  // A page that loads but whose Apply control we can't detect is NOT dropped;
+  // it's surfaced to pipeline flagged (unverifiedOffers) so a live offer never
+  // silently vanishes. Only `expired` (a positive dead signal) is removed.
   let verifiedOffers = newOffers;
   let expiredOffers = [];
-  let droppedOffers = [];
+  let unverifiedOffers = [];
   let invalidOffers = [];
   if (verify && newOffers.length > 0) {
     console.log(`\nVerifying liveness of ${newOffers.length} new offer(s) with Playwright (sequential)...`);
     const result = await verifyOffers(newOffers);
     verifiedOffers = result.verified;
     expiredOffers = result.expired;
-    droppedOffers = result.dropped;
+    unverifiedOffers = result.unverified;
     invalidOffers = result.invalid;
   }
 
@@ -1148,10 +1257,12 @@ async function main() {
   if (!dryRun && expiredOffers.length > 0) {
     appendToScanHistory(expiredOffers, date, 'skipped_expired');
   }
-  // Pages that loaded but had no Apply control: record so we don't re-verify
-  // them next scan, but never let them reach pipeline.md.
-  if (!dryRun && droppedOffers.length > 0) {
-    appendToScanHistory(droppedOffers, date, 'skipped_no_apply_control');
+  // Pages that loaded but had no recognizable Apply control: surface to pipeline
+  // flagged (never silently dropped — a live offer might just have unusual markup)
+  // and record in scan-history as normal so they dedup-track on future scans.
+  if (!dryRun && unverifiedOffers.length > 0) {
+    appendToPipeline(unverifiedOffers, { note: '⚠️ unverified (no apply control found — check manually)' });
+    appendToScanHistory(unverifiedOffers, date);
   }
   // Guard-rejected URLs (invalid / unsupported protocol / blocked host) are
   // recorded with a precise status so subsequent scans dedup-skip them via
@@ -1186,6 +1297,20 @@ async function main() {
       snapJobs = deduped;
       if (collapsed > 0) {
         console.log(`Dedup: collapsed ${collapsed} duplicate(s) — ${collapsedById} by posting ID, ${collapsedByHeuristic} aggregator mirror(s)`);
+      }
+    }
+    // Optional weekly staleness recheck: curl-recheck the aged tail and drop only
+    // confirmed-dead postings. Runs on the deduped snapshot so we never waste a
+    // fetch on a row that dedup already collapsed.
+    if (recheck) {
+      const rc = config.recheck || {};
+      const expiredUrls = await recheckStaleSnapshot(snapJobs, {
+        ...(rc.min_age_days != null ? { minAgeDays: rc.min_age_days } : {}),
+        ...(rc.concurrency != null ? { concurrency: rc.concurrency } : {}),
+        ...(rc.timeout_ms != null ? { timeoutMs: rc.timeout_ms } : {}),
+      });
+      if (expiredUrls.size > 0) {
+        snapJobs = snapJobs.filter((j) => !expiredUrls.has(j.url));
       }
     }
     const out = {
@@ -1232,7 +1357,7 @@ async function main() {
   }
   if (verify) {
     console.log(`Expired (verified):    ${expiredOffers.length} dropped`);
-    console.log(`No apply control:      ${droppedOffers.length} dropped`);
+    console.log(`Unverified (surfaced): ${unverifiedOffers.length} flagged in pipeline`);
     console.log(`Invalid (guarded):     ${invalidOffers.length} dropped`);
   }
   console.log(`New offers added:      ${verifiedOffers.length}`);

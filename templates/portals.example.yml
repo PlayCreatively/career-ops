@@ -83,6 +83,17 @@
 #     - "remotegamejobs.com"
 #     - "gamesjobsdirect.com"
 
+# -- Weekly staleness recheck (scan.mjs --recheck) --
+# Curl-rechecks the aged tail of the board snapshot and removes only postings
+# with a POSITIVE dead signal ("no longer available", HTTP 404/410, …).
+# Browserless and conservative: anything it can't confirm dead is KEPT. Only
+# runs when --recheck is passed (intended for a weekly job, not the daily scan).
+# These values are the built-in defaults; uncomment to tune.
+# recheck:
+#   min_age_days: 45   # only re-check postings older than this
+#   concurrency: 6     # parallel curl fetches
+#   timeout_ms: 10000  # per-fetch timeout; a slow URL is kept, not dropped
+
 # -- Title filter --
 # The scanner uses these keywords to decide if a title is relevant.
 # At least 1 positive must match AND 0 negatives must match (case-insensitive).
