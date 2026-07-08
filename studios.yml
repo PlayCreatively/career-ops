@@ -121,6 +121,21 @@ tracked_companies:
     pages: 2
     enabled: true
 
+  # Broad catch-all — EVERY open Hitmarker posting, no tag/continent scoping.
+  # This is what widens the board beyond the three curated craft searches above.
+  # It carries `filtered: true`, so all its jobs are hidden by default (the
+  # scan.mjs / board / rank.mjs default view drops flagged jobs) and only appear
+  # when the board's global filters-off toggle is on. The scoped searches above
+  # are UNFLAGGED, so any posting they also match is un-flagged during snapshot
+  # dedup (an unflagged copy of a URL clears the flag) — the curated feed stays
+  # exactly as it was, and everything else rides along as revealable extra.
+  - name: Hitmarker — All (catch-all, hidden by default)
+    provider: hitmarker
+    query: "*"
+    pages: 10
+    filtered: true
+    enabled: true
+
   # ── Aggregator boards ─────────────────────────────────────────────
   # Like Hitmarker: one entry, many studios. See providers/workwithindies.mjs.
 

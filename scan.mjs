@@ -964,13 +964,15 @@ async function main() {
   // Indies, Games Jobs Direct, Remote Game Jobs) are whole-industry feeds, so a
   // handful of non-game employers (ByteDance, NVIDIA, Aristocrat…) leak through
   // with hundreds of non-game corporate roles that no title filter reliably
-  // catches. `exclude_companies` (studios.yml) drops them at ingest — before the
-  // snapshot, and independent of the personal targeting filter, so it holds even
-  // under --no-filter (the board's mode). Tracked + shared so collaborators get
-  // the same clean feed. Exact, case-insensitive name match only (fail-safe: a
-  // mixed employer with some real game roles, e.g. Tencent, must NOT be listed —
-  // let the title filter sort those). Gated to aggregator hosts so it can never
-  // touch a curated single-studio feed.
+  // catches. A match no longer DROPS the job: it sets `filtered: true`, which
+  // flows into the snapshot (jobs.json) so the board's global filters-off
+  // toggle can reveal it. The default board view and personal scans treat
+  // flagged jobs as if they don't exist, so the clean feed is unchanged.
+  // Independent of the personal targeting filter — it holds even under
+  // --no-filter (the board's mode). Exact, case-insensitive name match only
+  // (fail-safe: a mixed employer with some real game roles, e.g. Tencent, must
+  // NOT be listed — let the title filter sort those). Gated to aggregator hosts
+  // so it can never touch a curated single-studio feed.
   const isBlockedCompany = buildCompanyBlocklist(excludeCompanies);
   if (!companies.length) {
     console.error(`Error: no studios found. Add tracked_companies to ${STUDIOS_PATH} (or run onboarding).`);
@@ -1083,7 +1085,10 @@ async function main() {
   let totalFilteredTitle = 0;
   let totalFilteredLocation = 0;
   let totalFilteredCompany = 0;
-  let totalBlockedCompany = 0;
+  // Jobs flagged `filtered: true` (employer blocklist, entry-level flag, or a
+  // provider-level flag like rehm off-theme / GJD excluded sector). Kept in the
+  // snapshot for the board's filters-off toggle, hidden everywhere else.
+  let totalHidden = 0;
   let totalDupes = 0;
   let totalEnrichFailures = 0; // Phase-2 detail fetches that failed (detail lost, posting kept)
   const newOffers = [];
@@ -1092,7 +1097,12 @@ async function main() {
   // exported file is always the COMPLETE live set regardless of what prior
   // runs left in data/. Feeds the static board.
   const snapshot = [];
-  const snapSeen = new Set();
+  // URL-keyed for filtered-flag reconciliation: targets run CONCURRENTLY, so
+  // the same URL can arrive twice (e.g. via a scoped Hitmarker search AND the
+  // flagged broad catch-all) in either order. If ANY copy is unflagged, the
+  // job is a genuine in-scope hit — clear the flag on whichever copy landed
+  // first instead of trusting arrival order.
+  const snapByUrl = new Map();
   const errors = [...resolveErrors];
   // Per-provider health: how many companies we attempted vs how many returned
   // (a successful fetch, even with 0 jobs) vs how many we never saw because we
@@ -1146,19 +1156,28 @@ async function main() {
       totalFound += jobs.length;
 
       for (const job of jobs) {
-        // Source-level employer blocklist (aggregator leakage). Runs first, and
-        // independent of the targeting filter, so it holds even under --no-filter.
-        // Gated to aggregator hosts: a curated studio feed's company IS the studio,
-        // so it can never be collateral here.
-        if (isBlockedCompany(job.company)) {
+        // Built-in filter flags. A hit no longer drops the job — it marks it
+        // `filtered: true` so it survives into the snapshot, where the board's
+        // global filters-off toggle can reveal it. Three sources, same flag:
+        // provider-level (rehm off-theme, GJD excluded sector — already set on
+        // the job), entry-level `filtered: true` in studios.yml (broad
+        // catch-all searches), and the employer blocklist below. The blocklist
+        // stays gated to aggregator hosts: a curated studio feed's company IS
+        // the studio, so it can never be collateral here.
+        if (company.filtered === true) job.filtered = true;
+        if (!job.filtered && isBlockedCompany(job.company)) {
           let host = '';
           try { host = new URL(job.url || '').hostname.replace(/^www\./, ''); } catch { /* keep '' */ }
-          if (AGG_HOSTS.includes(host)) { totalBlockedCompany++; continue; }
+          if (AGG_HOSTS.includes(host)) job.filtered = true;
         }
-        const drop = dropTargeting(job);
-        if (drop === 'title') { totalFilteredTitle++; continue; }
-        if (drop === 'location') { totalFilteredLocation++; continue; }
-        if (drop === 'company') { totalFilteredCompany++; continue; }
+        // Flagged jobs skip personal targeting: they're hidden by default
+        // everywhere, so scoring them would only skew the filter counters.
+        if (!job.filtered) {
+          const drop = dropTargeting(job);
+          if (drop === 'title') { totalFilteredTitle++; continue; }
+          if (drop === 'location') { totalFilteredLocation++; continue; }
+          if (drop === 'company') { totalFilteredCompany++; continue; }
+        }
         // Normalise work mode baked into the location text ("Berlin, Hybrid",
         // "United States, Remote", "Remote (US)"…). Fill workMode when the
         // provider had no structured value, and strip the token so the board's
@@ -1178,28 +1197,42 @@ async function main() {
         }
         // Snapshot collection happens BEFORE history dedup so jobs.json is the
         // full current set even when data/scan-history.tsv already lists these.
-        if (jsonPath && job.url && !snapSeen.has(job.url)) {
-          snapSeen.add(job.url);
-          const companyUrl = studioUrlByName.get((job.company || '').trim().toLowerCase());
-          snapshot.push({
-            title: job.title,
-            url: job.url,
-            company: job.company,
-            location: job.location || '',
-            // Optional provider metadata — only set when known, so jobs.json
-            // stays lean. postedDate is ISO-8601; workMode is the tri-state
-            // remote/hybrid/onsite; department is a label; experienceLevel is a
-            // source-taxonomy seniority label. See providers/_types.js.
-            ...(companyUrl ? { companyUrl } : {}),
-            ...(job.postedDate ? { postedDate: job.postedDate } : {}),
-            ...(job.workMode ? { workMode: job.workMode } : {}),
-            ...(job.department ? { department: job.department } : {}),
-            ...(job.experienceLevel ? { experienceLevel: job.experienceLevel } : {}),
-            // Visa-sponsorship stance from the detail-phase enricher (only when
-            // the JD stated one): 'none' | 'offered'. See providers/enrichers/.
-            ...(job.sponsorship ? { sponsorship: job.sponsorship } : {}),
-          });
+        if (jsonPath && job.url) {
+          const prev = snapByUrl.get(job.url);
+          if (prev) {
+            // Same URL seen twice across concurrent targets. If either copy is
+            // unflagged, the job is genuinely in scope — clear the stored flag.
+            if (prev.filtered && !job.filtered) delete prev.filtered;
+          } else {
+            const companyUrl = studioUrlByName.get((job.company || '').trim().toLowerCase());
+            const entry = {
+              title: job.title,
+              url: job.url,
+              company: job.company,
+              location: job.location || '',
+              // Optional provider metadata — only set when known, so jobs.json
+              // stays lean. postedDate is ISO-8601; workMode is the tri-state
+              // remote/hybrid/onsite; department is a label; experienceLevel is a
+              // source-taxonomy seniority label. See providers/_types.js.
+              ...(companyUrl ? { companyUrl } : {}),
+              ...(job.postedDate ? { postedDate: job.postedDate } : {}),
+              ...(job.workMode ? { workMode: job.workMode } : {}),
+              ...(job.department ? { department: job.department } : {}),
+              ...(job.experienceLevel ? { experienceLevel: job.experienceLevel } : {}),
+              // Visa-sponsorship stance from the detail-phase enricher (only when
+              // the JD stated one): 'none' | 'offered'. See providers/enrichers/.
+              ...(job.sponsorship ? { sponsorship: job.sponsorship } : {}),
+              // Built-in filter flag: hidden by default on the board and in
+              // personal scans, revealed by the global filters-off toggle.
+              ...(job.filtered ? { filtered: true } : {}),
+            };
+            snapByUrl.set(job.url, entry);
+            snapshot.push(entry);
+          }
         }
+        // Flagged jobs are kept in the snapshot only; they never enter the
+        // personal pipeline (newOffers) or history dedup.
+        if (job.filtered) { totalHidden++; continue; }
         if (seenUrls.has(job.url)) {
           totalDupes++;
           continue;
@@ -1348,8 +1381,8 @@ async function main() {
   if (totalFilteredCompany > 0) {
     console.log(`Filtered by company:   ${totalFilteredCompany} removed`);
   }
-  if (totalBlockedCompany > 0) {
-    console.log(`Blocked (non-game):    ${totalBlockedCompany} removed`);
+  if (totalHidden > 0) {
+    console.log(`Flagged (hidden):      ${totalHidden} kept in snapshot, hidden by default`);
   }
   console.log(`Duplicates:            ${totalDupes} skipped`);
   if (totalEnrichFailures > 0) {

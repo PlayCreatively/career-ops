@@ -167,6 +167,10 @@
   }
   .btn:hover { border-color: var(--accent); }
   .btn.clear { color: var(--dim); }
+  /* Global filter toggle, pressed (built-in filters off → showing everything). */
+  #filterToggle[aria-pressed="true"] {
+    background: var(--accent); border-color: var(--accent); color: #0b1220;
+  }
   .split { display: inline-flex; }
   .split .btn { box-shadow: none; }
   .split .clear { border-top-right-radius: 0; border-bottom-right-radius: 0; }
@@ -601,6 +605,12 @@ window.__themeKey = "gamedevboard.theme";
         <option value="90">Posted: ≤3 months</option>
         <option value="180">Posted: ≤6 months</option>
       </select>
+      <!-- Global built-in-filter toggle. Default OFF (focused): jobs the scanner
+           flagged `filtered: true` (off-theme / blocklisted employers / broad
+           catch-all sources) are hidden from the list AND every count. Click to
+           reveal the full unfiltered set, sorted newest-first. -->
+      <button class="btn" id="filterToggle" type="button" aria-pressed="false"
+        title="Built-in filters on — hiding off-theme and non-matching jobs. Click to show every job.">🔍 Focused</button>
       <span class="split">
         <button class="btn clear" id="reset">Clear all labels</button>
         <button class="btn restore" id="restore" title="Restore the default labels from targeting.yml" aria-label="Restore default labels">↻</button>
@@ -719,7 +729,27 @@ var DEFAULT_GROUPS_SEED = null;
 // ignored), or 0..2 when rated: 0 hides matching jobs, 1 is "on", >1 boosts. An
 // `else` filter is a catch-all — it matches when nothing else in its group did.
 var STORE_KEY = "gamedevboard.filters.v6";
+// ALL is the LIVE dataset the whole board reads (list + every count). It's the
+// built-in-filter-gated view of RAW: by default it excludes jobs the scanner
+// flagged `filtered: true` (off-theme / blocklisted employers / broad catch-all
+// sources) so they're invisible to the list AND all counts, exactly as if they
+// weren't in the snapshot. The global toggle flips SHOW_FILTERED to reveal them.
+var RAW = [];
 var ALL = [];
+var SHOW_FILTERED = false;
+var FILTER_TOGGLE_KEY = "gamedevboard.showfiltered.v1";
+function loadFilterToggle() {
+  try { SHOW_FILTERED = localStorage.getItem(FILTER_TOGGLE_KEY) === "1"; }
+  catch (e) { SHOW_FILTERED = false; }
+}
+function saveFilterToggle() {
+  try { localStorage.setItem(FILTER_TOGGLE_KEY, SHOW_FILTERED ? "1" : "0"); } catch (e) {}
+}
+// Rebuild ALL from RAW under the current toggle. Cheap (a single filter pass);
+// callers follow with reindex(); recompute() so every count re-tallies.
+function applyFilterGate() {
+  ALL = SHOW_FILTERED ? RAW.slice() : RAW.filter(function (j) { return !j.filtered; });
+}
 var GROUPS = [];          // [{id,name,field,combine,weight,filters:[{id,name,keywords,weight,else}]}]
 var FBYID = {};           // filterId -> {f: filter, g: group}
 var MODES = ["max", "min", "avg"];
@@ -967,6 +997,10 @@ function prep(jobs) {
       // so it MUST be carried here — the ranker scores these normalized objects,
       // not the raw jobs. Dropping it silently reverts the Level group to title-only.
       experienceLevel: j.experienceLevel || "",
+      // Built-in-filter flag from the scanner (off-theme / blocklisted employer /
+      // broad catch-all source). Hidden by default; revealed by the global
+      // toggle. MUST be carried through prep or applyFilterGate can't see it.
+      filtered: j.filtered === true,
       _posted: j.postedDate ? (Date.parse(j.postedDate) || 0) : 0,
       _search: (title + " " + co + " " + loc + " " + (j.department || "") + " " + (j.experienceLevel || "")).toLowerCase(),
       _mem: {},      // groupId -> [filterId,...] of VISIBLE (non-muted) matches
@@ -2192,8 +2226,21 @@ function showHlPop(spanEl) {
   placePop(pop, spanEl.getBoundingClientRect());
 }
 
+// Reflect SHOW_FILTERED in the toggle button (label, pressed state, tooltip).
+function syncFilterToggleUI() {
+  var b = document.getElementById("filterToggle");
+  if (!b) return;
+  b.setAttribute("aria-pressed", SHOW_FILTERED ? "true" : "false");
+  b.textContent = SHOW_FILTERED ? "🌐 All jobs" : "🔍 Focused";
+  b.title = SHOW_FILTERED
+    ? "Showing every job, including off-theme and non-matching ones, newest first. Click to return to the focused view."
+    : "Built-in filters on — hiding off-theme and non-matching jobs. Click to show every job.";
+}
+
 function init(data) {
-  ALL = prep(data.jobs || []);
+  RAW = prep(data.jobs || []);
+  loadFilterToggle();
+  applyFilterGate();
   if (data.generated) {
     var gEl = document.getElementById("generated");
     gEl.textContent = "· updated " + sinceLabel(data.generated);
@@ -2206,6 +2253,10 @@ function init(data) {
   // On localhost the projected YAML wins: seed groups straight from the file
   // (ignore any saved board state) so the page always reflects portals.yml.
   if (LIVE) GROUPS = defaultGroups();
+  // When the built-in filters are off we're browsing the whole unfiltered set,
+  // where the games-targeting fit score is meaningless — default to newest-first.
+  if (SHOW_FILTERED) { sortMode = "posted"; sortDir = NATURAL_DIR.posted; }
+  syncFilterToggleUI();
   reindex(); recompute();
   document.getElementById("sort").value = sortMode;
   document.getElementById("freshness").value = String(maxAgeDays);
@@ -2257,6 +2308,22 @@ function init(data) {
     maxAgeDays = parseInt(e.target.value, 10) || 0;
     // Pill counts depend on the visible set, so recompute groups too.
     schedule({ groups: true });
+  });
+  // Global built-in-filter toggle. Flipping it re-gates ALL from RAW, so the
+  // list and every count follow in lockstep. Turning filters OFF switches to
+  // newest-first (fit score doesn't apply to the revealed non-matching jobs);
+  // turning them back ON restores the rating sort.
+  document.getElementById("filterToggle").addEventListener("click", function () {
+    SHOW_FILTERED = !SHOW_FILTERED;
+    saveFilterToggle();
+    applyFilterGate();
+    if (SHOW_FILTERED) { sortMode = "posted"; }
+    else { sortMode = "fit"; }
+    sortDir = NATURAL_DIR[sortMode];
+    document.getElementById("sort").value = sortMode;
+    syncFilterToggleUI();
+    // Dataset changed → re-tally pill counts as well as the list.
+    reindex(); recompute(); buildGroups(); render();
   });
   document.getElementById("reset").onclick = function () {
     GROUPS = []; ISOLATE = null;                 // wipe every label + its rating

@@ -157,7 +157,11 @@ export default {
         if (!recordMatchesStudio(r, studio)) continue;
       } else if (scope === 'uncovered' && covered.has(r.source_ats)) continue; // we scan this ATS directly
       const company = r.company || '';
-      if (isBlocked(company, excludes) || isOffTheme(company)) continue;
+      // Off-theme / blocklisted employers no longer drop: they're marked
+      // `filtered: true` so they survive into the snapshot and the board's
+      // global filters-off toggle can reveal them. Hidden by default
+      // everywhere else (personal scans skip them at the scan.mjs gate).
+      const flagged = isBlocked(company, excludes) || isOffTheme(company);
       if (q && !String(r.title).toLowerCase().includes(q)) continue;
       const postedDate = toIsoDate(r.posted_at);
       const workMode = normalizeWorkMode(r.workplace) || (r.remote ? 'remote' : '');
@@ -169,6 +173,7 @@ export default {
         ...(postedDate ? { postedDate } : {}),
         ...(workMode ? { workMode } : {}),
         ...(r.department ? { department: String(r.department) } : {}),
+        ...(flagged ? { filtered: true } : {}),
       });
     }
     return jobs;

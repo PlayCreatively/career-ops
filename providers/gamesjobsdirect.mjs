@@ -288,7 +288,11 @@ export default {
         // the sector gate so a blocked card never silently masks a later keeper.
         if (seen.has(job.url)) continue;
         seen.add(job.url);
-        if (sectorFilter && !sectorFilter(job)) continue;
+        // Blocked sector no longer drops: mark `filtered: true` so the job
+        // survives into the snapshot and the board's global filters-off toggle
+        // can reveal it. Hidden by default everywhere else (personal scans skip
+        // flagged jobs at the scan.mjs gate).
+        if (sectorFilter && !sectorFilter(job)) job.filtered = true;
         jobs.push(job);
       }
     }
