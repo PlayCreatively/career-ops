@@ -38,6 +38,29 @@
 #                     last_probe: 2026-06-08         # optional, set by resolve
 #
 # Tokenless dedup before adding anything: `node track-check.mjs "Name" [--url domain]`.
+#
+# ── Per-entry flags: `enabled` and `filtered` ────────────────────────
+# Every entry accepts two independent booleans. Don't confuse them:
+#
+#   enabled: true|false   WHETHER the scanner touches this entry at all.
+#     - true  → scanned every run (the normal state for a wired studio).
+#     - false → skipped entirely: no fetch, no jobs, as if commented out.
+#       Use it to PAUSE a studio without deleting it: a feed that broke and
+#       is under investigation, a studio you don't want to hit for now, or a
+#       backlog name you haven't wired yet. Absent = treated as enabled.
+#
+#   filtered: true        WHETHER this entry's jobs show on the MAIN board.
+#     - omitted (default) → jobs appear in the normal "Focused" view and its
+#       counts. This is what a GAME company should be — it belongs on the board.
+#     - true → every job from this entry is flagged: HIDDEN from the Focused
+#       board and all its counts, and revealed only by the board's "🌐 All jobs"
+#       toggle. This is what a NON-GAME company should be — kept on the board
+#       (so it's searchable) without bleeding into the game-focused main view.
+#       See the "Non-game companies" section at the bottom of this file.
+#
+# Rule of thumb: `enabled` answers "scan it?"; `filtered` answers "show it on
+# the main board?". A non-game studio you actively want is `enabled: true` +
+# `filtered: true`. A game studio is `enabled: true` with no `filtered`.
 
 # ── Aggregator employer blocklist ─────────────────────────────────────
 # The aggregator boards below (Hitmarker, Work With Indies, Games Jobs Direct,
@@ -8973,3 +8996,24 @@ tracked_companies:
     last_probe: 2026-06-26
     notes: "eightfold-confirmed live (16 game jobs, 2026-06-26) via /api/apply/v2/jobs Teams facet (Netflix Games Studio + Games + Next Games). Off rehm (eightfold now a covered ATS). AAA-publisher game studio; co-dev + first-party titles."
     enabled: true
+
+  # ── Non-game companies (hidden from Focused; visible under "🌐 All jobs") ──
+  # Every entry in this block carries `filtered: true`, so its jobs are kept OFF
+  # the game-focused main board and its counts, and appear only when the board's
+  # "🌐 All jobs" toggle is on. Add non-game employers HERE (not above) so they
+  # never bleed into the games view. They're still scanned normally, deduped, and
+  # searchable — just parked behind the toggle. A game studio does NOT belong in
+  # this block; add those to the sections above with no `filtered` flag.
+
+  - name: Bakken & Bæck
+    careers_url: https://bakkenbaeck.teamtailor.com
+    filtered: true
+    notes: "Non-game design & tech studio (Oslo/Amsterdam/Bonn). Teamtailor ATS, 9 roles (product/motion/art design, freelance-heavy). Hidden from the games board."
+    enabled: true
+
+  - name: ART+COM
+    careers_url: https://artcom.de/en/jobs/
+    filtered: true
+    status: unresolved
+    notes: "Non-game media-art / installation studio (Berlin). Careers page is a WordPress `?job_description=slug` custom setup (no standard ATS feed, ~1 open role) — needs a `recipe:` or browser pass to wire. Parked as backlog; scanned once resolved. Kept filtered so it lands off the games board when it goes live."
+    enabled: false
