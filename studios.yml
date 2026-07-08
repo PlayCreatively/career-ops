@@ -213,7 +213,7 @@ tracked_companies:
 
   - name: GameDevJobs.com
     provider: gamedevjobs
-    # Second global games aggregator (~650 postings), independent of GameJobs.co —
+    # Second global games aggregator (~780 postings), independent of GameJobs.co —
     # ~half its companies aren't on GameJobs.co and each posting links to the
     # studio's real source ATS, so it's a genuine second feed, not a mirror. Sitemap
     # INDEX gives a title + posted date per job; company/location come from each
@@ -222,10 +222,15 @@ tracked_companies:
     # aggregator company blocklist handle that. See providers/gamedevjobs.mjs.
     notes: "Global games aggregator (independent of GameJobs.co). Sitemap-index + JSON-LD enrichment. See providers/gamedevjobs.mjs."
     enabled: true
+    # UNLIKE GameJobs.co (whose slugs are `title-at-company`), GameDevJobs slugs are
+    # `title-hexid` — they carry NO company. So every posting past max_enrich lands
+    # with a blank company, unmergeable and unlabelled. The board is small/bounded
+    # (~780, one sub-sitemap), so we enrich the whole thing rather than the default
+    # 500. Raise this if the board keeps growing.
+    max_enrich: 1000
     # No source-level scoping by default: the whole board reaches your targeting
     # filter (portals.yml). To pre-scope (title-only; company is unknown pre-enrich)
     # add a `query:` keyword list, e.g. query: ["gameplay", "tools", "unity"].
-    # max_enrich: 500          # cap per-run enrichment fetches (default 500)
     # enrich_concurrency: 6    # parallel detail fetches (default 6)
     # enrich: false            # title+date only, single request, no company/location
 
