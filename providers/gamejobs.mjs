@@ -89,12 +89,31 @@ export function jobFromSlug(url) {
   };
 }
 
+// The URL pathname (slug) with leading slashes stripped, decoded. '' on a bad URL.
+function slugOf(url) {
+  try {
+    return decodeURIComponent(new URL(url).pathname.replace(/^\/+/, '')).trim();
+  } catch {
+    return '';
+  }
+}
+
 // Extract every job URL from the sitemap. Job postings are the `<loc>`s that look
 // like `/{slug}-at-{slug}`; the homepage and any nested sitemap (.xml) `<loc>` lack
 // "-at-" and are skipped. Deduped, order preserved.
+//
+// Also collapse GameJobs.co's OWN slug-collision twins. When it slugs two postings to
+// the same `title-at-company`, the first keeps the bare slug (`…-at-Netflix`) and the
+// second gets a numeric suffix (`…-at-Netflix-8057`); both list the same role, so left
+// alone the board shows a visible duplicate that downstream snapshot dedup can't
+// collapse (two rows from the SAME normal aggregator — neither is a "direct" twin nor a
+// last-resort mirror). We drop a suffixed slug ONLY when its exact bare twin is also
+// present this run — the strongest possible signal. A studio whose name ends in a number
+// (e.g. Team17) is safe: the stripped base (`…-at-Team`) won't exist as a real slug, so
+// the row is kept. Fail-safe: a suffixed slug with no bare twin is never touched.
 export function parseSitemapJobs(xml) {
   if (typeof xml !== 'string') return [];
-  const jobs = [];
+  const rows = [];
   const seen = new Set();
   for (const m of xml.matchAll(/<loc>([\s\S]*?)<\/loc>/g)) {
     const url = decodeEntities(m[1].trim());
@@ -102,9 +121,15 @@ export function parseSitemapJobs(xml) {
     if (seen.has(url)) continue;
     seen.add(url);
     const job = jobFromSlug(url);
-    if (job && job.title) jobs.push(job);
+    if (job && job.title) rows.push({ job, slug: slugOf(url) });
   }
-  return jobs;
+  const slugs = new Set(rows.map((r) => r.slug));
+  return rows
+    .filter((r) => {
+      const base = r.slug.replace(/-\d+$/, '');
+      return base === r.slug || !slugs.has(base); // keep bare slugs + orphan-suffixed
+    })
+    .map((r) => r.job);
 }
 
 // Normalise `query` (string | string[]) into a lowercased keyword list, or null

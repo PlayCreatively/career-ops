@@ -3217,6 +3217,28 @@ try {
     fail(`parseSitemapJobs = ${JSON.stringify(sm)}`);
   }
 
+  // Collision twins: GameJobs.co suffixes a slug that collides with an existing one
+  // (`…-at-Netflix-8057` next to bare `…-at-Netflix`). Drop the suffixed twin ONLY when
+  // its exact bare twin is present; keep a suffixed slug that has no bare twin (a studio
+  // whose name ends in a number, e.g. Team17, stays put); never touch bare slugs.
+  const twinXml = `<?xml version="1.0"?><urlset>
+    <url><loc>https://gamejobs.co/QA-Lead-at-Netflix</loc></url>
+    <url><loc>https://gamejobs.co/QA-Lead-at-Netflix-8057</loc></url>
+    <url><loc>https://gamejobs.co/Audio-Lead-at-Netflix-6624</loc></url>
+    <url><loc>https://gamejobs.co/Engineer-at-Team-17</loc></url>
+  </urlset>`;
+  const tw = parseSitemapJobs(twinXml);
+  const twUrls = tw.map((j) => j.url).sort();
+  if (tw.length === 3 &&
+      twUrls.includes('https://gamejobs.co/QA-Lead-at-Netflix') &&
+      !twUrls.includes('https://gamejobs.co/QA-Lead-at-Netflix-8057') &&
+      twUrls.includes('https://gamejobs.co/Audio-Lead-at-Netflix-6624') &&
+      twUrls.includes('https://gamejobs.co/Engineer-at-Team-17')) {
+    pass('parseSitemapJobs collapses suffixed collision twin, keeps orphan-suffixed + bare slugs');
+  } else {
+    fail(`parseSitemapJobs collision-twin = ${JSON.stringify(twUrls)}`);
+  }
+
   // JSON-LD: pick the JobPosting (even inside @graph), map org/location/date, and
   // read a TELECOMMUTE flag as remote. address may be a string or PostalAddress.
   const html = `<html><head>

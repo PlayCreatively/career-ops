@@ -207,8 +207,16 @@ tracked_companies:
     # targeting filter (portals.yml), the one place that decides what's kept. To
     # pre-scope (and bound enrichment to your roles) add a `query:` keyword list,
     # e.g. query: ["gameplay", "tools", "unity", "junior", "designer"].
-    # max_enrich: 500          # cap per-run enrichment fetches (default 500)
-    # enrich_concurrency: 6    # parallel detail fetches (default 6)
+    #
+    # Enrich the WHOLE board, not just the first 500. Location + posted date live only
+    # in each posting's JSON-LD, and the default cap left ~92% of a 6,600-posting board
+    # location-less (e.g. only 1 of 20 Netflix roles fell inside 500) — which also broke
+    # dedup, since an enriched row and its un-enriched twin no longer matched. This runs
+    # one fetch per posting each scan (bounded by enrich_concurrency), so it adds real
+    # scan time; if that gets painful, either lower max_enrich or add a `query:` scope
+    # above so only your target roles are fetched. Raise the cap as the board grows.
+    max_enrich: 8000           # cap per-run enrichment fetches (default 500)
+    enrich_concurrency: 8      # parallel detail fetches (default 6)
     # enrich: false            # slug-only, single request, no location/date
 
   - name: GameDevJobs.com
