@@ -58,12 +58,22 @@ export function parseHitmarkerResponse(json) {
       const detailText = typeof doc.jobDescription === 'string' && doc.jobDescription.trim()
         ? doc.jobDescription
         : stripHtml(doc.jobDescriptionHtml);
+      // Seniority ships FREE in the SAME list document as `jobLevel`
+      // ({ id, title }), e.g. { id: 'junior', title: 'Junior (1–2 years)' }.
+      // Emit the human-readable title as the source-taxonomy experienceLevel
+      // (Entry / Junior / Intermediate / Senior) — no detail fetch. Downstream
+      // rank.mjs reads it via the `experiencelevel` field. See providers/_types.js.
+      const experienceLevel =
+        doc.jobLevel && typeof doc.jobLevel.title === 'string' && doc.jobLevel.title.trim()
+          ? doc.jobLevel.title.trim()
+          : '';
       return attachDetail({
         title: String(doc.title),
         url: String(doc.url),
         company: doc.jobCompany?.title ? String(doc.jobCompany.title) : '',
         location: formatLocation(Array.isArray(doc.jobLocation) ? doc.jobLocation[0] : null),
         ...(postedDate ? { postedDate } : {}),
+        ...(experienceLevel ? { experienceLevel } : {}),
       }, { text: detailText });
     });
 }

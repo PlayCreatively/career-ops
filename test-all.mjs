@@ -1641,6 +1641,7 @@ try {
             title: 'Gameplay Programmer',
             url: 'https://hitmarker.net/jobs/larian-studios-gameplay-programmer-1700866',
             jobCompany: { title: 'Larian Studios' },
+            jobLevel: { id: 'junior', title: 'Junior (1–2 years)' },
             jobLocation: [{
               title: 'Guildford',
               parents: [
@@ -1650,7 +1651,8 @@ try {
             }],
           },
         },
-        // Remote-only doc: no city, country falls back to title alone.
+        // Remote-only doc: no city, country falls back to title alone. Also no
+        // jobLevel → experienceLevel must be omitted (never inferred).
         {
           document: {
             id: '2',
@@ -1680,6 +1682,12 @@ try {
     pass('parseHitmarkerResponse falls back to city title when no country parent');
   } else {
     fail(`row 1 location = ${JSON.stringify(jobs[1]?.location)}`);
+  }
+
+  if (jobs[0]?.experienceLevel === 'Junior (1–2 years)' && !('experienceLevel' in jobs[1])) {
+    pass('parseHitmarkerResponse maps jobLevel.title to experienceLevel (FREE from list), omits it when absent');
+  } else {
+    fail(`experienceLevel wrong: row0=${JSON.stringify(jobs[0]?.experienceLevel)} row1 has field=${'experienceLevel' in (jobs[1] || {})}`);
   }
 
   if (parseHitmarkerResponse({}).length === 0 && parseHitmarkerResponse({ results: [{ hits: null }] }).length === 0) {
