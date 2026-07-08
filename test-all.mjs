@@ -3405,7 +3405,7 @@ try {
 
   const positions = [
     // Same posting, two linked locations → collapse to one, canonical base wins.
-    { uid: 'A7.96E', name: 'Game Level Designer', location: { name: 'Remote', is_remote: true }, url_comeet_hosted_page: 'https://www.comeet.com/jobs/x/32.00E/game-level-designer/A7.96E' },
+    { uid: 'A7.96E', name: 'Game Level Designer', location: { name: 'Remote', is_remote: true }, experience_level: 'Intermediate', url_comeet_hosted_page: 'https://www.comeet.com/jobs/x/32.00E/game-level-designer/A7.96E' },
     { uid: 'A7.96E-96.508', name: 'Game Level Designer', location: { name: 'Remote Europe', is_remote: true }, url_comeet_hosted_page: 'https://www.comeet.com/jobs/x/32.00E/game-level-designer/A7.96E-96.508' },
     // Distinct base uids with the same title are genuinely separate reqs → kept.
     { uid: 'A7.B69', name: 'Motion Designer', location: { name: 'Remote' }, url_comeet_hosted_page: 'https://www.comeet.com/jobs/x/32.00E/motion/A7.B69' },
@@ -3420,6 +3420,14 @@ try {
     pass('mapComeetPositions collapses base+location-variant, keeps distinct base uids and the canonical row');
   } else {
     fail(`comeet dedup = ${JSON.stringify(mapped)}`);
+  }
+
+  // experience_level ships FREE in the list record → surfaces as experienceLevel;
+  // absent on the Motion rows → the field is omitted (never inferred from title).
+  if (gld[0]?.experienceLevel === 'Intermediate' && !('experienceLevel' in motion[0])) {
+    pass('mapComeetPositions maps experience_level to experienceLevel (FREE from list), omits it when absent');
+  } else {
+    fail(`comeet experienceLevel wrong: gld=${JSON.stringify(gld[0]?.experienceLevel)} motion has field=${'experienceLevel' in (motion[0] || {})}`);
   }
 
   // Variant-first ordering: a suffixed row seen before its base still yields the

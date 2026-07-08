@@ -56,7 +56,7 @@ function resolveTenant(entry) {
  *
  * @param {Array<object>} positions
  * @param {string} companyName
- * @returns {Array<{title: string, url: string, company: string, location: string, postedDate?: string, workMode?: string, department?: string}>}
+ * @returns {Array<{title: string, url: string, company: string, location: string, postedDate?: string, workMode?: string, department?: string, experienceLevel?: string}>}
  */
 export function mapComeetPositions(positions, companyName) {
   if (!Array.isArray(positions)) return [];
@@ -84,6 +84,12 @@ export function mapComeetPositions(positions, companyName) {
     // best freshness signal available.
     const postedDate = toIsoDate(rec.time_updated);
     const department = typeof rec.department === 'string' ? rec.department.trim() : '';
+    // Seniority ships FREE in the SAME list record as `experience_level`, a plain
+    // string in Comeet's own taxonomy (e.g. "Intermediate" / "Senior" / "Entry
+    // Level" / "Management"). Emit it as experienceLevel — no per-job fetch.
+    // Downstream rank.mjs reads it via the `experiencelevel` field. See _types.js.
+    const experienceLevel =
+      typeof rec.experience_level === 'string' ? rec.experience_level.trim() : '';
 
     // FREE inline detail: with details=true the list carries a `details` array
     // of {name, value:HTML} sections (Description/Responsibilities/Requirements/…).
@@ -100,6 +106,7 @@ export function mapComeetPositions(positions, companyName) {
       ...(postedDate ? { postedDate } : {}),
       ...(workMode ? { workMode } : {}),
       ...(department ? { department } : {}),
+      ...(experienceLevel ? { experienceLevel } : {}),
     }, { text: detailText });
 
     if (rec.uid == null) {
