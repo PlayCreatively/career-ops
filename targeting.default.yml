@@ -35,7 +35,7 @@ targeting:
       weight: 0.30
       filters:
         - name: Programming
-          keywords: [programmer, programming, engineer, developer, software, engine, gameplay engineer, graphics, rendering, backend, back-end, frontend, front-end, full stack, fullstack, tools, devops, network, physics, 'C++', 'C#', gameplay programmer, build, SDK, platform, systems engineer]
+          keywords: [programmer, programming, engineer, developer, software, engine, gameplay engineer, graphics, rendering, backend, back-end, frontend, front-end, full stack, fullstack, tools, devops, network, physics, 'C++', 'C#', gameplay programmer, build, SDK, platform, systems engineer, porting, server, infrastructure]
         - name: Art
           keywords: [artist, '/\bart\b/', '/\bVFX\b/', animator, animation, character, environment art, concept, modeler, modeller, rigging, lighting, texture, illustrator, outsource, 3D art]
         - name: Design
@@ -58,13 +58,13 @@ targeting:
         - name: EEU
           keywords: [germany, berlin, munich, münchen, hamburg, cologne, frankfurt, france, paris, lyon, montpellier, bordeaux, toulouse, sweden, stockholm, malmö, gothenburg, göteborg, finland, helsinki, poland, warsaw, warszawa, kraków, krakow, wrocław, spain, madrid, barcelona, valencia, netherlands, amsterdam, utrecht, rotterdam, ireland, dublin, czech, brno, prague, denmark, copenhagen, norway, oslo, belgium, brussels, portugal, lisbon, porto, italy, milan, rome, austria, vienna, switzerland, zurich, geneva, romania, bucharest, hungary, budapest, '/\bCET\b/', '/\bEU\b/', '/\bEEA\b/', '/\bEFTA\b/', schengen, europe, malta, cyprus, greece, athens, estonia, tallinn, lithuania, vilnius, latvia, riga, croatia, zagreb, slovenia, ljubljana, slovakia, bratislava, bulgaria, sofia, iceland, reykjavik, reykjavík, luxembourg]
         - name: Nordic
-          keywords: ['/\bnordic\b/', '/\bscandinavia\b/', scandinavian, sweden, stockholm, malmö, malmo, gothenburg, göteborg, goteborg, uppsala, norway, oslo, bergen, trondheim, denmark, copenhagen, aarhus, odense, finland, helsinki, espoo, tampere, iceland, reykjavik, reykjavík]
+          keywords: ['/\bnordic\b/', '/\bscandinavia\b/', scandinavian, sweden, stockholm, malmö, malmo, gothenburg, göteborg, goteborg, uppsala, norway, oslo, bergen, trondheim, denmark, copenhagen, aarhus, odense, finland, helsinki, espoo, tampere, iceland, reykjavik, reykjavík, '/, SE\b/', '/, NO\b/', '/, DK\b/', '/, FI\b/', '/, IS\b/']
         - name: UK
           keywords: [united kingdom, '/\bUK\b/', '/\bGB\b/', england, scotland, wales, northern ireland, london, guildford, brighton, manchester, cambridge, oxford, leamington, edinburgh, glasgow, bristol, leeds, sheffield, dundee, liverpool, nottingham, newcastle]
         - name: North America
           keywords: [united states, '/\bUSA\b/', '/\bUS\b/', canada, california, new york, texas, washington, seattle, san francisco, los angeles, austin, raleigh, cary, north carolina, massachusetts, boston, florida, chicago, montreal, montréal, toronto, vancouver, quebec, québec, ontario, alberta, oregon, colorado, georgia, utah, arizona, nevada, san diego, carlsbad, novato, redmond, irvine, san mateo, burnaby]
         - name: Asia/Pacific
-          keywords: [japan, tokyo, china, shanghai, beijing, singapore, korea, seoul, india, bangalore, bengaluru, hong kong, taiwan, australia, sydney, melbourne, brisbane, new zealand, auckland, philippines, manila, vietnam, malaysia, thailand]
+          keywords: [japan, tokyo, china, shanghai, beijing, singapore, korea, seoul, india, bangalore, bengaluru, hong kong, taiwan, australia, sydney, melbourne, brisbane, new zealand, auckland, philippines, manila, vietnam, malaysia, kuala lumpur, thailand, indonesia, jakarta, united arab emirates, dubai, israel, tel aviv]
         - name: Other
           else: true
     - name: Level
