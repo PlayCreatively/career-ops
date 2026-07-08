@@ -27,7 +27,12 @@ const HITMARKER_KEY =
   'QjFTckNNRFBWR2JOWjBvMUdlWmpEMUlYUEJJNnNnTFV6dEcxQVhvb28rVT1YNHFieyJleGNsdWRlX2ZpZWxkcyI6InRvdGFsQ291bnQsYWx0U2VhcmNoVGVybXMsYXV0aG9yIiwibGltaXRfbXVsdGlfc2VhcmNoZXMiOjEwMDAwfQ==';
 const COLLECTION = 'hitmarker_jobs_open';
 const PER_PAGE = 100;
-const MAX_PAGES = 10; // hard cap so a misconfigured entry can't paginate forever
+// Hard cap so a misconfigured entry can't paginate forever. Sized to cover the
+// whole open board (~6k postings today = ~61 pages) with headroom, and aligned
+// with the search key's limit_multi_searches:10000 window (100 pages × 100).
+// The fetch loop early-stops on the first short page, so a scoped search that
+// returns fewer results never pages this far.
+const MAX_PAGES = 100;
 
 // Compose a human-readable location from a Hitmarker jobLocation entry, e.g.
 // "Guildford, UK" — falls back gracefully when parents/title are missing.

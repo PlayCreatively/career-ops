@@ -132,7 +132,7 @@ tracked_companies:
   - name: Hitmarker — All (catch-all, hidden by default)
     provider: hitmarker
     query: "*"
-    pages: 10
+    pages: 100          # the provider early-stops at the first short page (~61 today), so this just means "every open posting"
     filtered: true
     enabled: true
 
