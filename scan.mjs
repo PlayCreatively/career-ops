@@ -66,11 +66,12 @@ const ENRICHERS_DIR = path.join(PROVIDERS_DIR, 'enrichers');
 mkdirSync('data', { recursive: true });
 
 const CONCURRENCY = 10;
-// Phase-2 detail defaults. A provider's detail pass fetches one posting per job
-// to feed enrichers; cap how many per entry so a huge aggregator board can't
-// storm a source, and how many run in parallel (throttle-prone sources drop it
-// lower via detailConcurrency / a per-entry enrich_concurrency).
-const DEFAULT_ENRICH_CAP = 500;
+// Phase-2 detail defaults. A provider's detail pass fetches one posting per job to
+// feed enrichers. There's no count cap — every job is enriched so location/date are
+// never silently missing on the long tail; the request rate is bounded instead by
+// how many run in parallel (throttle-prone sources drop it lower via
+// detailConcurrency / a per-entry enrich_concurrency), and a board can opt out of
+// the whole pass with `enrich: false` or pre-scope it with `query:`.
 const DEFAULT_ENRICH_CONCURRENCY = 4;
 
 // ── Provider loading ────────────────────────────────────────────────
@@ -189,9 +190,7 @@ export async function enrichJobs(jobs, provider, entry, ctx, enrichers, { extraF
   // PAID tier — a real per-job fetch, only when enabled and supported.
   let failures = 0;
   if (extraFetch && typeof provider.fetchDetail === 'function') {
-    const cap = Number.isInteger(entry.max_enrich) && entry.max_enrich >= 0
-      ? entry.max_enrich : DEFAULT_ENRICH_CAP;
-    const targets = jobs.slice(0, cap); // references into jobs — mutated in place
+    const targets = jobs; // enrich every job — no count cap; concurrency bounds the rate
     const concurrency = Number.isInteger(entry.enrich_concurrency) && entry.enrich_concurrency > 0
       ? entry.enrich_concurrency
       : Number.isInteger(provider.detailConcurrency) && provider.detailConcurrency > 0

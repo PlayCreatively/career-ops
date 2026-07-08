@@ -200,7 +200,7 @@ tracked_companies:
     # location + posted date from each posting's JSON-LD. See providers/gamejobs.mjs.
     # This is exactly the broad aggregator that catches the long tail of studios we
     # haven't wired first-party (Triband slipped through precisely because it wasn't
-    # in this file yet). Enrichment is capped (max_enrich) and fail-safe.
+    # in this file yet). Every posting is enriched (location + date), fail-safe.
     notes: "Global games aggregator. Sitemap-backed + JSON-LD enrichment. See providers/gamejobs.mjs."
     enabled: true
     # No source-level scoping by default: the whole board reaches your normal
@@ -208,15 +208,11 @@ tracked_companies:
     # pre-scope (and bound enrichment to your roles) add a `query:` keyword list,
     # e.g. query: ["gameplay", "tools", "unity", "junior", "designer"].
     #
-    # Enrich the WHOLE board, not just the first 500. Location + posted date live only
-    # in each posting's JSON-LD, and the default cap left ~92% of a 6,600-posting board
-    # location-less (e.g. only 1 of 20 Netflix roles fell inside 500) — which also broke
-    # dedup, since an enriched row and its un-enriched twin no longer matched. This runs
-    # one fetch per posting each scan (bounded by enrich_concurrency), so it adds real
-    # scan time; if that gets painful, either lower max_enrich or add a `query:` scope
-    # above so only your target roles are fetched. Raise the cap as the board grows.
-    max_enrich: 8000           # cap per-run enrichment fetches (default 500)
-    enrich_concurrency: 8      # parallel detail fetches (default 6)
+    # Enrichment runs one fetch per posting each scan (location + posted date live only
+    # in each posting's JSON-LD), so on a ~6,600-posting board it adds real scan time.
+    # If that gets painful, add a `query:` scope above so only your target roles are
+    # fetched, or turn the detail pass off entirely with `enrich: false`.
+    enrich_concurrency: 8      # parallel detail fetches (default 4)
     # enrich: false            # slug-only, single request, no location/date
 
   - name: GameDevJobs.com
@@ -231,11 +227,8 @@ tracked_companies:
     notes: "Global games aggregator (independent of GameJobs.co). Sitemap-index + JSON-LD enrichment. See providers/gamedevjobs.mjs."
     enabled: true
     # UNLIKE GameJobs.co (whose slugs are `title-at-company`), GameDevJobs slugs are
-    # `title-hexid` — they carry NO company. So every posting past max_enrich lands
-    # with a blank company, unmergeable and unlabelled. The board is small/bounded
-    # (~780, one sub-sitemap), so we enrich the whole thing rather than the default
-    # 500. Raise this if the board keeps growing.
-    max_enrich: 1000
+    # `title-hexid` — they carry NO company, so an un-enriched posting lands blank,
+    # unmergeable and unlabelled. Every posting is enriched, so that never happens.
     # No source-level scoping by default: the whole board reaches your targeting
     # filter (portals.yml). To pre-scope (title-only; company is unknown pre-enrich)
     # add a `query:` keyword list, e.g. query: ["gameplay", "tools", "unity"].

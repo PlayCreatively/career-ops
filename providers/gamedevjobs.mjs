@@ -31,7 +31,6 @@ import { parseJobPostingLd } from './_jsonld.mjs';
 //     provider: gamedevjobs
 //     query: ["gameplay", "tools", "unity", "gameplay programmer"]  # optional scope
 //     enrich: true            # optional — fill company/location from each page (default: on)
-//     max_enrich: 500         # optional — cap per-page enrichment fetches (default: 500)
 //     enrich_concurrency: 6   # optional — parallel detail fetches during enrichment
 //
 // QUERY SCOPING (optional). This is a whole-industry board. `query` (string or
@@ -42,16 +41,16 @@ import { parseJobPostingLd } from './_jsonld.mjs';
 //
 // ENRICHMENT. Company + location live ONLY on each posting's page — so WITHOUT
 // enrichment every posting has a title + date but an empty company. Enrichment
-// fetches each posting once and overlays the JSON-LD. It's bounded by `max_enrich`
-// (default 500) so a query-less run can't storm the board; postings beyond the
-// cap are still returned with their slug title + sitemap date, just no company —
-// the cap limits richness, never inclusion. Fail-safe throughout: a
-// failed/blocked/unparseable page keeps the slug fields and never drops the
-// posting. Opt out with `enrich: false` (fast, title+date only, no company).
+// fetches each posting once and overlays the JSON-LD. EVERY posting is enriched —
+// no count cap, so no posting is left company-less on the long tail; the request
+// rate is bounded only by enrich_concurrency (and by a `query:` scope, if set).
+// Fail-safe throughout: a failed/blocked/unparseable page keeps the slug fields
+// and never drops the posting. Opt out with `enrich: false` (fast, title+date
+// only, no company).
 
 const BASE = 'https://gamedevjobs.com';
 const SITEMAP_URL = `${BASE}/sitemap.xml`;
-const DEFAULT_ENRICH_CONCURRENCY = 6;  // parallel detail fetches (scanner caps count via max_enrich)
+const DEFAULT_ENRICH_CONCURRENCY = 6;  // parallel detail fetches (scanner enriches every job)
 
 function decodeEntities(s) {
   return String(s == null ? '' : s)
@@ -78,8 +77,8 @@ export function jobFromSlug(url, lastmod) {
   if (!slug) return null;
   slug = slug.replace(/-[0-9a-f]{8,}$/i, ''); // strip trailing hex id
   // GameDevJobs slugs are lowercased; title-case the fallback so postings shown
-  // WITHOUT enrichment (past the cap / enrich:false) don't read all-lowercase.
-  // Enrichment's JSON-LD title overrides this whenever it runs.
+  // WITHOUT enrichment (enrich:false, or a page that failed to parse) don't read
+  // all-lowercase. Enrichment's JSON-LD title overrides this whenever it runs.
   const title = slug.replace(/-+/g, ' ').replace(/\s+/g, ' ').trim()
     .replace(/\b\w/g, (c) => c.toUpperCase());
   if (!title) return null;
@@ -246,9 +245,9 @@ export default {
   },
 
   // PAID detail (a real per-page fetch): without it every posting has an empty
-  // company and the board is unusable, so it runs by default (--extra-fetch on);
-  // --no-extra-fetch falls back to slug title + sitemap date. The scanner bounds
-  // it by max_enrich (default 500) and runs detailConcurrency in parallel.
+  // company and the board is unusable, so it runs by default (--extra-fetch on)
+  // over every job; --no-extra-fetch falls back to slug title + sitemap date. The
+  // scanner runs detailConcurrency of these in parallel.
   detailConcurrency: DEFAULT_ENRICH_CONCURRENCY,
 
   // Fetch one posting page and read its schema.org JobPosting. `overlay` carries the

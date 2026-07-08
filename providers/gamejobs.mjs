@@ -23,7 +23,6 @@ import { parseJobPostingLd } from './_jsonld.mjs';
 //     provider: gamejobs-co
 //     query: ["gameplay", "tools", "unity", "gameplay programmer"]  # optional scope
 //     enrich: true            # optional — fill location/date from each page (default: on)
-//     max_enrich: 500         # optional — cap per-page enrichment fetches (default: 500)
 //     enrich_concurrency: 6   # optional — parallel detail fetches during enrichment
 //
 // QUERY SCOPING (optional). This is a WHOLE-INDUSTRY, global board — the sitemap
@@ -37,17 +36,17 @@ import { parseJobPostingLd } from './_jsonld.mjs';
 //
 // ENRICHMENT. Location and posted date live ONLY on each posting's own page
 // (in the JSON-LD), never in the sitemap. Filling them in means fetching each
-// posting once and reading its JobPosting block. Enrichment is bounded by
-// `max_enrich` (default 500) so a query-less run can't fire thousands of requests
-// at the board; postings BEYOND the cap are still returned, just with the
-// slug-derived title/company and no location — the cap limits richness, never
-// inclusion. Enrichment is fail-safe throughout: a failed/blocked/unparseable
-// page keeps the slug-derived fields and never drops the posting. Opt out entirely
-// with `enrich: false` (fast, slug-only, single request for the whole board).
+// posting once and reading its JobPosting block. EVERY posting is enriched — no
+// count cap, so location/date are never silently missing on the long tail; the
+// request rate is bounded only by enrich_concurrency (and by a `query:` scope, if
+// set, which shrinks the set that's fetched). Enrichment is fail-safe throughout:
+// a failed/blocked/unparseable page keeps the slug-derived fields and never drops
+// the posting. Opt out entirely with `enrich: false` (fast, slug-only, single
+// request for the whole board).
 
 const BASE = 'https://gamejobs.co';
 const SITEMAP_URL = `${BASE}/sitemap.xml`;
-const DEFAULT_ENRICH_CONCURRENCY = 6;  // parallel detail fetches (scanner caps count via max_enrich)
+const DEFAULT_ENRICH_CONCURRENCY = 6;  // parallel detail fetches (scanner enriches every job)
 
 function decodeEntities(s) {
   return String(s == null ? '' : s)
@@ -186,9 +185,8 @@ export default {
 
   // PAID detail (a real per-page fetch): the sitemap gives only a rough
   // slug-derived title/company, so the JSON-LD overlay is what makes rows
-  // accurate. Runs by default (--extra-fetch on); --no-extra-fetch falls back to
-  // the slug basics. Bounded by max_enrich (default 500) with detailConcurrency
-  // parallel fetches.
+  // accurate. Runs by default (--extra-fetch on) over every job; --no-extra-fetch
+  // falls back to the slug basics. detailConcurrency parallel fetches.
   detailConcurrency: DEFAULT_ENRICH_CONCURRENCY,
 
   // Fetch one posting page and read its schema.org JobPosting. `overlay` carries the
