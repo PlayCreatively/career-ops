@@ -568,6 +568,18 @@ tracked_companies:
     notes: "Paris. Sifu, Absolver, Rematch."
     enabled: true
 
+  # ── Studios on Simployer Recruitment ──────────────────────────────
+  # Multi-tenant Nordic ATS at {tenant}.recruitment.simployer.com. The careers
+  # page is a Next.js app; the provider reads the job list embedded in its
+  # __NEXT_DATA__ blob (one HTML GET, description inline). Auto-detects from a
+  # careers_url on *.recruitment.simployer.com. See providers/simployer.mjs.
+
+  - name: Tarsier Studios
+    provider: simployer
+    careers_url: https://tarsier.recruitment.simployer.com/careers
+    notes: "Malmö. Little Nightmares, REANIMAL. Now independent (ex-Embracer)."
+    enabled: true
+
   # ── Studios on Lever ──────────────────────────────────────────────
 
   - name: Avalanche Studios
