@@ -3298,8 +3298,10 @@ try {
 console.log('\n27. Provider — gamedevjobs sitemap-index + JSON-LD');
 
 try {
-  const { jobFromSlug, parseSitemapIndex, parseJobsSitemap, mergeSameRoleLocations } =
+  const { jobFromSlug, parseSitemapIndex, parseJobsSitemap, mergeSameRoleLocations,
+    parseDetailList } =
     await import(pathToFileURL(join(ROOT, 'providers/gamedevjobs.mjs')).href);
+  const { splitLocationMode } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
 
   // Slug parse: /jobs/{title}-{hexid} → title only (company/location come from the
   // page). Strip the trailing 8+ hex id; seed postedDate from <lastmod>. Fail-safe
@@ -3364,6 +3366,35 @@ try {
     pass('mergeSameRoleLocations joins per-office rows, keeps freshest date + first URL, leaves company-less rows split (fail-safe)');
   } else {
     fail(`mergeSameRoleLocations = ${JSON.stringify(mrl)}`);
+  }
+
+  // Seniority (`Level`) and work arrangement (the `Location` row's prefix) live ONLY
+  // in the page's definition list, never in the JSON-LD. Parse the rows, strip tags
+  // and &nbsp;, and fail safe on an absent/blank row or non-string input.
+  const dl = `<dl>
+    <dt class="font-semibold">Location</dt><dd class="min-w-0">Hybrid (Solna)</dd>
+    <dt class="font-semibold">Compensation</dt><dd class="min-w-0">$12k - $17k/mo</dd>
+    <dt class="font-semibold">Employment</dt><dd class="min-w-0">Full-time</dd>
+    <dt class="font-semibold">Level</dt><dd class="min-w-0"><span>Senior&nbsp;Level</span></dd>
+  </dl>`;
+  const rows = parseDetailList(dl);
+  if (rows.get('level') === 'Senior Level' && rows.get('employment') === 'Full-time' &&
+      rows.get('location') === 'Hybrid (Solna)' &&
+      parseDetailList('<dl><dt>Employment</dt><dd>Full-time</dd></dl>').get('level') === undefined &&
+      parseDetailList('<dl><dt>Level</dt><dd>  </dd></dl>').get('level') === undefined &&
+      parseDetailList(null).size === 0) {
+    pass('parseDetailList reads the dt/dd rows (Level, Location, …), fails safe');
+  } else {
+    fail(`parseDetailList = ${JSON.stringify([...rows])}`);
+  }
+
+  // The Location row's mode prefix is what fetchDetail turns into workMode.
+  const modes = ['Hybrid (Solna)', 'Remote (Canada)', 'Onsite (Bengaluru, Karnataka)', 'Solna']
+    .map((s) => splitLocationMode(s).workMode);
+  if (modes.join(',') === 'hybrid,remote,onsite,') {
+    pass('gamedevjobs Location row maps to workMode (hybrid/remote/onsite), blank when unstated');
+  } else {
+    fail(`gamedevjobs Location row workModes = ${JSON.stringify(modes)}`);
   }
 } catch (e) {
   fail(`gamedevjobs provider tests crashed: ${e.message}`);

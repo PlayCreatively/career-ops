@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate } from './_util.mjs';
+import { toIsoDate, splitLocationMode } from './_util.mjs';
 import { parseJobPostingLd } from './_jsonld.mjs';
 
 // GameDevJobs.com provider — an AGGREGATOR board (like GameJobs.co / Hitmarker /
@@ -91,6 +91,39 @@ export function jobFromSlug(url, lastmod) {
     ...(postedDate ? { postedDate } : {}),
   };
 }
+
+// Each posting page renders a small definition list beside the JSON-LD —
+// `Location`, sometimes `Compensation`, `Employment`, `Level` — and it carries two
+// signals the JSON-LD does NOT: the seniority (`Level`) and the work arrangement
+// (the `Location` row reads "Hybrid (Solna)" / "Remote (Canada)" / "Onsite (…)",
+// while the JSON-LD names only the city and sets jobLocationType on almost
+// nothing). Read the rows into a label → value map during enrichment; the page is
+// already fetched, so both cost no extra request. Fail-safe: a page without the
+// list, or with markup we don't recognise, yields an empty map and the posting
+// keeps every other field. Exported for unit tests.
+export function parseDetailList(html) {
+  /** @type {Map<string,string>} */
+  const rows = new Map();
+  if (typeof html !== 'string') return rows;
+  // Tags out, entities (incl. the &nbsp; the page glues "Senior Level" with) in,
+  // whitespace collapsed.
+  const text = (s) => decodeEntities(
+    s.replace(/<[^>]*>/g, '').replace(/&nbsp;|&#160;/gi, ' '),
+  ).replace(/\s+/g, ' ').trim();
+  for (const m of html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt>\s*<dd[^>]*>([\s\S]*?)<\/dd>/gi)) {
+    const label = text(m[1]).toLowerCase();
+    const value = text(m[2]);
+    if (label && value && !rows.has(label)) rows.set(label, value);
+  }
+  return rows;
+}
+
+// Consumers (fetchDetail): the `level` row goes out verbatim as the source-taxonomy
+// experienceLevel — never inferred from the title (see providers/_types.js) — and
+// the `location` row goes through splitLocationMode, which maps "Hybrid (Solna)" →
+// hybrid, "Remote (Canada)" → remote, "Onsite (Bengaluru, Karnataka)" → onsite. We
+// keep only that mode and let the JSON-LD supply the place, which it spells more
+// fully (with country).
 
 // The `/sitemap.xml` is an INDEX of sub-sitemaps. Return the sub-sitemap URLs that
 // hold job postings — the `<loc>`s that mention "jobs" (e.g. sitemaps/jobs-0.xml),
@@ -250,15 +283,34 @@ export default {
   // scanner runs detailConcurrency of these in parallel.
   detailConcurrency: DEFAULT_ENRICH_CONCURRENCY,
 
-  // Fetch one posting page and read its schema.org JobPosting. `overlay` carries the
-  // authoritative title/company/location/workMode/date (the sitemap couldn't); `text`
-  // is the description body for cross-cutting enrichers (sponsorship). Fail-safe: a
-  // page that doesn't parse returns null and the scanner keeps the slug fields.
+  // Fetch one posting page and read BOTH of its structured sources: the schema.org
+  // JobPosting (title/company/location/date) and the definition list beside it
+  // (`Level` → experienceLevel, `Location` → workMode), which the JSON-LD doesn't
+  // express. `overlay` carries the authoritative fields the sitemap couldn't; `text`
+  // is the description body for cross-cutting enrichers (sponsorship).
+  //
+  // workMode precedence: the JSON-LD's own mode wins when it has one, since that
+  // comes from a structured `jobLocationType: TELECOMMUTE` (the only way
+  // parseJobPostingLd sets it here — GameDevJobs' LD location is a bare city with no
+  // mode text to infer from). The `Location` row fills the gap on the vast majority
+  // of postings, which set no jobLocationType at all.
+  //
+  // Fail-safe: neither source is required — a page whose JSON-LD doesn't parse still
+  // contributes its list fields, and a page with neither returns null so the scanner
+  // keeps the slug fields.
   async fetchDetail(job, ctx) {
     const html = await ctx.fetchText(job.url, { redirect: 'error' });
     const ld = parseJobPostingLd(html);
-    if (!ld) return null;
+    const rows = parseDetailList(html);
+    const experienceLevel = rows.get('level') || '';
+    const workMode = splitLocationMode(rows.get('location') || '').workMode || '';
+    if (!ld) {
+      const overlay = { ...(experienceLevel ? { experienceLevel } : {}), ...(workMode ? { workMode } : {}) };
+      return Object.keys(overlay).length ? { overlay } : null;
+    }
     const { description, ...overlay } = ld;
+    if (experienceLevel) overlay.experienceLevel = experienceLevel;
+    if (workMode && !overlay.workMode) overlay.workMode = workMode;
     return { overlay, ...(description ? { text: description } : {}) };
   },
 

@@ -109,9 +109,6 @@ async function generatePDF() {
     process.exit(1);
   }
 
-  inputPath = resolve(inputPath);
-  outputPath = resolve(outputPath);
-
   // Validate format
   const validFormats = ['a4', 'letter'];
   if (!validFormats.includes(format)) {
@@ -119,12 +116,28 @@ async function generatePDF() {
     process.exit(1);
   }
 
+  inputPath = resolve(inputPath);
   console.log(`📄 Input:  ${inputPath}`);
-  console.log(`📁 Output: ${outputPath}`);
-  console.log(`📏 Format: ${format.toUpperCase()}`);
 
-  // Read HTML to inject font paths as absolute file:// URLs
-  let html = await readFile(inputPath, 'utf-8');
+  const source = await readFile(inputPath, 'utf-8');
+  return renderHtmlToPdf(source, outputPath, { format, baseDir: dirname(inputPath) });
+}
+
+/**
+ * Renders an HTML *string* to a PDF file.
+ *
+ * @param {string} source     HTML content (not a path).
+ * @param {string} outputPath Destination .pdf path.
+ * @param {{format?: 'a4'|'letter', baseDir?: string}} [options]
+ */
+export async function renderHtmlToPdf(source, outputPath, options = {}) {
+  const { format = 'a4', baseDir = __dirname } = options;
+  outputPath = resolve(outputPath);
+
+  console.log(`📁 Output: ${outputPath}`);
+  console.log(`📏 Format: ${String(format).toUpperCase()}`);
+
+  let html = source;
 
   // Resolve font paths relative to career-ops/fonts/
   const fontsDir = resolve(__dirname, 'fonts');
@@ -154,7 +167,7 @@ async function generatePDF() {
     // Set content with file base URL for any relative resources
     await page.setContent(html, {
       waitUntil: 'networkidle',
-      baseURL: `file://${dirname(inputPath)}/`,
+      baseURL: `file://${baseDir}/`,
     });
 
     // Wait for fonts to load
@@ -191,7 +204,13 @@ async function generatePDF() {
   }
 }
 
-generatePDF().catch((err) => {
-  console.error('❌ PDF generation failed:', err.message);
-  process.exit(1);
-});
+// Only run the CLI when this file is the entry point, so other scripts can
+// import renderHtmlToPdf without triggering argument parsing.
+const isEntryPoint = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isEntryPoint) {
+  generatePDF().catch((err) => {
+    console.error('❌ PDF generation failed:', err.message);
+    process.exit(1);
+  });
+}
