@@ -25,11 +25,11 @@ export const DETAIL = Symbol('careerops.detail');
  *
  * @template {object} J
  * @param {J} job
- * @param {{text?: string, overlay?: object}} payload
+ * @param {{text?: string, overlay?: object, drop?: boolean}} payload
  * @returns {J}
  */
 export function attachDetail(job, payload) {
-  if (job && payload && (payload.text || payload.overlay)) {
+  if (job && payload && (payload.text || payload.overlay || payload.drop)) {
     Object.defineProperty(job, DETAIL, { value: payload, enumerable: false, configurable: true, writable: true });
   }
   return job;

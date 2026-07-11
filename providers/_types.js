@@ -108,9 +108,16 @@
  *     posting's JSON-LD, which the list page couldn't expose). Only non-empty
  *     values overwrite; absent keys leave the list value intact.
  *
+ * A detail fetch may also POSITIVELY drop its job: return `{ drop: true }` when
+ * the fetched page proves the posting is dead (e.g. an aggregator that lingers
+ * expired listings in its sitemap — the page carries an expiry banner). This is
+ * distinct from a detail MISS (null / thrown / network error), which keeps the
+ * job with its Phase-1 fields. Only an explicit `drop: true` omits the posting.
+ *
  * @typedef {object} DetailPayload
  * @property {string}         [text]     Plain-text description body for enrichers.
  * @property {Partial<Job>}   [overlay]  Core job fields to overwrite (non-empty only).
+ * @property {boolean}        [drop]     True = posting proven dead; omit it from the snapshot.
  */
 
 /**

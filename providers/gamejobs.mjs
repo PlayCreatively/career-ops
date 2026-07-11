@@ -2,6 +2,8 @@
 /** @typedef {import('./_types.js').Provider} Provider */
 
 import { parseJobPostingLd } from './_jsonld.mjs';
+import { stripHtml } from './_util.mjs';
+import { classifyLiveness } from '../liveness-core.mjs';
 
 // GameJobs.co provider — an AGGREGATOR board (like Hitmarker / Work With Indies /
 // Games Jobs Direct), not a single company. One tracked_companies entry yields
@@ -18,10 +20,11 @@ import { parseJobPostingLd } from './_jsonld.mjs';
 // title/company. EXPIRED postings (which GameJobs.co keeps in the sitemap for a
 // while, flagged "This job might no longer be available") drop the JSON-LD block
 // entirely — so a page with no JSON-LD is an expired posting, not a new layout to
-// scrape. Those are caught and dropped by the liveness pass (scan.mjs --verify/
-// --recheck → liveness-core's HARD_EXPIRED_PATTERNS), which is the single owner of
-// the expiry decision; we deliberately do NOT scrape a header fallback here, since
-// it would only ever recover fields for jobs that are already dead.
+// scrape. Enrichment already fetches every page (for location), so it recognises
+// that expiry banner right there and DROPS the posting (returns { drop: true }) so
+// it never reaches the board — no waiting for the weekly liveness recheck. The
+// expiry decision itself stays single-sourced in liveness-core's classifier; we
+// only drop on its positive text signal, never on a blocked/short fetch.
 //
 // Configure it explicitly in studios.yml:
 //
@@ -195,13 +198,21 @@ export default {
   // falls back to the slug basics. detailConcurrency parallel fetches.
   detailConcurrency: DEFAULT_ENRICH_CONCURRENCY,
 
-  // Fetch one posting page and read its schema.org JobPosting. `overlay` carries the
-  // authoritative title/company/location/workMode/date; `text` is the description
-  // body for cross-cutting enrichers (sponsorship). Fail-safe: a page that doesn't
-  // parse (e.g. an EXPIRED posting that has dropped its JSON-LD — see header note)
-  // returns null and the scanner keeps the slug fields; the liveness pass drops it.
+  // Fetch one posting page. First: drop it if the page proves the posting is dead —
+  // GameJobs.co lingers expired listings with a "This job might no longer be
+  // available" banner (and no JSON-LD). We gate the drop on the liveness classifier's
+  // POSITIVE text/redirect signal only (expired_body/expired_url), NOT on its
+  // soft "insufficient content" verdict — a Cloudflare block or truncated fetch
+  // must never be mistaken for an expiry. Otherwise read the schema.org JobPosting:
+  // `overlay` carries the authoritative title/company/location/workMode/date; `text`
+  // is the description body for cross-cutting enrichers (sponsorship). Fail-safe: a
+  // page that doesn't parse returns null and the scanner keeps the slug fields.
   async fetchDetail(job, ctx) {
     const html = await ctx.fetchText(job.url, { redirect: 'error' });
+    const live = classifyLiveness({ finalUrl: job.url, bodyText: stripHtml(html) });
+    if (live.result === 'expired' && (live.code === 'expired_body' || live.code === 'expired_url')) {
+      return { drop: true };
+    }
     const ld = parseJobPostingLd(html);
     if (!ld) return null;
     const { description, ...overlay } = ld;

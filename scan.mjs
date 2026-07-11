@@ -176,14 +176,21 @@ function applyDetail(job, detail, enrichers) {
 // in place; returns { jobs, failures } (jobs may be re-shaped by postFetch, e.g.
 // gamedevjobs' office merge). A provider is one tier or the other, never both.
 export async function enrichJobs(jobs, provider, entry, ctx, enrichers, { extraFetch }) {
-  if (jobs.length === 0 || entry.enrich === false) return { jobs, failures: 0 };
+  if (jobs.length === 0 || entry.enrich === false) return { jobs, failures: 0, dropped: 0 };
+
+  // Postings a detail payload POSITIVELY proved dead (detail.drop === true — e.g.
+  // an aggregator that lingers expired listings, whose page carries an expiry
+  // banner). Collected here, filtered out before postFetch. A detail MISS (null /
+  // throw) is NOT a drop — the job survives with its Phase-1 fields.
+  const dropped = new Set();
 
   // FREE tier — consume any inline detail the provider attached during fetch.
   for (const job of jobs) {
     const inline = job[DETAIL];
     if (inline) {
-      applyDetail(job, inline, enrichers);
       delete job[DETAIL]; // never let it reach the JSON snapshot (symbol, but tidy)
+      if (inline.drop === true) { dropped.add(job); continue; }
+      applyDetail(job, inline, enrichers);
     }
   }
 
@@ -205,14 +212,16 @@ export async function enrichJobs(jobs, provider, entry, ctx, enrichers, { extraF
         try {
           detail = await provider.fetchDetail(job, ctx);
         } catch { failures++; continue; } // keep the job; lose only its detail
+        if (detail && detail.drop === true) { dropped.add(job); continue; }
         applyDetail(job, detail, enrichers);
       }
     };
     await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
   }
 
-  const out = typeof provider.postFetch === 'function' ? provider.postFetch(jobs, entry) : jobs;
-  return { jobs: Array.isArray(out) ? out : jobs, failures };
+  const kept = dropped.size ? jobs.filter((j) => !dropped.has(j)) : jobs;
+  const out = typeof provider.postFetch === 'function' ? provider.postFetch(kept, entry) : kept;
+  return { jobs: Array.isArray(out) ? out : kept, failures, dropped: dropped.size };
 }
 
 // Resolve which provider handles a tracked_companies entry.
@@ -1090,6 +1099,7 @@ async function main() {
   let totalHidden = 0;
   let totalDupes = 0;
   let totalEnrichFailures = 0; // Phase-2 detail fetches that failed (detail lost, posting kept)
+  let totalEnrichDropped = 0;  // Phase-2 detail proved the posting dead (omitted from the snapshot)
   const newOffers = [];
   // Full current snapshot for --json: every job that passes the filters,
   // deduped within this run only (independent of scan-history.tsv), so the
@@ -1151,6 +1161,7 @@ async function main() {
       const enriched = await enrichJobs(jobs, provider, company, ctx, enrichers, { extraFetch });
       jobs = enriched.jobs;
       if (enriched.failures) totalEnrichFailures += enriched.failures;
+      if (enriched.dropped) totalEnrichDropped += enriched.dropped;
 
       totalFound += jobs.length;
 
@@ -1397,6 +1408,9 @@ async function main() {
   console.log(`Duplicates:            ${totalDupes} skipped`);
   if (totalEnrichFailures > 0) {
     console.log(`Detail enrich misses:  ${totalEnrichFailures} (posting kept, detail skipped)`);
+  }
+  if (totalEnrichDropped > 0) {
+    console.log(`Detail-proved dead:    ${totalEnrichDropped} (expired page, omitted from snapshot)`);
   }
   if (verify) {
     console.log(`Expired (verified):    ${expiredOffers.length} dropped`);

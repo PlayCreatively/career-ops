@@ -3342,6 +3342,28 @@ try {
       cleanLdAddress('Berlin, Made in Germany region'),
     ])}`);
   }
+
+  // Scan-time drop: fetchDetail drops an EXPIRED posting (the "This job might no
+  // longer be available" banner → liveness expired_body) so it never reaches the
+  // board; a LIVE JSON-LD page returns its overlay; a Cloudflare-blocked/short page
+  // is a MISS (null), never a false drop.
+  const { default: gjProvider } =
+    await import(pathToFileURL(join(ROOT, 'providers/gamejobs.mjs')).href);
+  const ctxOf = (html) => ({ fetchText: async () => html });
+  const bodyFiller = 'x'.repeat(400); // clear the classifier's min-content bar
+  const expiredHtml = `<html><body><article><p class="flash">This job might no longer be available.</p><h1>Unity Developer</h1><p>${bodyFiller}</p></article></body></html>`;
+  const liveHtml = `<html><head><script type="application/ld+json">{"@type":"JobPosting","title":"Tools Programmer","hiringOrganization":{"name":"Triband"},"jobLocation":{"address":{"addressLocality":"Copenhagen","addressCountry":"DK"}},"datePosted":"2026-06-23"}</script></head><body><p>${bodyFiller}</p></body></html>`;
+  const blockedHtml = '<html><body>Just a moment...</body></html>'; // Cloudflare interstitial, short
+  const dExpired = await gjProvider.fetchDetail({ url: 'https://gamejobs.co/Unity-Developer-at-Virtuos-9730' }, ctxOf(expiredHtml));
+  const dLive = await gjProvider.fetchDetail({ url: 'https://gamejobs.co/Tools-Programmer-at-Triband' }, ctxOf(liveHtml));
+  const dBlocked = await gjProvider.fetchDetail({ url: 'https://gamejobs.co/x-at-y' }, ctxOf(blockedHtml));
+  if (dExpired && dExpired.drop === true &&
+      dLive && dLive.overlay && dLive.overlay.company === 'Triband' && dLive.overlay.location === 'Copenhagen, DK' &&
+      dBlocked === null) {
+    pass('gamejobs fetchDetail drops the expiry-banner page, overlays a live page, treats a blocked/short page as a miss (no false drop)');
+  } else {
+    fail(`gamejobs fetchDetail drop-gating = ${JSON.stringify({ dExpired, dLive, dBlocked })}`);
+  }
 } catch (e) {
   fail(`gamejobs-co provider tests crashed: ${e.message}`);
 }
@@ -3911,6 +3933,35 @@ try {
     pass('enrichJobs gates PAID fetch behind --extra-fetch; entry.enrich:false disables both tiers');
   } else {
     fail(`enrichJobs gating: off=${off.jobs[0].company} on=${on.jobs[0].company} disabled=${JSON.stringify(disabled.jobs[0])}`);
+  }
+
+  // Drop channel: a detail payload of { drop: true } POSITIVELY omits its job from
+  // the snapshot (an aggregator that proved a lingering listing dead), and is
+  // counted in `dropped` — distinct from a MISS (null), which keeps the job. Works
+  // for both the PAID fetch and a FREE inline payload.
+  const dropProvider = {
+    id: 'dropper',
+    async fetchDetail(job) {
+      if (job.url.endsWith('/dead')) return { drop: true };       // proven dead → omit
+      if (job.url.endsWith('/miss')) return null;                  // miss → keep
+      return { overlay: { company: 'Live' } };
+    },
+  };
+  const inlineDead = attachDetail({ title: 'ID', url: 'https://x/id', company: '' }, { drop: true });
+  const dropJobs = [
+    { title: 'Live', url: 'https://x/live', company: '' },
+    { title: 'Dead', url: 'https://x/dead', company: '' },
+    { title: 'Miss', url: 'https://x/miss', company: '' },
+    inlineDead,
+  ];
+  const dr = await enrichJobs(dropJobs, dropProvider, {}, {}, enrichers, { extraFetch: true });
+  if (dr.dropped === 2 && dr.jobs.length === 2 &&
+      dr.jobs.some((j) => j.title === 'Live' && j.company === 'Live') &&
+      dr.jobs.some((j) => j.title === 'Miss') &&
+      !dr.jobs.some((j) => j.title === 'Dead' || j.title === 'ID')) {
+    pass('enrichJobs { drop:true } omits the job (PAID + FREE inline), counts it, keeps a null MISS');
+  } else {
+    fail(`enrichJobs drop channel: dropped=${dr.dropped} kept=${JSON.stringify(dr.jobs.map((j) => j.title))}`);
   }
 } catch (e) {
   fail(`enrichJobs tests crashed: ${e.message}`);
