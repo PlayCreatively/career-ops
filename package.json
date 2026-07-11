@@ -28,7 +28,9 @@
     "patterns": "node analyze-patterns.mjs",
     "gemini:eval": "node gemini-eval.mjs",
     "studio": "node studio-info.mjs",
-    "board:studios": "node studio-info.mjs --board"
+    "board:studios": "node studio-info.mjs --board",
+    "board:pull": "node board-pull.mjs",
+    "board:live": "node board-pull.mjs && npm run board:dev"
   },
   "keywords": [
     "ai",

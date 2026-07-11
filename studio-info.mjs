@@ -14,7 +14,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { lookupStudio, getToken, keyOf } from './providers/igdb.mjs';
+import { lookupStudio, getToken, keyOf, countryOfLocation } from './providers/igdb.mjs';
 
 // dotenv is optional — fall back to process.env if it isn't installed.
 try { const { config } = await import('dotenv'); config(); } catch {}
@@ -59,17 +59,26 @@ async function single(name) {
   console.log(fmtStudio(studio, name));
 }
 
-// Unique company names present on the board, in first-seen order.
+// Unique studios on the board, each with the country that dominates its
+// postings — the hint IGDB uses to disambiguate namesakes. First-seen order.
 async function boardCompanies() {
   const raw = JSON.parse(await readFile(JOBS_PATH, 'utf8'));
   const jobs = Array.isArray(raw) ? raw : raw.jobs || raw.data || [];
-  const seen = new Map(); // key -> original display name
+  const seen = new Map(); // key -> { name, counts: Map<country, n> }
   for (const j of jobs) {
     const name = (j && j.company) || '';
     const k = keyOf(name);
-    if (k && !seen.has(k)) seen.set(k, name.trim());
+    if (!k) continue;
+    let e = seen.get(k);
+    if (!e) { e = { name: name.trim(), counts: new Map() }; seen.set(k, e); }
+    const cc = countryOfLocation(j && j.location);
+    if (cc) e.counts.set(cc, (e.counts.get(cc) || 0) + 1);
   }
-  return [...seen.values()];
+  return [...seen.values()].map((e) => {
+    let hint = null, best = 0;
+    for (const [c, n] of e.counts) if (n > best) { best = n; hint = c; }
+    return { name: e.name, countryHint: hint };
+  });
 }
 
 // Run `fn` over `items` with at most `size` in flight (IGDB allows ~4/s, 8 conc).
@@ -115,15 +124,15 @@ async function board() {
 
   const todo = refresh
     ? companies
-    : companies.filter((c) => { const k = keyOf(c); return !(k in out) && !misses.has(k); });
+    : companies.filter((c) => { const k = keyOf(c.name); return !(k in out) && !misses.has(k); });
   const work = limit ? todo.slice(0, limit) : todo;
   console.log(`Enriching ${work.length} studio(s)${limit ? ` (--limit ${limit})` : ''} via IGDB…\n`);
 
   let done = 0, hits = 0;
-  await pool(work, 4, async (name) => {
+  await pool(work, 4, async ({ name, countryHint }) => {
     const k = keyOf(name);
     try {
-      const s = await lookupStudio(name, { token, refresh });
+      const s = await lookupStudio(name, { token, refresh, countryHint });
       if (hasContext(s)) { out[k] = s; misses.delete(k); hits++; }
       else { delete out[k]; misses.add(k); } // no context → remember so we don't re-ask
     } catch (e) {
