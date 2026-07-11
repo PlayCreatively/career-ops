@@ -296,7 +296,15 @@ async function fetchGames(companyId, token) {
   }
   const games = [...byName.values()];
   games.sort((a, b) => b.pop - a.pop || b.rating - a.rating || b.year - a.year);
-  return games.slice(0, MAX_GAMES).map((g) => ({ name: g.name, cover: g.cover, role: g.role }));
+  return games.slice(0, MAX_GAMES).map((g) => ({
+    name: g.name,
+    cover: g.cover,
+    role: g.role,
+    // Release year (from the unix first_release_date) and IGDB rating (0-100,
+    // rounded) — small extras the board shows on hover. Null when IGDB had none.
+    year: g.year ? new Date(g.year * 1000).getUTCFullYear() : null,
+    rating: g.rating ? Math.round(g.rating) : null,
+  }));
 }
 
 function normalize(company, games) {
