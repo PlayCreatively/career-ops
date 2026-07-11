@@ -29,6 +29,17 @@
 // "nice-to-have" heading (or trailing "…is a plus") are skipped entirely, so an
 // aspirational "8+ years preferred" never masquerades as the requirement.
 //
+// PRECISION ON BARE "N years": a "5+ years" / "3–5 years" / "5 years or more" form is
+// almost always a requirement. A BARE "N years" (no +, no range) very often is NOT —
+// it's the STUDIO's age ("20 years of history", "for over 25 years"), a benefit or
+// tenure milestone ("7 years of employment", "at 5 years of service"), a contract or
+// programme length ("1 year FTC", "3 year degree"), or an age gate ("18 years of
+// age"). So a bare mention is only kept when it carries a real experience anchor —
+// the word "experience"/"expertise", or a requirement qualifier ("at least N years
+// in/as/of <role>") — and is dropped on any longevity / duration / age signal. This
+// is a whitelist by design: a NEW way to phrase "our studio is N years old" simply
+// won't match, so the safe failure is a missing chip, never a misleading one.
+//
 // No JD (Lever, Ashby) → `needs: 'text'` skips this entirely → no chip, never a
 // false "0 years". A description that states no requirement → null, same result.
 
@@ -54,12 +65,26 @@ const WORDS = {
 // A years-of-experience phrase: an optional qualifier ("at least", "minimum of"…),
 // a number (digits or word), an optional "+"/range, then "years"/"yrs". The lower
 // number is the threshold a candidate must clear ("3-5 years" → 3, "5+ years" → 5).
+// Group 1 captures the qualifier (a "required floor" signal used to trust bare years);
+// group 2 the number; groups 3/5 the "+"; group 4 the range upper bound.
 const YEARS_RE = new RegExp(
-  '\\b(?:at least\\s+|minimum\\s+(?:of\\s+)?|min\\.?\\s+|over\\s+|more than\\s+|around\\s+|approx\\.?\\s+)?' +
+  '\\b(at least\\s+|minimum\\s+(?:of\\s+)?|min\\.?\\s+|over\\s+|more than\\s+|around\\s+|approx\\.?\\s+)?' +
     '(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)' +
     '\\s*(\\+|plus)?\\s*(?:(?:-|–|—|to)\\s*(\\d{1,2}))?\\s*(\\+)?\\s*(?:years?|yrs?)\\b',
   'gi',
 );
+
+// A bare "N years" mention whose immediately following words name a non-experience
+// noun — age gate, tenure/benefit, contract or programme length, company history —
+// is never an experience requirement. Tested against the text right after the match.
+const NON_REQ_AFTER =
+  /^\W*(?:of\s+)?(?:age|service|employment|history|creation|tenure|seniority)\b|^\W*(?:year\s+)?(?:apprenticeship|traineeship|internship|sabbatical|contract|degree|programme|program|duration|rotation)\b/i;
+
+// Company-longevity / duration narrative around a bare mention: "for over N years",
+// "N years of history/now", "we've been…", "average tenure…", a franchise's age. The
+// number describes the studio or the role's length, not the candidate's background.
+const LONGEVITY_RE =
+  /\b(?:for (?:over|more than|nearly|almost)\s+\S+\s+years?\b|years?\s+(?:of\s+history|now\b)|we[''`’]?ve\b|we have\b|has been\b|have been\b|had been\b|been (?:around|in the business)\b|spent\b|founded\b|established\b|operating\b|entertaining\b|average tenure\b|our (?:mission|journey|story|games|history)\b|franchise\b|flagship\b|welcomed\b|pioneer|generations of players\b|celebrat|anniversary)/i;
 
 // Signals that the years are qualified as real-world work, not hobby/study time.
 // Loaded from skills.yml (`experience.industry_signals`) so the list is tunable
@@ -198,12 +223,29 @@ export function detectExperience(text, skillsFn = detectSkills, industrySignals 
   let m;
   while ((m = YEARS_RE.exec(text)) !== null) {
     if (isFalsePositive(text, m)) continue;
-    const years = toNum(m[1]);
+    const qualifier = m[1]; // "at least" / "minimum" / "over"… — a required-floor signal
+    const years = toNum(m[2]);
     if (!Number.isFinite(years) || years < 1 || years > 25) continue;
-    const context = boundedContext(text, m.index, m.index + m[0].length);
+    const end = m.index + m[0].length;
+    const after = text.slice(end, end + 48);
+    // Age / tenure / contract / company-history nouns → not an experience requirement,
+    // regardless of the "+" form (kills "18+ years of age", "for over 25 years").
+    if (NON_REQ_AFTER.test(after)) continue;
+    const context = boundedContext(text, m.index, end);
     if (inOptionalSection(text, m.index, context)) continue; // preferred / nice-to-have → not a bar
-    const upper = m[3] ? toNum(m[3]) : null; // range upper bound, if any
-    const plus = Boolean(m[2] || m[4]);
+    const upper = m[4] ? toNum(m[4]) : null; // range upper bound, if any
+    // "+" before "years", or a trailing "years+" / "years or more" → a real floor.
+    const trailingPlus = /^\W*(?:\+|or\s+(?:more|above|greater|over|up)|and\s+(?:above|up|over))\b/i.test(after);
+    const plus = Boolean(m[3] || m[5] || trailingPlus);
+    const strong = plus || (upper && upper > years);
+    // A BARE "N years" is trusted only with a real experience anchor; on any longevity
+    // or duration narrative it's the studio's/role's clock, not the candidate's — drop.
+    if (!strong) {
+      if (LONGEVITY_RE.test(text.slice(Math.max(0, m.index - 48), m.index) + m[0] + after)) continue;
+      const hasExpWord = /\b(?:experience|expertise|track record)\b/i.test(context);
+      const looksRequirement = Boolean(qualifier) && !/^\W*(?:to|for|ago|old|now)\b/i.test(after);
+      if (!hasExpWord && !looksRequirement) continue;
+    }
     const industry = isIndustry(context, industrySignals);
     const label = upper && upper > years
       ? `${years}–${upper} yrs`
