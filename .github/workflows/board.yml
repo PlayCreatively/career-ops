@@ -82,6 +82,28 @@ jobs:
         # source so the live site always matches targeting.default.yml.
         run: node project-targeting.mjs targeting.default.yml site/data/targeting.json
 
+      - name: Fetch previous studio context from the live board
+        # Studio context (logos/games/cover ids) and the miss ledger both ride the
+        # published artifact, not the repo (gitignored). Pull them so this run only
+        # asks IGDB about company names it has never seen — the day's newcomers.
+        # Best-effort: absent on the first run, and a miss never fails the build.
+        run: |
+          BASE="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data"
+          mkdir -p site/data
+          curl -sf "$BASE/studios.json"       -o site/data/studios.json       && echo "Loaded studio context." || echo "No prior studio context (first run / unreachable)."
+          curl -sf "$BASE/studio-misses.json" -o site/data/studio-misses.json && echo "Loaded miss ledger."      || echo "No prior miss ledger (first run / unreachable)."
+
+      - name: Enrich new studios via IGDB
+        # Incremental: only names absent from BOTH seeds above cost an IGDB call,
+        # so after the one-time cold fill this is seconds per day. Non-fatal — if
+        # IGDB is down one morning the board still deploys with yesterday's context.
+        # Needs IGDB_CLIENT_ID / IGDB_CLIENT_SECRET repo (or github-pages env)
+        # secrets; without them this step no-ops loudly and the board still ships.
+        env:
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
+        run: node studio-info.mjs --board || echo "studio enrich hit a non-fatal error; board deploys with existing studio context."
+
       - name: Upload Pages artifact (only the board, not the repo)
         uses: actions/upload-pages-artifact@v5
         with:

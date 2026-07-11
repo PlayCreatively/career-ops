@@ -26,7 +26,9 @@
     "board:deploy": "gh workflow run board.yml",
     "track-check": "node track-check.mjs",
     "patterns": "node analyze-patterns.mjs",
-    "gemini:eval": "node gemini-eval.mjs"
+    "gemini:eval": "node gemini-eval.mjs",
+    "studio": "node studio-info.mjs",
+    "board:studios": "node studio-info.mjs --board"
   },
   "keywords": [
     "ai",

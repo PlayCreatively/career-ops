@@ -69,6 +69,25 @@ jobs:
       - name: Project board default filters
         run: node project-targeting.mjs targeting.default.yml site/data/targeting.json
 
+      - name: Fetch previous studio context from the live board
+        # Seed from the published artifact so a mid-run IGDB blip can't blank a
+        # studio: --refresh re-fetches all, but any lookup that fails keeps its
+        # prior value from this seed rather than dropping off the board.
+        run: |
+          BASE="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data"
+          mkdir -p site/data
+          curl -sf "$BASE/studios.json" -o site/data/studios.json && echo "Loaded studio context." || echo "No prior studio context (first run / unreachable)."
+
+      - name: Re-enrich all studios via IGDB (weekly full refresh)
+        # --refresh re-checks EVERY studio: picks up newly released games / cover
+        # art and re-tests the miss ledger, so a studio IGDB has since added moves
+        # onto the board. Heavier (~all studios) but weekly, and non-fatal — a bad
+        # IGDB morning just leaves last week's context in place.
+        env:
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
+        run: node studio-info.mjs --board --refresh || echo "studio re-enrich hit a non-fatal error; board deploys with existing studio context."
+
       - name: Upload Pages artifact (only the board, not the repo)
         uses: actions/upload-pages-artifact@v5
         with:

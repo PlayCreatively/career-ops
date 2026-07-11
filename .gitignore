@@ -79,3 +79,11 @@ site/data/jobs.json
 site/data/targeting.json
 # Board: personal filter override projected by board:dev (keep private)
 site/data/targeting.local.json
+# Studio context from IGDB — derived per-studio data built by
+# `node studio-info.mjs --board`. Personal + regenerable, kept local.
+site/data/studios.json
+# Negative ledger of studios IGDB had nothing useful for (bare keys, no token) —
+# lets a stateless CI run skip re-asking about the same blanks. Regenerable.
+site/data/studio-misses.json
+# IGDB lookup cache — ALSO holds the OAuth token, so it must never be committed.
+data/studio-cache.json
