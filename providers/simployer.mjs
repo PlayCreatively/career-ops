@@ -149,6 +149,10 @@ export default {
     const origin = resolveOrigin(entry);
     if (!origin) throw new Error(`simployer: cannot derive careers URL for ${entry.name} — set careers_url on *.recruitment.simployer.com (https)`);
 
+    // NOTE: the pagination loop below is written defensively (dedup-by-url +
+    // no-new-slugs stop + MAX_PAGES cap) but is UNVERIFIED against a multi-page
+    // tenant — the only wired studio (Tarsier) has 2 roles and next_page=null.
+    // Re-check the loop against a Simployer studio with 30+ openings if one turns up.
     const out = [];
     const seen = new Set();
     for (let page = 1; page <= MAX_PAGES; page++) {
