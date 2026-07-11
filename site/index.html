@@ -1463,7 +1463,7 @@ function render() {
     // shows the source sentence. `.industry` flags a professional/commercial bar.
     var er = j.experience;
     var expReqChip = er
-      ? ' <span class="expreq' + (er.industry ? ' industry' : '') + '" title="' + esc(er.context || '') + '">⏳ ' + esc(er.label) + (er.industry ? ' industry' : '') + '</span>'
+      ? ' <span class="expreq' + (er.industry ? ' industry' : '') + '" data-tip="' + esc(er.context || '') + '">⏳ ' + esc(er.label) + (er.industry ? ' industry' : '') + '</span>'
       : '';
     // Work mode as a badge on its OWN line below the location text: 🌐 Anywhere /
     // 🏠 Remote / ⇄ Hybrid; onsite and unknown show no badge. The location string
