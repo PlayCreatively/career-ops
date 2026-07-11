@@ -1950,7 +1950,7 @@ try {
 
 console.log('\n17. Work mode — location split + multi-source filter fields');
 try {
-  const { splitLocationMode, normalizeWorkMode, slugifyTitle } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
+  const { splitLocationMode, normalizeWorkMode, slugifyTitle, titleWorkMode } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
   const { fieldText, fieldKnown, isExcluded, matchGroup, scoreGroup, DEFAULT_GROUP_WEIGHT } = await import(pathToFileURL(join(ROOT, 'rank.mjs')).href);
 
   // splitLocationMode: strip the mode token from common shapes, derive workMode.
@@ -1981,6 +1981,35 @@ try {
     }
   }
   if (splitOk) pass(`splitLocationMode strips mode token across ${cases.length} location shapes`);
+
+  // titleWorkMode: pull the arrangement out of a job TITLE, but only from
+  // delimited segments whose tokens are all mode words + allowed fillers.
+  const titleCases = [
+    ['Senior Unity Game Engineer (Remote)', 'remote'],
+    ['QA Tester - Fully Remote', 'remote'],
+    ['LQA Game Tester (French) - Freelance Remote', 'remote'],
+    ['Build Engineer (On-Site)', 'onsite'],
+    ['Global Director of People (Hybrid UK)', 'hybrid'],
+    ['Senior Producer (remote or on-site, fulltime)', 'remote'], // permissive wins
+    ['Game Developer (remote/hybrid, full-time)', 'remote'],
+    ['Technical Designer | North America | Canada | Europe | Fully Remote', 'remote'],
+    ['Open Application [Remote]', 'remote'],
+    ['Unity Game Developer (Remote OK)', 'remote'],
+    // Traps: mode word embedded in prose must NOT fire.
+    ['Senior Infrastructure Engineer – Bazel Remote Execution', ''],
+    ['General Manager - Live Studios (Hybrid-casual Games)', ''],
+    ['Remote Sensing Data Scientist', ''],            // no delimited segment
+    ['Gameplay Programmer', ''],                      // nothing to find
+  ];
+  let titleOk = true;
+  for (const [input, mode] of titleCases) {
+    const got = titleWorkMode(input);
+    if (got !== mode) {
+      titleOk = false;
+      fail(`titleWorkMode(${JSON.stringify(input)}) = ${JSON.stringify(got)}, expected ${JSON.stringify(mode)}`);
+    }
+  }
+  if (titleOk) pass(`titleWorkMode reads mode from delimited title segments across ${titleCases.length} shapes`);
 
   if (normalizeWorkMode('OnSite') === 'onsite' && normalizeWorkMode('Hybrid') === 'hybrid'
       && normalizeWorkMode('Anywhere') === 'anywhere' && normalizeWorkMode('distributed') === 'anywhere'

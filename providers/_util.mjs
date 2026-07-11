@@ -236,3 +236,82 @@ export function splitLocationMode(rawLocation) {
 
   return { location: loc, workMode };
 }
+
+// Work-mode phrases that can appear in a job TITLE, mapped to the enum. Multi-word
+// keys are matched greedily before their single-word parts (see titleWorkMode).
+const TITLE_MODE_WORDS = {
+  'remote': 'remote', 'fully remote': 'remote', 'full remote': 'remote',
+  'wfh': 'remote', 'work from home': 'remote', 'work-from-home': 'remote',
+  'hybrid': 'hybrid',
+  'onsite': 'onsite', 'on-site': 'onsite', 'on site': 'onsite',
+  'in-office': 'onsite', 'in office': 'onsite',
+  'anywhere': 'anywhere', 'distributed': 'anywhere',
+};
+// Tokens allowed to sit alongside a mode word in a title segment WITHOUT
+// disqualifying it — intensifiers, employment-type words, region abbreviations,
+// and connectors. Any token outside this set (a real role/skill word like
+// "Execution" or "Engineer") means the segment is prose, not a mode tag, so we
+// don't fire. This is what keeps "Bazel Remote Execution" and "Hybrid-casual
+// Games" from being read as work-mode signals.
+const TITLE_MODE_FILLER = new Set([
+  'fully', '100%', 'or', 'and', '&', 'ok',
+  'full-time', 'fulltime', 'full', 'time', 'part-time', 'parttime', 'part',
+  'ft', 'pt', '32h', '40h', 'contract', 'contractor', 'permanent', 'perm',
+  'position', 'role', 'temporary', 'temp', 'freelance', 'freelancing',
+  'first', 'only', 'optional', 'eligible', 'friendly', 'preferred', 'available',
+  'based', 'working',
+  'us', 'usa', 'uk', 'eu', 'emea', 'apac', 'latam', 'na', 'anz', 'mena', 'uae',
+  'canada', 'europe', 'americas', 'global', 'worldwide',
+]);
+const TITLE_MODE_PRIORITY = { anywhere: 4, remote: 3, hybrid: 2, onsite: 1 };
+
+/**
+ * Derive a work-mode token from a job TITLE, for the many postings that tag the
+ * arrangement in the title rather than the location field — "Gameplay Engineer
+ * (Remote)", "QA Tester - Fully Remote", "Producer (remote or on-site)", or the
+ * pipe-delimited facet tails some ATSs bake in ("… | Europe | Fully Remote").
+ *
+ * Precision over recall: only DELIMITED segments are considered — parenthetical
+ * / bracket chunks and the tail segments of a " - " / " | " / " / " split — and a
+ * segment fires ONLY when every one of its tokens is a mode word or an allowed
+ * filler (see TITLE_MODE_FILLER). A single unrecognized word disqualifies the
+ * segment, so "Bazel Remote Execution" (Execution) and "Hybrid-casual Games"
+ * (games; "hybrid-casual" isn't even a bare mode word) never match. When several
+ * modes appear ("remote or on-site"), the most permissive wins (anywhere >
+ * remote > hybrid > onsite), matching splitLocationMode.
+ *
+ * This is the LOWEST-priority source: callers should only use it to fill
+ * workMode when neither a structured provider value nor a location-embedded one
+ * (splitLocationMode) was available. The title is never modified.
+ *
+ * @param {unknown} title
+ * @returns {('remote'|'hybrid'|'onsite'|'anywhere'|'')}
+ */
+export function titleWorkMode(title) {
+  if (typeof title !== 'string' || !title) return '';
+  const segments = [];
+  for (const m of title.matchAll(/[([]([^)\]]+)[)\]]/g)) segments.push(m[1]);
+  const parts = title.split(/\s+[-–—|/]\s+/);
+  for (let i = 1; i < parts.length; i++) segments.push(parts[i]);
+
+  let best = '';
+  for (const raw of segments) {
+    const toks = raw.trim().toLowerCase().split(/[\s,/]+/).filter(Boolean);
+    if (!toks.length) continue;
+    const modes = [];
+    let allFiller = true;
+    for (let i = 0; i < toks.length; ) {
+      const pair = toks[i] + ' ' + (toks[i + 1] || '');
+      if (TITLE_MODE_WORDS[pair]) { modes.push(TITLE_MODE_WORDS[pair]); i += 2; continue; }
+      if (TITLE_MODE_WORDS[toks[i]]) { modes.push(TITLE_MODE_WORDS[toks[i]]); i += 1; continue; }
+      if (TITLE_MODE_FILLER.has(toks[i])) { i += 1; continue; }
+      allFiller = false;
+      break;
+    }
+    if (!allFiller || !modes.length) continue;
+    for (const m of modes) {
+      if (!best || TITLE_MODE_PRIORITY[m] > TITLE_MODE_PRIORITY[best]) best = m;
+    }
+  }
+  return best;
+}

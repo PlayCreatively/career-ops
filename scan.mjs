@@ -38,7 +38,7 @@ import yaml from 'js-yaml';
 
 import { makeHttpCtx, classifyFetchError } from './providers/_http.mjs';
 import { mergeHealth } from './merge-health.mjs';
-import { splitLocationMode, DETAIL } from './providers/_util.mjs';
+import { splitLocationMode, titleWorkMode, DETAIL } from './providers/_util.mjs';
 import { classifyLiveness } from './liveness-core.mjs';
 import { scoreCategory, matchGroup, isExcluded, buildFilterIndex } from './rank.mjs';
 
@@ -1204,6 +1204,16 @@ async function main() {
           job.location = cleanLoc;
           if (locMode === 'anywhere' && !cleanLoc) job.workMode = 'anywhere';
           else if (!job.workMode && locMode) job.workMode = locMode;
+        }
+        // Last-resort work mode: many postings tag the arrangement in the TITLE
+        // ("Gameplay Engineer (Remote)", "QA Tester - Fully Remote", or a
+        // pipe-delimited "… | Europe | Fully Remote" facet tail) and nowhere
+        // else. Fill from the title only when nothing above resolved it — the
+        // title is the least authoritative source, and the title text is left
+        // untouched (it's the role name, not a badge to strip).
+        if (!job.workMode) {
+          const tMode = titleWorkMode(job.title);
+          if (tMode) job.workMode = tMode;
         }
         // Snapshot collection happens BEFORE history dedup so jobs.json is the
         // full current set even when data/scan-history.tsv already lists these.
