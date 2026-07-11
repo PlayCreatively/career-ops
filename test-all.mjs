@@ -1914,7 +1914,7 @@ try {
 console.log('\n17. Work mode — location split + multi-source filter fields');
 try {
   const { splitLocationMode, normalizeWorkMode, slugifyTitle } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
-  const { fieldText, isExcluded, matchGroup } = await import(pathToFileURL(join(ROOT, 'rank.mjs')).href);
+  const { fieldText, fieldKnown, isExcluded, matchGroup, scoreGroup, DEFAULT_GROUP_WEIGHT } = await import(pathToFileURL(join(ROOT, 'rank.mjs')).href);
 
   // splitLocationMode: strip the mode token from common shapes, derive workMode.
   const cases = [
@@ -2010,6 +2010,45 @@ try {
     pass('Seniority group on [experiencelevel, title] uses the board value, falls back to title when absent');
   } else {
     fail(`seniority wiring wrong: junior=${JSON.stringify(labels(boardJunior))} boardless=${JSON.stringify(labels(boardless))}`);
+  }
+
+  // skills field: tags the enricher read out of the JD. ABSENT (never fetched a
+  // description) must behave differently from [] (fetched it, matched nothing).
+  if (
+    fieldText({ skills: ['unity', 'c++'] }, 'skills') === 'unity c++' &&
+    fieldText({ skills: [] }, 'skills') === '' &&
+    fieldText({ title: 'Gameplay Programmer' }, 'skills') === '' &&
+    fieldKnown({ skills: [] }, 'skills') === true &&
+    fieldKnown({ title: 'Gameplay Programmer' }, 'skills') === false &&
+    fieldKnown({ title: 'Gameplay Programmer' }, ['title', 'skills']) === true
+  ) {
+    pass('fieldText/fieldKnown: skills joins its tags; absent is unknown, [] is known-empty');
+  } else {
+    fail(`skills field wrong: known([])=${fieldKnown({ skills: [] }, 'skills')} known(absent)=${fieldKnown({}, 'skills')}`);
+  }
+
+  // Abstention (the fail-safe): a skills group over a job whose description we
+  // never had matches NOTHING — not its hard exclude, not even its catch-all —
+  // so it scores neutral and can't hide the job. Jobs whose JD we did read are
+  // judged normally, including the catch-all when no tag matched.
+  const skillGroup = { id: 'sk', name: 'Skills', field: 'skills', combine: 'min', weight: 1, filters: [
+    { id: 'gfx', name: 'Graphics', keywords: ['graphics'], weight: 0 },
+    { id: 'gp', name: 'Gameplay', keywords: ['gameplay'], weight: 2 },
+    { id: 'rest', name: 'Other', else: true, weight: 0.3 },
+  ] };
+  const noJd = { title: 'Programmer' };                       // Lever/Ashby — no description
+  const readNothing = { title: 'Programmer', skills: [] };    // read it, matched no tag
+  const gfx = { title: 'Programmer', skills: ['graphics'] };  // hard exclude fires
+  if (
+    matchGroup(noJd, skillGroup).length === 0 &&
+    scoreGroup(noJd, skillGroup) === DEFAULT_GROUP_WEIGHT &&
+    isExcluded(noJd, [skillGroup]) === false &&
+    matchGroup(readNothing, skillGroup).map((f) => f.name).join() === 'Other' &&
+    isExcluded(gfx, [skillGroup]) === true
+  ) {
+    pass('skills group abstains on jobs with no description (no catch-all, no exclude), judges the rest');
+  } else {
+    fail(`skills abstain wrong: noJd matched=${JSON.stringify(matchGroup(noJd, skillGroup).map((f) => f.name))} score=${scoreGroup(noJd, skillGroup)} excluded=${isExcluded(noJd, [skillGroup])}`);
   }
 
   // Cross-field exclude only works when the group reads BOTH sources.
@@ -3599,6 +3638,139 @@ try {
   }
 } catch (e) {
   fail(`sponsorship enricher tests crashed: ${e.message}`);
+}
+
+// ── Enricher — skills (JD text → tags, via skills.yml) ──────────
+
+console.log('\n30b. Enricher — skills tags from the job description');
+
+try {
+  const { detectSkills, loadVocabulary, default: skillsEnricher } =
+    await import(pathToFileURL(join(ROOT, 'providers/enrichers/skills.mjs')).href);
+
+  const vocab = loadVocabulary();
+  if (vocab.length > 0 && vocab.every(([tag, res]) => tag && Array.isArray(res) && res.length)) {
+    pass(`skills.yml compiles into ${vocab.length} tags, each with at least one usable keyword`);
+  } else {
+    fail(`skills.yml compiled to ${vocab.length} tags`);
+  }
+
+  const gameplayJd = 'Gameplay Programmer working in Unreal Engine 5, writing C++ and Blueprint. Multiplayer netcode experience welcome.';
+  const tags = detectSkills(gameplayJd);
+  if (['unreal', 'c++', 'gameplay', 'networking'].every((t) => tags.includes(t))) {
+    pass('detectSkills reads engine / language / domain tags out of real JD prose');
+  } else {
+    fail(`detectSkills(gameplayJd) = ${JSON.stringify(tags)}`);
+  }
+
+  // The contract that makes abstention work: NO description → null (job gets no
+  // `skills` key → unknown). A description that matched nothing → [] (known-empty).
+  // Declaring `needs` would break this, since the enricher would be skipped.
+  const s1 = skillsEnricher.enrich({ text: gameplayJd });
+  const s2 = skillsEnricher.enrich({ text: 'We sell insurance to nice people.' });
+  const s3 = skillsEnricher.enrich({});
+  if (skillsEnricher.id === 'skills' && skillsEnricher.needs === undefined &&
+      s1 && s1.skills.length > 0 &&
+      s2 && Array.isArray(s2.skills) && s2.skills.length === 0 &&
+      s3 === null) {
+    pass('skills enricher: no needs; text→tags, unmatched text→[], no text→null (absent = unknown)');
+  } else {
+    fail(`skills enricher = ${JSON.stringify([skillsEnricher.id, skillsEnricher.needs, s1, s2, s3])}`);
+  }
+} catch (e) {
+  fail(`skills enricher tests crashed: ${e.message}`);
+}
+
+// ── Enricher — experience (JD text → headline years chip) ──────
+
+console.log('\n30c. Enricher — headline years-of-experience from the job description');
+
+try {
+  const { detectExperience, default: expEnricher, loadIndustrySignals, isIndustry } =
+    await import(pathToFileURL(join(ROOT, 'providers/enrichers/experience.mjs')).href);
+
+  // Headline = the LOWEST required threshold (the true floor); the qualifier in that
+  // same clause sets `industry`, and the clause is re-read for co-occurring skills.
+  const jd = 'Requirements. 3+ years of professional games industry experience with Unreal Engine. 6+ years for senior applicants.';
+  const exp = detectExperience(jd);
+  if (exp && exp.years === 3 && exp.label === '3+ yrs' && exp.industry === true && exp.skills.includes('unreal')) {
+    pass('detectExperience picks the lowest required mention (3+ over 6+), reads industry + co-occurring skills');
+  } else {
+    fail(`detectExperience(jd) = ${JSON.stringify(exp)}`);
+  }
+
+  // A lower number that sits under a "preferred / nice-to-have" heading must NOT win
+  // (or even show): the required 5+ is the floor, not the optional 2 years.
+  const optional = detectExperience('Requirements: 5+ years of commercial experience with C++. Nice to have: 2 years of Lua.');
+  const sectioned = detectExperience('Preferred qualifications. Familiarity with consoles. 2+ years with Unreal. That would be nice.');
+  if (optional && optional.years === 5 && optional.industry === true && optional.skills.includes('c++') &&
+      sectioned === null) {
+    pass('detectExperience ignores preferred / nice-to-have mentions, even when they state a lower number');
+  } else {
+    fail(`optional=${JSON.stringify(optional)} sectioned=${JSON.stringify(sectioned)}`);
+  }
+
+  // Generic (hobby/academic) years must NOT be flagged industry; range renders as a
+  // "N–M yrs" label from the lower threshold.
+  const generic = detectExperience('Comfortable with 3 years of experience using Unity in a hobby or academic setting.');
+  const ranged = detectExperience('Role requirements. We need 3-5 years of games industry experience. Apply now.');
+  if (generic && generic.years === 3 && generic.industry === false &&
+      ranged && ranged.years === 3 && ranged.label === '3–5 yrs' && ranged.industry === true) {
+    pass('detectExperience: non-industry years stay unflagged; a range reads its lower bound + industry qualifier');
+  } else {
+    fail(`generic=${JSON.stringify(generic)} ranged=${JSON.stringify(ranged)}`);
+  }
+
+  // Duration noise ("over the past N years") is not a requirement → no headline.
+  const noise = detectExperience('Our studio has shipped titles over the past 10 years, with 5 year plans ahead.');
+  if (noise === null) {
+    pass('detectExperience ignores "past N years" / "N year plan" duration noise → null');
+  } else {
+    fail(`duration noise should be null, got ${JSON.stringify(noise)}`);
+  }
+
+  // A run-on clause is windowed down so the tooltip never carries paragraph-length text.
+  const filler = 'Additional context and general information that pads this particular sentence well beyond the tooltip length cap so the enricher has to window it down to a readable size';
+  const capped = detectExperience(`${filler} with 6+ years of experience ${filler}.`);
+  if (capped && capped.years === 6 && capped.context.length <= 162 && /years/.test(capped.context)) {
+    pass(`detectExperience caps the tooltip sentence (${capped.context.length} ≤ 162 chars) and keeps the match visible`);
+  } else {
+    fail(`capping wrong: len=${capped && capped.context.length} ctx=${JSON.stringify(capped && capped.context)}`);
+  }
+
+  // Enricher contract: gated on text (needs:'text'); wraps the headline; drops the
+  // `industry`/`skills` keys when they'd be false/empty; null when nothing is stated.
+  const e1 = expEnricher.enrich({ text: jd });
+  const e2 = expEnricher.enrich({ text: 'We need 4 years of experience in a fast-paced team.' });
+  const e3 = expEnricher.enrich({ text: 'A friendly team building cosy games. No specific bar.' });
+  const e4 = expEnricher.enrich({});
+  if (expEnricher.id === 'experience' && expEnricher.needs === 'text' &&
+      e1 && e1.experience.years === 3 && e1.experience.industry === true &&
+      e2 && e2.experience.years === 4 && !('industry' in e2.experience) && !('skills' in e2.experience) &&
+      e3 === null && e4 === null) {
+    pass("experience enricher: needs 'text'; wraps headline, omits industry/skills when empty, null when unstated");
+  } else {
+    fail(`experience enricher = ${JSON.stringify([expEnricher.id, expEnricher.needs, e1, e2, e3, e4])}`);
+  }
+
+  // Industry qualifier is config-driven: loadIndustrySignals reads skills.yml (with a
+  // built-in fallback), and detectExperience takes an injected list, so a custom
+  // vocabulary changes what counts as "industry" without touching code.
+  const sig = loadIndustrySignals();
+  const custom = ['fintech'].map((k) => new RegExp('\\b' + k, 'i'));
+  const clause = '5+ years of professional experience shipping games.';
+  const withDefault = detectExperience(clause);
+  const withCustom = detectExperience(clause, () => [], custom);
+  if (Array.isArray(sig) && sig.length && isIndustry('professional games studio') === true &&
+      isIndustry('a cosy hobby project', custom) === false &&
+      withDefault && withDefault.industry === true &&
+      withCustom && withCustom.industry === false) {
+    pass('industry signals load from skills.yml with a fallback; an injected list re-scopes the flag');
+  } else {
+    fail(`config-driven industry: sig=${sig && sig.length} def=${JSON.stringify(withDefault)} cust=${JSON.stringify(withCustom)}`);
+  }
+} catch (e) {
+  fail(`experience enricher tests crashed: ${e.message}`);
 }
 
 // ── Provider — rippling (list map + detail ref parsing) ─────────

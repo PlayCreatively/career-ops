@@ -401,6 +401,10 @@
   tr.starred td.fit { box-shadow: inset 3px 0 0 var(--warm); }
   tr.checked td:not(.fit), tr.checked .fitval { opacity: .25; }
   tr.ignored td:not(.fit), tr.ignored .fitval { opacity: .25; }
+  /* The last row whose link you opened — tinted so it's easy to spot when you come
+     back to the board after leaving for the job page. */
+  tr.jobrow.lastopen td { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  tr.jobrow.lastopen td.fit { box-shadow: inset 3px 0 0 var(--accent); }
   td.fit { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
   /* Links must not start a native URL-drag — otherwise a drag-select that begins
      on the link text drags the href instead of selecting, and the add-to-filter
@@ -422,6 +426,24 @@
     line-height: 16px; vertical-align: middle; white-space: nowrap; opacity: .9; }
   td.role .sponsor.none { color: var(--warm); }
   td.role .sponsor.offered { color: var(--accent2); }
+  /* Experience-requirement chip — headline "N+ yrs" the enricher read from the JD,
+     with the source sentence as its hover tooltip. Display only, never a filter.
+     `.industry` marks a professional/commercial bar (stronger than raw years). */
+  td.role .expreq { position: relative; display: inline-block; margin-left: 6px; padding: 0 6px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--chip);
+    color: var(--dim); font-size: 11px; line-height: 16px; vertical-align: middle;
+    white-space: nowrap; cursor: help; }
+  td.role .expreq.industry { border-color: currentColor; color: var(--accent2); }
+  /* Custom tooltip: the native `title` attribute waits ~0.5s before showing, so the
+     source sentence is carried in `data-tip` and rendered by this pseudo-element,
+     which appears the instant the pointer is over the chip. Table cells don't clip
+     (overflow visible), so it can spill above the row. */
+  td.role .expreq[data-tip]:hover::after {
+    content: attr(data-tip); position: absolute; left: 0; bottom: calc(100% + 6px);
+    z-index: 40; width: max-content; max-width: 340px; padding: 7px 10px;
+    border: 1px solid var(--line); border-radius: 6px; background: var(--panel);
+    color: var(--txt); box-shadow: var(--shadow); font-size: 12px; line-height: 1.45;
+    font-weight: 400; white-space: normal; text-align: left; pointer-events: none; }
   /* Keep the dept in normal flow (so it reserves space and never spills into the
      row below), but balance it with an equal spacer above the title. The title
      then sits centred on the row's middle line instead of being pushed up. The
@@ -464,6 +486,44 @@
     box-shadow: 0 8px 30px rgba(60,48,36,.18); padding: 6px; display: none; font-size: 13px;
     overflow-y: auto; overscroll-behavior: contain; }
   .selpop.open { display: block; }
+  /* Studio-context marker + popover (logo, previous games, founding). */
+  /* The company cell leads with a square brand tile, then the name — both
+     vertically centred in one flex row so every studio lines up the same way
+     regardless of logo aspect ratio. The logo sits on a white plate (many logos
+     are transparent PNGs with black text that would vanish on the dark board);
+     the 🎮 fallback shares the exact footprint so the column never jitters. */
+  .cowrap { display: inline-flex; align-items: center; gap: 11px; }
+  .studiobadge { flex: none; box-sizing: border-box; width: 43px; height: 43px;
+    border-radius: 9px; border: 1px solid var(--line);
+    box-shadow: 0 1px 3px rgba(0,0,0,.28); cursor: help; }
+  .studiologo { background: #fff; object-fit: contain; padding: 5px; }
+  .studiodot { display: inline-flex; align-items: center; justify-content: center;
+    background: var(--panel2); color: var(--dim); font-size: 20px; font-weight: 700; }
+  .studiopop { min-width: 240px; max-width: 320px; padding: 12px 14px; }
+  .studiopop .sthead { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .studiopop .stlogo { flex: none; width: 44px; height: 44px; object-fit: contain;
+    border-radius: 8px; background: #fff; border: 1px solid var(--line); padding: 4px; }
+  .studiopop .stttl { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .studiopop .stttl b { color: var(--txt); font-weight: 700; font-size: 14px; }
+  .studiopop .stmeta { color: var(--dim); font-size: 11px; }
+  .studiopop .stgames { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .studiopop .stgame { background: var(--panel2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--txt); }
+  .studiopop .stgame.hascover { cursor: zoom-in; border-color: color-mix(in srgb, var(--accent2) 45%, var(--line)); }
+  .studiopop .stgame.hascover:hover { background: color-mix(in srgb, var(--accent2) 14%, var(--panel2)); }
+  /* Floating game cover-art tooltip (nested inside the studio popover). */
+  .gamepop { position: absolute; z-index: 70; display: none; padding: 4px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 12px 36px rgba(0,0,0,.42); pointer-events: none; }
+  .gamepop.open { display: block; }
+  .gamepop img { display: block; width: 176px; height: auto; border-radius: 6px;
+    opacity: 0; transition: opacity .18s ease; }
+  .gamepop img.ok { opacity: 1; }
+  .studiopop .stdesc { color: var(--dim); font-size: 12px; line-height: 1.45; margin-bottom: 8px; }
+  .studiopop .stlinks { display: flex; gap: 8px; font-size: 12px; }
+  .studiopop .stlinks a { color: var(--accent2); text-decoration: none; font-weight: 600; }
+  .studiopop .stlinks a:hover { text-decoration: underline; }
+  .studiopop .stsep { color: var(--dim); }
   /* Sticky header so the "Add X to…" context stays visible while the list scrolls.
      Negative margins span it full-width and cover the container's top padding so
      rows scroll cleanly behind it. */
@@ -686,8 +746,10 @@ window.__themeKey = "gamedevboard.theme";
         <label><input type="checkbox" value="department"> Department / team</label>
         <label><input type="checkbox" value="workmode"> Work mode (remote / hybrid / onsite)</label>
         <label><input type="checkbox" value="experiencelevel"> Experience level (entry / junior / senior)</label>
+        <label><input type="checkbox" value="skills"> Skills from the job description (unity, c++, gameplay…)</label>
       </div>
       <div class="hint">Pick one or more — filters match against the combined text of the chosen sources.</div>
+      <div class="hint">Skills are read from the posting's description, which some boards (Lever, Ashby) never expose. A group matching only on skills leaves those jobs unjudged rather than hiding them.</div>
     </div>
     <div class="actions">
       <button class="btn rm" id="gmRemove">Delete group</button>
@@ -753,7 +815,7 @@ function applyFilterGate() {
 var GROUPS = [];          // [{id,name,field,combine,weight,filters:[{id,name,keywords,weight,else}]}]
 var FBYID = {};           // filterId -> {f: filter, g: group}
 var MODES = ["max", "min", "avg"];
-var FIELDS = ["title", "company", "location", "department", "workmode", "experiencelevel", "any"];
+var FIELDS = ["title", "company", "location", "department", "workmode", "experiencelevel", "skills", "any"];
 var sortMode = "fit";
 // Freshness gate: hide postings older than this many days (0 = no gate, the
 // default). The scanner's API feed only returns reqs still flagged OPEN in the
@@ -783,6 +845,40 @@ function loadStatus() {
   catch (e) { STATUS = {}; }
 }
 function saveStatus() { try { localStorage.setItem(STATUS_KEY, JSON.stringify(STATUS)); } catch (e) {} }
+// Last job whose link the user opened. In-memory only — NOT persisted anywhere.
+// The links open in a new tab, so the board page stays alive and the highlight is
+// still there when you switch back; but a refresh resets this and the tint is
+// gone. It's a transient "where was I just now", not saved state. One url; the
+// next opened link overwrites it.
+var LAST_OPEN = "";
+function saveLastOpen(url) { LAST_OPEN = url || ""; }
+// Studio context (logo, previous games, founding) keyed by lowercased company
+// name — an optional map loaded from data/studios.json (built by
+// `node studio-info.mjs --board`). Empty when the file is absent; the board
+// simply shows no studio popovers then. Key must match igdb.mjs's keyOf().
+var STUDIOS = {};
+function studioKey(name) { return String(name || "").toLowerCase().replace(/\s+/g, " ").trim(); }
+// IGDB matches sometimes carry nothing but a name + an IGDB page link (thin or
+// wrong matches like "AMD", "Corsair"). Those would render a badge that opens an
+// empty popover — noise — so treat a studio as present only when it has at least
+// one thing worth showing (logo, games, founding, country, blurb or website).
+function studioHasContext(s) {
+  return !!(s && (s.logo || (s.games && s.games.length) || s.founded || s.country || s.description || s.website));
+}
+function studioFor(name) {
+  var s = STUDIOS[studioKey(name)];
+  return studioHasContext(s) ? s : null;
+}
+// Inline logo failed to load (dead IGDB image) → swap in the ? marker so the
+// studio popover is still reachable.
+function studioImgErr(img) {
+  var s = document.createElement("span");
+  s.className = "studiobadge studiodot";
+  s.setAttribute("data-co", img.getAttribute("data-co") || "");
+  s.title = "Studio context — hover for logo & games";
+  s.textContent = "?";
+  img.replaceWith(s);
+}
 // Departed-ATS banner: health.json carries an `alerts` list of studios that have
 // failed the daily CI scan N+ times in a row (likely gone from their ATS). It's
 // a separate, optional file — a missing/empty one just hides the strip.
@@ -992,6 +1088,10 @@ function prep(jobs) {
       workMode: j.workMode || "",   // 'anywhere' | 'remote' | 'hybrid' | 'onsite' | ''
       sponsorship: j.sponsorship || "",  // 'none' | 'offered' | '' — visa stance from the JD
       department: j.department || "",
+      // Headline years-of-experience chip from the JD enricher (display-only:
+      // { years, label, context, industry?, skills? }). Carried verbatim so the
+      // render can show the ⏳ tag + tooltip; absent on postings with no JD.
+      experience: j.experience || null,
       // Source's own experience/seniority label (e.g. games-jobs-direct's
       // "Junior-Associate"). Read by Rank.matchGroup via fieldText('experiencelevel'),
       // so it MUST be carried here — the ranker scores these normalized objects,
@@ -1308,7 +1408,8 @@ function render() {
     var tr = document.createElement("tr");
     var st = jobStatus(j.url);   // "" | "s" | "c" | "i"
     tr.className = "jobrow" +
-      (st === "s" ? " starred" : st === "c" ? " checked" : st === "i" ? " ignored" : "");
+      (st === "s" ? " starred" : st === "c" ? " checked" : st === "i" ? " ignored" : "") +
+      (j.url === LAST_OPEN ? " lastopen" : "");
     tr.dataset.url = j.url;
     var acts =
       '<div class="rowacts">' +
@@ -1317,9 +1418,23 @@ function render() {
         '<button type="button" class="ignore' + (st === "i" ? " active" : "") + '" data-act="i" title="Ignore — grey this role out">✕</button>' +
       '</div>';
     var coHl = highlightCell(j.company, "company", j);
-    var coCell = j.companyUrl
+    var nameCell = j.companyUrl
       ? '<a href="' + esc(j.companyUrl) + '" target="_blank" rel="noopener" draggable="false">' + coHl + '</a>'
       : coHl;
+    // Studio-context affordance: when data/studios.json knows this company, lead
+    // the cell with a fixed-size brand badge — the logo on a white plate (many
+    // logos are transparent PNGs with black text that would vanish on the dark
+    // board). No logo → a 🎮 badge of the same footprint so the column aligns.
+    // Either one opens the studio popover on hover (logo, games, founding).
+    var studio = studioFor(j.company);
+    var badge = "";
+    if (studio && studio.logo) {
+      badge = '<img class="studiobadge studiologo" data-co="' + esc(j.company) + '" src="' + esc(studio.logo) +
+        '" alt="" loading="lazy" title="Studio context — hover for games &amp; founding" onerror="studioImgErr(this)">';
+    } else if (studio) {
+      badge = '<span class="studiobadge studiodot" data-co="' + esc(j.company) + '" title="Studio context — hover for logo &amp; games">?</span>';
+    }
+    var coCell = '<span class="cowrap">' + badge + nameCell + '</span>';
     // Department as a dim subtitle under the role title (only when known).
     var deptLine = j.department ? '<span class="dept">' + highlightCell(j.department, "department", j) + '</span>' : '';
     // Experience level as a small chip after the title (only when the source
@@ -1333,6 +1448,12 @@ function render() {
       : j.sponsorship === "offered"
         ? ' <span class="sponsor offered" title="This posting states it offers visa sponsorship">🛂 Visa sponsorship</span>'
         : '';
+    // Experience-requirement chip — headline "N+ yrs" read from the JD, hovering it
+    // shows the source sentence. `.industry` flags a professional/commercial bar.
+    var er = j.experience;
+    var expReqChip = er
+      ? ' <span class="expreq' + (er.industry ? ' industry' : '') + '" data-tip="' + esc(er.context || '') + '">⏳ ' + esc(er.label) + (er.industry ? ' industry' : '') + '</span>'
+      : '';
     // Work mode as a badge on its OWN line below the location text: 🌐 Anywhere /
     // 🏠 Remote / ⇄ Hybrid; onsite and unknown show no badge. The location string
     // is now place-only (work-mode tokens stripped during the scan), so no dup.
@@ -1343,7 +1464,7 @@ function render() {
     tr.innerHTML =
       '<td class="fit" style="color:' + fitColor(j._final) + '">' + acts + '<span class="fitval">' + j._final.toFixed(2) + '</span></td>' +
       '<td class="co">' + coCell + '</td>' +
-      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener" draggable="false">' + highlightCell(j.title, "title", j) + '</a>' + expChip + sponsorChip + deptLine + '</td>' +
+      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener" draggable="false">' + highlightCell(j.title, "title", j) + '</a>' + expChip + sponsorChip + expReqChip + deptLine + '</td>' +
       '<td class="loc">' + locCell + '</td>' +
       '<td class="tags"><div class="tagwrap">' + tags + '</div></td>' +
       '<td class="posted">' + postedCell(j.postedDate) + '</td>';
@@ -2237,6 +2358,113 @@ function syncFilterToggleUI() {
     : "Built-in filters on — hiding off-theme and non-matching jobs. Click to show every job.";
 }
 
+// ── Studio-context popover ────────────────────────────────────────────────────
+// Hovering the 🎮 marker on a company shows the studio's logo, previous games,
+// founding year and site — pulled from data/studios.json (built by
+// `node studio-info.mjs --board`). Same lifecycle as the match popover: a short
+// close delay bridges the gap between the marker and the popover.
+var stPop = null, stHideT = null;
+function ensureStudioPop() {
+  if (stPop) return stPop;
+  stPop = document.createElement("div");
+  stPop.className = "selpop studiopop";
+  stPop.addEventListener("mouseenter", function () { if (stHideT) { clearTimeout(stHideT); stHideT = null; } });
+  stPop.addEventListener("mouseleave", scheduleHideStudio);
+  // Hovering a game chip that has a cover → float the cover art beside it.
+  stPop.addEventListener("mouseover", function (e) {
+    var chip = e.target.closest(".stgame.hascover");
+    if (chip) showGamePop(chip);
+  });
+  stPop.addEventListener("mouseout", function (e) {
+    var chip = e.target.closest(".stgame.hascover");
+    if (!chip) return;
+    var to = e.relatedTarget;
+    if (!to || !to.closest || !to.closest(".stgame.hascover")) hideGamePop();
+  });
+  document.body.appendChild(stPop);
+  return stPop;
+}
+function hideStudioPop() { if (stPop) stPop.classList.remove("open"); hideGamePop(); }
+
+// Nested cover-art tooltip: hovering a game chip inside the studio popover shows
+// that game's IGDB cover. We store only the image id in studios.json and build
+// the CDN URL here, loading the JPEG lazily on hover (never before). The tooltip
+// is pointer-events:none so it can overlap the chip without stealing the hover.
+var gamePop = null;
+function igdbImg(id, size) { return "https://images.igdb.com/igdb/image/upload/" + size + "/" + id + ".jpg"; }
+function ensureGamePop() {
+  if (gamePop) return gamePop;
+  gamePop = document.createElement("div");
+  gamePop.className = "gamepop";
+  document.body.appendChild(gamePop);
+  return gamePop;
+}
+function hideGamePop() { if (gamePop) gamePop.classList.remove("open"); }
+var gameCoverFor = null; // the chip we're currently showing, to skip redundant re-renders
+function showGamePop(chip) {
+  var id = chip.getAttribute("data-cover");
+  if (!id) return;
+  var pop = ensureGamePop();
+  if (gameCoverFor !== id) {
+    // Cover art is portrait (IGDB t_cover_big ≈ 264×374). Fade the image in on
+    // load so a slow CDN fetch doesn't flash an empty box.
+    pop.innerHTML = '<img src="' + esc(igdbImg(id, "t_cover_big")) +
+      '" alt="" onload="this.classList.add(\'ok\')" onerror="hideGamePop()">';
+    gameCoverFor = id;
+  }
+  placeGameCover(pop, chip.getBoundingClientRect());
+  pop.classList.add("open");
+}
+// Place the cover to the right of the chip, flipping left when there's no room,
+// and clamp it vertically to the viewport. (placePop stacks below/above — wrong
+// here, since the studio popover already owns that space.)
+function placeGameCover(pop, rect) {
+  pop.classList.add("open");
+  var vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  var gap = 8, margin = 8;
+  var pw = pop.offsetWidth || 196, ph = pop.offsetHeight || 260;
+  var left = rect.right + gap;
+  if (left + pw > vw - margin) left = rect.left - gap - pw;   // flip to the left
+  if (left < margin) left = margin;
+  var top = rect.top + rect.height / 2 - ph / 2;              // centre on the chip
+  if (top + ph > vh - margin) top = vh - margin - ph;
+  if (top < margin) top = margin;
+  pop.style.top = (window.scrollY + top) + "px";
+  pop.style.left = (window.scrollX + left) + "px";
+}
+function scheduleHideStudio() { if (stHideT) clearTimeout(stHideT); stHideT = setTimeout(hideStudioPop, 180); }
+function showStudioPop(dotEl) {
+  var s = studioFor(dotEl.getAttribute("data-co"));
+  if (!s) return;
+  var pop = ensureStudioPop();
+  var meta = [];
+  if (s.founded) meta.push("est. " + s.founded);
+  if (s.country) meta.push(esc(s.country));
+  var html = '<div class="sthead">' +
+    (s.logo ? '<img class="stlogo" src="' + esc(s.logo) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
+    '<div class="stttl"><b>' + esc(s.name) + '</b>' +
+    (meta.length ? '<span class="stmeta">' + meta.join(" · ") + '</span>' : '') + '</div></div>';
+  if (s.games && s.games.length) {
+    html += '<div class="stgames">';
+    s.games.forEach(function (g) {
+      // Games are objects {name, cover-id} now; tolerate the old string shape.
+      var nm = (typeof g === "string") ? g : (g && g.name) || "";
+      var cv = (g && typeof g === "object") ? g.cover : null;
+      html += '<span class="stgame' + (cv ? ' hascover" data-cover="' + esc(cv) : '') +
+        '">' + esc(nm) + '</span>';
+    });
+    html += '</div>';
+  }
+  if (s.description) html += '<div class="stdesc">' + esc(s.description) + '</div>';
+  var links = [];
+  if (s.website) links.push('<a href="' + esc(s.website) + '" target="_blank" rel="noopener">website ↗</a>');
+  if (s.url) links.push('<a href="' + esc(s.url) + '" target="_blank" rel="noopener">IGDB ↗</a>');
+  if (links.length) html += '<div class="stlinks">' + links.join('<span class="stsep">·</span>') + '</div>';
+  pop.innerHTML = html;
+  pop.classList.add("open");
+  placePop(pop, dotEl.getBoundingClientRect());
+}
+
 function init(data) {
   RAW = prep(data.jobs || []);
   loadFilterToggle();
@@ -2271,12 +2499,27 @@ function init(data) {
   document.getElementById("rows").addEventListener("click", function (e) {
     var tag = e.target.closest(".tag[data-fid]");
     if (tag) { scrollToFilter(tag.getAttribute("data-fid")); return; }
+    // Opening a role or company link leaves the board. Remember which line it was
+    // and light it up now (the link opens a new tab, so nothing re-renders) — so
+    // when you come back the row you were on is still marked and easy to find.
+    var link = e.target.closest("td.role a[href], td.co a[href]");
+    if (link) {
+      var lr = link.closest("tr");
+      if (lr && lr.dataset.url) {
+        saveLastOpen(lr.dataset.url);
+        var prev = document.querySelector("tr.jobrow.lastopen");
+        if (prev && prev !== lr) prev.classList.remove("lastopen");
+        lr.classList.add("lastopen");
+      }
+      return;   // let the link navigate normally
+    }
     var btn = e.target.closest(".rowacts button");
     if (!btn) return;
     var tr = btn.closest("tr");
     var url = tr && tr.dataset.url;
     if (!url) return;
     setStatus(url, btn.getAttribute("data-act"));   // "s" | "c" | "i"
+    if (url === LAST_OPEN) saveLastOpen("");        // once you act on it, drop the "you were here" tint
     schedule({});                                   // restyle the row
   });
 
@@ -2425,6 +2668,9 @@ function init(data) {
   // while a text selection is in progress (so it doesn't fight the select menu).
   var rowsEl = document.getElementById("rows");
   rowsEl.addEventListener("mouseover", function (e) {
+    // Studio-context marker (🎮 or inline logo) → logo/games/founding popover.
+    var dot = e.target.closest(".studiodot, .studiologo");
+    if (dot) { if (stHideT) { clearTimeout(stHideT); stHideT = null; } showStudioPop(dot); return; }
     // A tag lights its matched words (and any sibling tags for the same filter).
     var tag = e.target.closest(".tag[data-fid]");
     if (tag) { clearXhl(); crossHighlight(tag); return; }
@@ -2436,6 +2682,7 @@ function init(data) {
     showHlPop(sp);
   });
   rowsEl.addEventListener("mouseout", function (e) {
+    if (e.target.closest(".studiodot, .studiologo")) scheduleHideStudio();
     if (e.target.closest(".hlmatch")) scheduleHideHl();
     // Drop the cross-highlight once the pointer leaves all tags/spans.
     var to = e.relatedTarget;
@@ -2492,8 +2739,14 @@ function fetchJobs() {
   return fetch("data/jobs.json", { cache: "no-store" })
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
 }
-Promise.all([fetchJobs(), fetchSeed()])
-  .then(function (res) { DEFAULT_GROUPS_SEED = res[1]; init(res[0]); })
+// Studio context is optional: absent file → no popovers, board works unchanged.
+function fetchStudios() {
+  return fetch("data/studios.json", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; });
+}
+Promise.all([fetchJobs(), fetchSeed(), fetchStudios()])
+  .then(function (res) { DEFAULT_GROUPS_SEED = res[1]; if (res[2]) STUDIOS = res[2]; init(res[0]); })
   .catch(function (e) {
     document.getElementById("meta").innerHTML =
       "Could not load <code>data/jobs.json</code> (" + e.message + "). If you opened this file directly, run a local server (e.g. <code>npx serve site</code>) — browsers block <code>fetch</code> over file://.";

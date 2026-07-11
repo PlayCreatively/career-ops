@@ -1221,6 +1221,17 @@ async function main() {
               // Visa-sponsorship stance from the detail-phase enricher (only when
               // the JD stated one): 'none' | 'offered'. See providers/enrichers/.
               ...(job.sponsorship ? { sponsorship: job.sponsorship } : {}),
+              // Tags read out of the JD by the skills enricher. Written even when
+              // EMPTY: `[]` says "we read the description and matched nothing",
+              // which a skills group's catch-all may act on, while an ABSENT key
+              // says "no description was ever available" and makes that group
+              // abstain. See providers/enrichers/skills.mjs and rank.mjs fieldKnown.
+              ...(Array.isArray(job.skills) ? { skills: job.skills } : {}),
+              // Headline years-of-experience requirement read from the JD by the
+              // experience enricher — a display-only chip (label + tooltip
+              // sentence), never a filter. Absent when no description was
+              // available or none was stated. See providers/enrichers/experience.mjs.
+              ...(job.experience ? { experience: job.experience } : {}),
               // Built-in filter flag: hidden by default on the board and in
               // personal scans, revealed by the global filters-off toggle.
               ...(job.filtered ? { filtered: true } : {}),

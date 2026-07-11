@@ -1,0 +1,105 @@
+# Skills vocabulary — what the JD enricher looks for in a posting's description.
+#
+# The scanner already fetches each posting's description text (that's how the
+# sponsorship badge works), but it never stored it: full JD prose would take
+# site/data/jobs.json from ~6 MB to ~100 MB. Instead, providers/enrichers/skills.mjs
+# reads the description once at scan time and records only which tags below it
+# matched, as `skills: [...]` on the job (~30 bytes). The board then exposes
+# `skills` as a filter-group source, exactly like title or location.
+#
+#     tag: [keyword, keyword, /regex/]
+#
+# The TAG (the key) is what a board filter matches against, so keep tags short,
+# lowercase and stable — renaming one silently breaks any filter keyed on it.
+# The keywords are matched against the JD text with the same engine as every
+# other filter (rank.mjs keyToRegExp): a bare keyword must START a word but may
+# run on ("shader" hits "shaders"), and /slashes/ mean a real regex. Reach for
+# regex whenever a short token would collide inside longer words — "ai" would
+# otherwise hit "aim", "air" and "said".
+#
+# Widening this file changes what future scans record, so it takes a rescan to
+# take effect — unlike the board's own filters, which are live. Deleting or
+# emptying this file makes the enricher inert: no job gets a `skills` field, and
+# every skills group abstains rather than hiding anything.
+#
+# Coverage: only providers that hand us description text can fill this in
+# (greenhouse, teamtailor, recruitee, personio, comeet, workwithindies, hitmarker,
+# and the aggregator boards). Lever and Ashby expose no description, so their
+# postings carry no `skills` key at all — and a group matching on `skills` scores
+# them neutral instead of excluding them. Absent means unknown, never "no".
+
+skills:
+  # ── Engines & frameworks ──────────────────────────────────────────────────
+  unity: [unity, unity3d]
+  unreal: [unreal, '/\bUE ?[45]\b/', blueprint]
+  godot: [godot]
+  proprietary-engine: [proprietary engine, in-house engine, custom engine, /\bown engine\b/]
+
+  # ── Languages ─────────────────────────────────────────────────────────────
+  c++: ['C++', 'CPP']
+  c#: ['C#']
+  python: [python]
+  rust: [/\bRust\b/]
+  lua: [/\bLua\b/]
+  typescript: [typescript, javascript, /\bJS\b/]
+
+  # ── Programming domains ───────────────────────────────────────────────────
+  # Deliberately narrow: "engine" and "tools" appear in half of all game JDs as
+  # nouns ("our engine", "the tools team"), so these look for the ROLE, not the
+  # word. Better to miss a tag than to paint every posting with it.
+  gameplay: [gameplay, game mechanics, game feel, combat system, player controller]
+  tools-pipeline: [/\btool(s|ing)? (programmer|engineer|developer|development)\b/, editor tool, pipeline tool, /\btechnical artist\b/]
+  engine-programming: [/\bengine (programmer|engineer|developer|team|architecture)\b/, engine internals]
+  graphics: [/\b(graphics|rendering|render) (programmer|engineer)\b/, shader, /\bHLSL\b/, /\bGLSL\b/, ray tracing, /\bDirectX\b/, vulkan]
+  physics: [/\bphysics (programmer|engineer|simulation)\b/, collision detection, /\brigid ?body\b/]
+  networking: [multiplayer, netcode, /\bnetwork(ing)? (programmer|engineer|code)\b/, /\breplication\b/, dedicated server]
+  backend: [backend, back-end, server-side, microservice, /\bAPI\b/, postgres, kubernetes, /\bAWS\b/]
+  build-devops: [/\bCI\/CD\b/, jenkins, teamcity, build system, build engineer, devops, perforce]
+  game-ai: [/\bgame AI\b/, behaviour tree, behavior tree, pathfinding, /\bNPC\b/, /\bFSM\b/]
+  ui-ux: [/\bUI\b/, /\bUX\b/, /\bHUD\b/, user interface, /\bUMG\b/]
+
+  # ── Art & animation crafts ────────────────────────────────────────────────
+  animation: [animation, animator, /\brig(ging)?\b/, skinning, motion capture, /\bmocap\b/]
+  vfx: [/\bVFX\b/, visual effects, particle, niagara]
+  3d-modelling: [3d model, modeller, modeler, /\bmaya\b/, blender, /\bzbrush\b/, /\b3ds max\b/, substance painter]
+  2d-art: [2d art, illustration, illustrator, concept art, /\bphotoshop\b/, sprite, hand-drawn, hand drawn]
+  level-art: [level art, environment art, world building, /\benvironment artist\b/]
+
+  # ── Design & narrative ────────────────────────────────────────────────────
+  level-design: [level design, encounter design, /\bblockout\b/, /\bgreybox(ing)?\b/]
+  systems-design: [systems design, game economy, balancing, progression system]
+  narrative: [narrative, storytelling, dialogue writing, scriptwriter, /\bworldbuilding\b/]
+
+  # ── Platforms ─────────────────────────────────────────────────────────────
+  console: [playstation, /\bPS5\b/, xbox, nintendo switch, console certification, /\bTRC\b/]
+  mobile: [/\bmobile\b/, /\biOS\b/, android, free-to-play, /\bF2P\b/]
+  vr-ar: [/\bVR\b/, /\bAR\b/, virtual reality, augmented reality, /\bXR\b/, quest headset]
+
+  # ── Ways of working ───────────────────────────────────────────────────────
+  # The gap swallows the qualifiers studios pad this with: "shipped at least one
+  # commercial title", "shipped 2+ AAA titles". Kept word-only so it can't run
+  # across a sentence boundary.
+  shipped-title: ['/shipped [\w+ ]{0,40}titles?/', shipped game]
+  live-ops: [live ?ops, live service, games as a service, /\bGaaS\b/, post-launch content]
+
+# ── Experience enricher: industry qualifier ─────────────────────────────────
+# providers/enrichers/experience.mjs reads the HEADLINE "N years" requirement out
+# of a JD and shows it as a chip. When the same clause also carries one of the
+# signals below, the chip is marked `industry: true` — because "5+ years of
+# experience" and "5+ years of PROFESSIONAL experience" are different bars.
+#
+# Matched with the same engine as the skills keywords above (keyToRegExp): a bare
+# word matches a word-start (so "industry" also catches "industries"); wrap in
+# /slashes/ for a real regex. Deleting or emptying this list just means no chip is
+# ever flagged industry — the years number itself is unaffected.
+experience:
+  industry_signals:
+    - industry
+    - professional
+    - commercial
+    - /games? industry/
+    - /game dev(elopment)?/
+    - shipped
+    - AAA
+    - studio
+    - production

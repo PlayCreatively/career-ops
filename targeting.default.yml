@@ -14,7 +14,11 @@
 # ── Schema (see portals.personal.yml for a fully-tuned example) ───────────────
 # targeting.groups[] = { name, field, combine, weight, filters[] }
 #   field    title | company | location | department | workmode | experiencelevel
-#            | any   (which job text to match; may be a [list] joined with spaces)
+#            | skills | any   (which job text to match; may be a [list] joined
+#            with spaces). `skills` holds the tags the scanner read out of the
+#            posting's description (vocabulary: skills.yml). Boards that expose no
+#            description leave it absent, and a group matching only on skills
+#            abstains on those jobs rather than excluding them.
 #   combine  min | max | avg                     (how matched filters reduce)
 #   weight   cross-group importance for the fit  (normalized at use)
 # filter = { name, keywords[], weight, else }

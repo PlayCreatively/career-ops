@@ -224,8 +224,30 @@ export function fieldText(job, field) {
   // [experiencelevel, title] uses the authoritative board value where it exists
   // and falls back to title-word guessing where it doesn't.
   if (field === 'experiencelevel') return job.experienceLevel || '';
+  // Tags the skills enricher read out of the posting's description (see
+  // providers/enrichers/skills.mjs). Absent when we never had the description —
+  // fieldKnown() below turns that into an abstention rather than a silent miss.
+  // Not folded into `any`: `any` combines the plain text fields, and skills is a
+  // derived field with its own unknown state.
+  if (field === 'skills') return Array.isArray(job.skills) ? job.skills.join(' ') : '';
   if (field === 'any') return `${job.title || ''} ${job.company || ''} ${job.location || ''} ${job.department || ''} ${job.experienceLevel || ''}`;
   return job.title || ''; // 'title' (default)
+}
+
+/**
+ * Is this field's value KNOWN for this job? Every field but `skills` is always
+ * known — worst case it's the empty string, which is a real answer (the job
+ * genuinely has no department). `skills` is the one field we can fail to collect:
+ * providers that expose no description text (Lever, Ashby) leave it absent, while
+ * `[]` means we read the JD and matched nothing.
+ *
+ * A group whose sources are ALL unknown abstains (see matchGroup). For a
+ * multi-source group ([title, skills]) one known source is enough to judge on.
+ */
+export function fieldKnown(job, field) {
+  if (Array.isArray(field)) return field.some((f) => fieldKnown(job, f));
+  if (field === 'skills') return Array.isArray(job.skills);
+  return true;
 }
 
 // Compile a filter's keywords into RegExps once, cached on the filter as `_res`
@@ -304,6 +326,12 @@ export function filterMatches(text, f, job, index) {
  */
 export function matchGroup(job, group, index) {
   const idx = index || buildFilterIndex([group]);
+  // Abstention: when none of the group's sources are known for this job (a
+  // skills group over a posting whose description we never fetched), the group
+  // matches nothing at all — not even its catch-all. scoreGroup then falls back
+  // to DEFAULT_GROUP_WEIGHT and isExcluded() cannot fire. Missing data must
+  // never read as a "no". See fieldKnown.
+  if (!fieldKnown(job, group.field)) return [];
   const text = fieldText(job, group.field);
   const matched = [];
   let anyKeyword = false;

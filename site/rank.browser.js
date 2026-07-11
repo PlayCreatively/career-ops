@@ -138,8 +138,21 @@
     // so a Seniority group keyed on [experiencelevel, title] uses the real board
     // value where present and falls back to the title elsewhere. Mirrors rank.mjs.
     if (field === 'experiencelevel') return job.experienceLevel || '';
+    // Tags the skills enricher read out of the posting's description. Absent when
+    // the provider never gave us one (Lever/Ashby) — fieldKnown turns that into
+    // an abstention, not a silent miss. Kept out of `any` (parity with rank.mjs).
+    if (field === 'skills') return Array.isArray(job.skills) ? job.skills.join(' ') : '';
     if (field === 'any') return (job.title || '') + ' ' + (job.company || '') + ' ' + (job.location || '') + ' ' + (job.department || '') + ' ' + (job.experienceLevel || '');
     return job.title || '';
+  }
+
+  // Is this field's value KNOWN for this job? Only `skills` has an unknown state:
+  // absent = no description text was ever fetched; [] = read it, matched nothing.
+  // A group whose sources are all unknown abstains. Mirrors rank.mjs (parity).
+  function fieldKnown(job, field) {
+    if (Array.isArray(field)) return field.some(function (f) { return fieldKnown(job, f); });
+    if (field === 'skills') return Array.isArray(job.skills);
+    return true;
   }
 
   function filterRegexes(f) {
@@ -201,6 +214,10 @@
 
   function matchGroup(job, group, index) {
     var idx = index || buildFilterIndex([group]);
+    // Abstention: no known source for this job → the group matches nothing, not
+    // even its catch-all, so it scores neutral and its weight-0 excludes cannot
+    // fire. Missing data never reads as a "no". Mirrors rank.mjs (parity).
+    if (!fieldKnown(job, group.field)) return [];
     var text = fieldText(job, group.field);
     var matched = [], anyKeyword = false, elseFilter = null;
     var filters = group.filters || [];
@@ -308,6 +325,7 @@
     combineGroup: combineGroup,
     filterLabel: filterLabel,
     fieldText: fieldText,
+    fieldKnown: fieldKnown,
     buildFilterIndex: buildFilterIndex,
     filterMatches: filterMatches,
     matchGroup: matchGroup,
