@@ -210,6 +210,14 @@ export function parseWorkableWidget(data, companyName) {
  * URLs are validated against `https://apply.workable.com/` — off-domain or
  * non-HTTPS [View] links are skipped (not emitted).
  *
+ * Columns are anchored from the RIGHT, not the left. Some accounts inject a
+ * variable number of extra location-facet cells between Title and Department
+ * (e.g. `| Title | North America | Canada | Europe | Fully Remote | Dept | … |`),
+ * which shifts every left-counted field and would otherwise surface a region
+ * name as the department (no role tag) and drop the real remote location. The
+ * Details cell (holding the [View] link) is always last, and the six trailing
+ * columns are fixed: … | Department | Location | Type | Salary | Posted | Details.
+ *
  * @param {string} text — markdown body
  * @param {string} companyName — value to write into job.company
  * @returns {Array<{title: string, url: string, company: string, location: string}>}
@@ -220,13 +228,15 @@ export function parseWorkableMarkdown(text, companyName) {
   for (const line of text.split('\n')) {
     if (!line.startsWith('|') || !line.includes('[View]')) continue;
     const cols = line.split('|').map(c => c.trim());
-    // Cols: ['', title, dept, location, type, salary, posted, '[View](url.md)', '']
-    if (cols.length < 8) continue;
     const title = cols[1];
     if (!title || title === 'Title') continue;
-    const department = cols[2] || '';
-    const location = cols[3] || '';
-    const postedDate = toIsoDate(cols[6]);  // 'Posted' column; '' if unparseable
+    // Right-anchor on the Details cell (see docstring): extra facet cells can be
+    // injected after Title, so counting fields from the left mislabels them.
+    const viewIdx = cols.findIndex(c => c.includes('[View]'));
+    if (viewIdx < 7) continue;  // need Title + the 6 fixed trailing columns
+    const department = cols[viewIdx - 5] || '';
+    const location = cols[viewIdx - 4] || '';
+    const postedDate = toIsoDate(cols[viewIdx - 1]);  // 'Posted' column; '' if unparseable
     const urlMatch = line.match(/\[View\]\(([^)]+)\)/);
     let url = urlMatch ? urlMatch[1] : '';
     if (url.endsWith('.md')) url = url.slice(0, -3);

@@ -826,6 +826,29 @@ try {
     fail(`expected only "Good Role" through, got ${JSON.stringify(filteredJobs.map(j => j.title))}`);
   }
 
+  // Extra location-facet cells injected after Title (escape-velocity layout):
+  // a VARIABLE number of region cells sit before the real Department/Location,
+  // so fields must be right-anchored on the [View] cell — otherwise a region
+  // name surfaces as the department (no role tag) and the real remote location
+  // is lost. Rows below carry 4, 2 and 3 facet cells respectively.
+  const facetMd = [
+    '| Title | Department | Location | Type | Salary | Posted | Details |',
+    '|---|---|---|---|---|---|---|',
+    '| Technical Designer | North America | Canada | Europe | Fully Remote | Design | United States (Remote) | Full-time | — | 2026-07-09 | [View](https://apply.workable.com/x/jobs/view/5A72817F3C.md) |',
+    '| UI Engineer | Europe | Fully Remote | Engineering | United Kingdom (Remote) | Full-time | — | 2026-07-08 | [View](https://apply.workable.com/x/jobs/view/040DEE6AE9.md) |',
+    '| HR Coordinator | UK | Czech Republic | Fully Remote | HR | United Kingdom (Remote) | Contract | — | 2026-06-15 | [View](https://apply.workable.com/x/jobs/view/B40EBA1CD5.md) |',
+  ].join('\n');
+  const facetJobs = parseWorkableMarkdown(facetMd, 'X');
+  const td = facetJobs.find(j => j.title === 'Technical Designer');
+  const uie = facetJobs.find(j => j.title === 'UI Engineer');
+  if (facetJobs.length === 3 &&
+      td?.department === 'Design' && td?.location === 'United States (Remote)' && td?.postedDate?.startsWith('2026-07-09') &&
+      uie?.department === 'Engineering' && uie?.location === 'United Kingdom (Remote)') {
+    pass('parseWorkableMarkdown right-anchors fields past variable facet columns');
+  } else {
+    fail(`facet-column rows mis-parsed: ${JSON.stringify(facetJobs)}`);
+  }
+
 } catch (e) {
   fail(`workable provider tests crashed: ${e.message}`);
 }
