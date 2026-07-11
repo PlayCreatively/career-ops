@@ -2475,11 +2475,20 @@ function showStudioPop(dotEl) {
     // no "Developed" header).
     var dev = s.games.filter(function (g) { return g && typeof g === "object" && g.role === "developer"; });
     var pub = s.games.filter(function (g) { return g && typeof g === "object" && g.role === "publisher"; });
-    // Only split when every game carries a role and both buckets are populated;
-    // any roleless entry (old string shape) falls back to one flat row.
-    if (dev.length && pub.length && dev.length + pub.length === s.games.length) {
+    var other = s.games.filter(function (g) { return !(g && typeof g === "object" && (g.role === "developer" || g.role === "publisher")); });
+    // Label every role section, even when only one is present — the header IS
+    // the signal of whether the studio developed or published these. Roleless
+    // leftovers (old string shape) get an unlabeled trailing row.
+    if (dev.length && pub.length) {
       html += '<div class="stgsec"><div class="stglbl">Developed</div>' + chipRow(dev) + '</div>';
       html += '<div class="stgsec"><div class="stglbl">Published</div>' + chipRow(pub) + '</div>';
+      if (other.length) html += chipRow(other);
+    } else if (dev.length) {
+      html += '<div class="stgsec"><div class="stglbl">Developed</div>' + chipRow(dev) + '</div>';
+      if (other.length) html += chipRow(other);
+    } else if (pub.length) {
+      html += '<div class="stgsec"><div class="stglbl">Published</div>' + chipRow(pub) + '</div>';
+      if (other.length) html += chipRow(other);
     } else {
       html += chipRow(s.games);
     }
