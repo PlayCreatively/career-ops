@@ -42,7 +42,11 @@ function fmtStudio(s, name) {
   L.push(`\n  ${s.name}${s.founded ? `  ·  est. ${s.founded}` : ''}${s.country ? `  ·  ${s.country}` : ''}`);
   if (s.website) L.push(`  ${s.website}`);
   if (s.logo) L.push(`  logo: ${s.logo}`);
-  if (s.games && s.games.length) L.push(`  games: ${s.games.map((g) => (typeof g === 'string' ? g : g.name)).join(', ')}`);
+  if (s.games && s.games.length) L.push(`  games: ${s.games.map((g) => {
+    if (typeof g === 'string') return g;
+    const tag = g.role === 'developer' ? ' (dev)' : g.role === 'publisher' ? ' (pub)' : '';
+    return g.name + tag;
+  }).join(', ')}`);
   if (s.description) L.push(`\n  ${s.description}`);
   if (s.url) L.push(`\n  IGDB: ${s.url}`);
   return L.join('\n');
@@ -64,20 +68,23 @@ async function single(name) {
 async function boardCompanies() {
   const raw = JSON.parse(await readFile(JOBS_PATH, 'utf8'));
   const jobs = Array.isArray(raw) ? raw : raw.jobs || raw.data || [];
-  const seen = new Map(); // key -> { name, counts: Map<country, n> }
+  const seen = new Map(); // key -> { name, counts: Map<country, n>, companyUrl }
   for (const j of jobs) {
     const name = (j && j.company) || '';
     const k = keyOf(name);
     if (!k) continue;
     let e = seen.get(k);
-    if (!e) { e = { name: name.trim(), counts: new Map() }; seen.set(k, e); }
+    if (!e) { e = { name: name.trim(), counts: new Map(), companyUrl: null }; seen.set(k, e); }
     const cc = countryOfLocation(j && j.location);
     if (cc) e.counts.set(cc, (e.counts.get(cc) || 0) + 1);
+    // First ATS careers URL we see for this studio — carries its self-chosen slug,
+    // which disambiguates a truncated display name (see studioSlug in igdb.mjs).
+    if (!e.companyUrl && j && j.companyUrl) e.companyUrl = j.companyUrl;
   }
   return [...seen.values()].map((e) => {
     let hint = null, best = 0;
     for (const [c, n] of e.counts) if (n > best) { best = n; hint = c; }
-    return { name: e.name, countryHint: hint };
+    return { name: e.name, countryHint: hint, companyUrl: e.companyUrl };
   });
 }
 
@@ -129,10 +136,10 @@ async function board() {
   console.log(`Enriching ${work.length} studio(s)${limit ? ` (--limit ${limit})` : ''} via IGDB…\n`);
 
   let done = 0, hits = 0;
-  await pool(work, 4, async ({ name, countryHint }) => {
+  await pool(work, 4, async ({ name, countryHint, companyUrl }) => {
     const k = keyOf(name);
     try {
-      const s = await lookupStudio(name, { token, refresh, countryHint });
+      const s = await lookupStudio(name, { token, refresh, countryHint, companyUrl });
       if (hasContext(s)) { out[k] = s; misses.delete(k); hits++; }
       else { delete out[k]; misses.add(k); } // no context → remember so we don't re-ask
     } catch (e) {

@@ -511,6 +511,13 @@
     border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--txt); }
   .studiopop .stgame.hascover { cursor: zoom-in; border-color: color-mix(in srgb, var(--accent2) 45%, var(--line)); }
   .studiopop .stgame.hascover:hover { background: color-mix(in srgb, var(--accent2) 14%, var(--panel2)); }
+  /* When a studio both DEVeloped and PUBlished games, the list splits into two
+     labeled sections instead of tagging each chip. A single-role list stays
+     flat and unlabeled. */
+  .studiopop .stgsec { margin-bottom: 8px; }
+  .studiopop .stgsec .stgames { margin-bottom: 0; }
+  .studiopop .stglbl { font-size: 8px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--dim); opacity: .7; margin-bottom: 4px; }
   /* Floating game cover-art tooltip (nested inside the studio popover). */
   .gamepop { position: absolute; z-index: 70; display: none; padding: 4px;
     background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
@@ -1452,7 +1459,7 @@ function render() {
     // shows the source sentence. `.industry` flags a professional/commercial bar.
     var er = j.experience;
     var expReqChip = er
-      ? ' <span class="expreq' + (er.industry ? ' industry' : '') + '" data-tip="' + esc(er.context || '') + '">⏳ ' + esc(er.label) + (er.industry ? ' industry' : '') + '</span>'
+      ? ' <span class="expreq' + (er.industry ? ' industry' : '') + '" title="' + esc(er.context || '') + '">⏳ ' + esc(er.label) + (er.industry ? ' industry' : '') + '</span>'
       : '';
     // Work mode as a badge on its OWN line below the location text: 🌐 Anywhere /
     // 🏠 Remote / ⇄ Hybrid; onsite and unknown show no badge. The location string
@@ -2445,15 +2452,37 @@ function showStudioPop(dotEl) {
     '<div class="stttl"><b>' + esc(s.name) + '</b>' +
     (meta.length ? '<span class="stmeta">' + meta.join(" · ") + '</span>' : '') + '</div></div>';
   if (s.games && s.games.length) {
-    html += '<div class="stgames">';
-    s.games.forEach(function (g) {
-      // Games are objects {name, cover-id} now; tolerate the old string shape.
-      var nm = (typeof g === "string") ? g : (g && g.name) || "";
+    // One chip. Games are objects {name, cover-id, role} now; tolerate the old
+    // string shape.
+    function gameChip(g) {
+      var full = (typeof g === "string") ? g : (g && g.name) || "";
+      if (!full) return ""; // skip a malformed nameless entry rather than render an empty chip
       var cv = (g && typeof g === "object") ? g.cover : null;
-      html += '<span class="stgame' + (cv ? ' hascover" data-cover="' + esc(cv) : '') +
-        '">' + esc(nm) + '</span>';
-    });
-    html += '</div>';
+      // Cap long titles so a chip like "Horror of the High Seas: Episode 4 -
+      // Pirate Ship of Fools" can't blow out the popover. Trim to a word boundary
+      // and keep the full name in the native tooltip.
+      var nm = full;
+      if (nm.length > 36) nm = nm.slice(0, 35).replace(/\s+\S*$/, "") + "…";
+      var attrs = 'class="stgame' + (cv ? ' hascover"' : '"') + (cv ? ' data-cover="' + esc(cv) + '"' : "");
+      if (nm !== full) attrs += ' title="' + esc(full) + '"';
+      return '<span ' + attrs + '>' + esc(nm) + '</span>';
+    }
+    function chipRow(list) {
+      return '<div class="stgames">' + list.map(gameChip).join("") + '</div>';
+    }
+    // Split developed vs published. When both are present, show two labeled
+    // sections; otherwise a single flat unlabeled row (a pure-dev studio needs
+    // no "Developed" header).
+    var dev = s.games.filter(function (g) { return g && typeof g === "object" && g.role === "developer"; });
+    var pub = s.games.filter(function (g) { return g && typeof g === "object" && g.role === "publisher"; });
+    // Only split when every game carries a role and both buckets are populated;
+    // any roleless entry (old string shape) falls back to one flat row.
+    if (dev.length && pub.length && dev.length + pub.length === s.games.length) {
+      html += '<div class="stgsec"><div class="stglbl">Developed</div>' + chipRow(dev) + '</div>';
+      html += '<div class="stgsec"><div class="stglbl">Published</div>' + chipRow(pub) + '</div>';
+    } else {
+      html += chipRow(s.games);
+    }
   }
   if (s.description) html += '<div class="stdesc">' + esc(s.description) + '</div>';
   var links = [];

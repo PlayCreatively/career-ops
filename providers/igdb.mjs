@@ -21,8 +21,9 @@ const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const API = 'https://api.igdb.com/v4';
 const CACHE_PATH = fileURLToPath(new URL('../data/studio-cache.json', import.meta.url));
 
-const DESC_CAP = 240; // hard cap on the blurb we keep — a card subtitle, not the wiki
-const MAX_GAMES = 8;  // catalogue chips shown per studio
+const DESC_CAP = 240;   // hard cap on the blurb we keep — a card subtitle, not the wiki
+const MAX_GAMES = 10;   // catalogue chips stored/shown per studio (only these are kept)
+const GAME_FETCH = 40;  // top-by-popularity games pulled per studio before filtering to MAX_GAMES
 
 // IGDB `country` is an ISO 3166-1 numeric-3 code. We map the countries a game
 // studio is realistically based in; anything unmapped just drops the field.
@@ -106,6 +107,40 @@ let _cache = null; // lazily loaded { _token?, [nameKey]: studio|null }
 
 function keyOf(name) {
   return String(name || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// The studio's own handle inside its ATS careers URL — a config-free identity
+// signal that beats an ambiguous display name. Job boards drop suffixes ("Amber"
+// for "Amber Studio"), which then collides with an unrelated IGDB namesake; but
+// the ATS URL carries the studio's self-chosen slug ("amberstudiocareers",
+// "turtlerockstudios", "cinnamonsoftware.teamtailor.com") which keeps the suffix.
+// We normalize it to a bare alphanumeric string and, in scoring, prefer the
+// candidate whose own name is embedded in it (see slugKeyOf + bestMatch).
+//
+// The slug lives in the subdomain (cinnamonsoftware.teamtailor.com) for some ATSes
+// and the first path segment (jobvite.com/amberstudiocareers) for others; generic
+// hosting labels ("jobs", "careers", "job-boards", country/lang codes) are skipped.
+const SLUG_GENERIC = new Set([
+  'www', 'jobs', 'job', 'careers', 'career', 'apply', 'boards', 'job-boards',
+  'recruiting', 'recruitment', 'hire', 'hiring', 'talent', 'join', 'work', 'app',
+  'en', 'us', 'uk', 'en-us', 'en_us', 'global', 'home', 'company', 'about',
+]);
+export function studioSlug(companyUrl) {
+  if (!companyUrl) return null;
+  let u;
+  try { u = new URL(companyUrl); } catch { return null; }
+  const labels = u.hostname.toLowerCase().split('.');
+  // Distinctive subdomain (more than host+TLD, first label not generic hosting).
+  if (labels.length > 2 && !SLUG_GENERIC.has(labels[0])) return labels[0];
+  // Else the first meaningful path segment.
+  const seg = u.pathname.split('/').map((s) => s.trim()).filter(Boolean)
+    .find((s) => !SLUG_GENERIC.has(s.toLowerCase()));
+  return seg || null;
+}
+// Bare alphanumerics, lowercased — the form we substring-test candidate names in.
+function slugKeyOf(companyUrl) {
+  const s = studioSlug(companyUrl);
+  return s ? s.toLowerCase().replace(/[^a-z0-9]/g, '') : null;
 }
 
 async function loadCache() {
@@ -195,33 +230,76 @@ function officialSite(websites) {
   return off ? off.url : null;
 }
 
-// Dedupe developed + published, keep real games (game_type 0 = main game, or
-// unknown), sort by rating then recency, and return up to MAX_GAMES titles.
-// Each title carries its cover *image id* (not a URL) — the board builds the
-// IGDB CDN URL on hover, so studios.json stays tiny.
-function pickGames(company) {
-  const all = [...(company.developed || []), ...(company.published || [])];
-  const byName = new Map(); // lowercased name → best entry (merges dev/pub dups)
-  for (const g of all) {
+// Decide whether a game genuinely belongs on THIS studio's shelf, from each
+// game's per-credit involved_companies (the "Main Developers / Porting
+// Developers / Publishers" split IGDB shows on a game page). Two kinds of noise
+// this filters out — both from games where our studio is only a *publisher*:
+//   • Regional distribution — the game was self-published by a DIFFERENT company
+//     (one credited as BOTH developer and publisher). That self-publisher is the
+//     real owner; our studio just handled a regional release. This is why
+//     "Electronic Arts" was showing Valve's Portal 2 / Half-Life 2: EA is a
+//     publisher-of-record for the regional release only.
+//   • Supporting / porting-only credits — our studio only helped or ported.
+// A game we DEVELOPED is unquestionably ours; a game we PUBLISH is ours unless a
+// third party self-published it. Returns the studio's role on the game, which the
+// card shows as a tag, or null when the game doesn't belong on its shelf:
+//   'developer' — credited as a developer (we made it)
+//   'publisher' — publisher of record (no third party self-published it)
+//   null        — regional distribution (someone else self-published) or a
+//                 supporting/porting-only credit: not really our game
+function gameRole(g, companyId) {
+  const ics = g.involved_companies;
+  if (!Array.isArray(ics) || !ics.length) return 'developer'; // matched our id but credits absent → treat as ours
+  const ours = ics.find((ic) => ic.company === companyId);
+  if (!ours) return 'developer';       // shouldn't happen (queried by our id)
+  if (ours.developer) return 'developer';
+  if (!ours.publisher) return null;    // supporting/porting-only → not ours
+  // Publisher-only: drop if a different company self-published (dev && pub) —
+  // then we're a regional distributor, not the publisher of record.
+  if (ics.some((ic) => ic.company !== companyId && ic.developer && ic.publisher)) return null;
+  return 'publisher';
+}
+
+// Pull a studio's games in ONE popularity-sorted query (IGDB's "Popular Games"
+// ordering, total_rating_count), keep real games (game_type 0 = main game, or
+// unknown), drop the regional-distribution / porting noise above, dedupe, and
+// return up to MAX_GAMES. Fetching only the top GAME_FETCH — sorted server-side —
+// means we never transfer a mega-publisher's whole 1500-game catalogue just to
+// keep ten. Each title carries its cover *image id* (not a URL); the board builds
+// the IGDB CDN URL on hover, so studios.json stays tiny.
+async function fetchGames(companyId, token) {
+  const rows = await apicalypse(
+    'games',
+    // version_parent = null drops editions/re-releases ("… Deluxe Edition") that
+    // point at a base game — we want the base title, not every SKU of it.
+    `${GAME_FIELDS} where involved_companies.company = ${companyId} & version_parent = null; sort total_rating_count desc; limit ${GAME_FETCH};`,
+    token,
+  );
+  const byName = new Map(); // lowercased name → best entry (merges duplicates)
+  for (const g of rows) {
     if (!g || !g.name) continue;
     if (g.game_type != null && g.game_type !== 0) continue; // drop DLC/bundles/mods
+    const role = gameRole(g, companyId);
+    if (!role) continue;                                    // regional distribution / porting → not ours
     const k = g.name.toLowerCase();
     const cover = (g.cover && g.cover.image_id) || null;
     const prev = byName.get(k);
     if (prev) {
-      if (!prev.cover && cover) prev.cover = cover; // a dup may carry the cover the first lacked
+      if (!prev.cover && cover) prev.cover = cover;
+      if (role === 'developer') prev.role = 'developer';    // a developer credit outranks a publisher one on a dup
+      prev.pop = Math.max(prev.pop, g.total_rating_count || 0);
       prev.rating = Math.max(prev.rating, g.total_rating || 0);
       prev.year = Math.max(prev.year, g.first_release_date || 0);
       continue;
     }
-    byName.set(k, { name: g.name, cover, rating: g.total_rating || 0, year: g.first_release_date || 0 });
+    byName.set(k, { name: g.name, cover, role, pop: g.total_rating_count || 0, rating: g.total_rating || 0, year: g.first_release_date || 0 });
   }
   const games = [...byName.values()];
-  games.sort((a, b) => b.rating - a.rating || b.year - a.year);
-  return games.slice(0, MAX_GAMES).map((g) => ({ name: g.name, cover: g.cover }));
+  games.sort((a, b) => b.pop - a.pop || b.rating - a.rating || b.year - a.year);
+  return games.slice(0, MAX_GAMES).map((g) => ({ name: g.name, cover: g.cover, role: g.role }));
 }
 
-function normalize(company) {
+function normalize(company, games) {
   return {
     name: company.name,
     logo: logoUrl(company.logo && company.logo.image_id),
@@ -234,21 +312,35 @@ function normalize(company) {
         ? company.description.slice(0, DESC_CAP).replace(/\s+\S*$/, '') + '…'
         : company.description)
       : null,
-    games: pickGames(company),
+    games,
   };
 }
 
+// Company match fields are lightweight: `developed`/`published` are left as bare
+// id arrays (just counts, for nGames scoring) — the full game details come from a
+// single popularity-sorted fetchGames() call for the WINNER only, not every
+// candidate. That keeps the widen search (up to 50 companies) cheap.
 const FIELDS =
   'fields id,name,description,country,start_date,url,logo.image_id,' +
-  'developed.name,developed.game_type,developed.total_rating,developed.first_release_date,developed.cover.image_id,' +
-  'published.name,published.game_type,published.total_rating,published.first_release_date,published.cover.image_id,' +
-  'websites.url,websites.type;';
+  'developed,published,websites.url,websites.type;';
+
+// Per-game fields for fetchGames: popularity (the sort), the bits normalize/
+// dedupe need, and the involved_companies credits keepGame filters on. `company`
+// on each involved_company is a bare id, matched against the studio's own id.
+const GAME_FIELDS =
+  'fields name,game_type,total_rating,total_rating_count,first_release_date,cover.image_id,' +
+  'involved_companies.company,involved_companies.developer,involved_companies.publisher,involved_companies.porting;';
 
 // Studio-suffix words that IGDB and job boards use inconsistently ("Bampot
 // Studio" vs "Bampot Games"). Stripping the trailing one lets those still match.
 const SUFFIX_RE = /\b(studios?|games?|interactive|entertainment|productions?|software|digital|media|works|limited|company|corporation|corp|inc|ltd|llc|co|gmbh|ab|oy|sa|bv|the)\b/gi;
+// A studio written as a domain ("Wargaming.net", "thatgamecompany.com") is the
+// same identity as its base — strip a trailing web TLD so it ties the plain name
+// rather than reading as a distinct "contains-only" match.
+const TLD_RE = /\.(net|com|io|gg|co|dev|games|studio|world|gl|ai|xyz|tv)$/;
 function coreName(name) {
-  const core = keyOf(name).replace(SUFFIX_RE, ' ').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const base = keyOf(name).replace(TLD_RE, '');
+  const core = base.replace(SUFFIX_RE, ' ').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
   return core || keyOf(name); // never strip a name down to nothing
 }
 function nGames(c) {
@@ -282,10 +374,24 @@ function scoreCandidate(c, want, core, hint) {
 // only hard reject is a contains-only hit with no name tie and no country+games
 // corroboration: that's the substring garbage the old "first result" grabbed.
 // A solid name tie is kept even when the (noisy) country hint disagrees.
-function bestMatch(results, name, hint) {
+function bestMatch(results, name, hint, slugKey) {
   if (!results || !results.length) return null;
   const want = keyOf(name);
   const core = coreName(name);
+
+  // Slug-first: the studio's own ATS handle is stronger identity than a display
+  // name a board may have truncated. Among candidates whose bare name is embedded
+  // in the slug and that have a catalogue, take the MOST SPECIFIC (longest) — so
+  // "amberstudiocareers" picks "Amber Studio" over the unrelated exact "Amber".
+  // Guarded to length ≥ 5 so a two-letter name can't latch onto any slug.
+  if (slugKey) {
+    const bySlug = results
+      .map((c) => ({ c, ck: keyOf(c.name).replace(/[^a-z0-9]/g, '') }))
+      .filter(({ c, ck }) => ck.length >= 5 && slugKey.includes(ck) && nGames(c) > 0)
+      .sort((a, b) => b.ck.length - a.ck.length || nGames(b.c) - nGames(a.c));
+    if (bySlug.length) return bySlug[0].c;
+  }
+
   let best = null, bestScore = -Infinity;
   for (const c of results) {
     const sc = scoreCandidate(c, want, core, hint);
@@ -300,23 +406,23 @@ function bestMatch(results, name, hint) {
 
 // Brand fallback: a bare brand name ("Ubisoft") often has no company of its own
 // in IGDB, only regional sub-studios ("Ubisoft Vancouver"). When the strict
-// matcher above rejects everything, show the sub-studio that best fits — one in
-// the studio's dominant posting country if we know it, else the one with the
-// biggest catalogue — but only if it carries real evidence, so a lone mislabeled
-// "<name> Something" with nothing behind it still shows no badge.
+// matcher above rejects everything, show the sub-studio in the studio's dominant
+// posting country — but ONLY when that country hint corroborates it. A brand's
+// sub-studios are named "<brand> <place>" and one of them really is where the
+// postings come from; a coincidental "<word> Something" (three unrelated indies
+// called "Cinnamon Switch"/"Cinnamon Pupper"…) has no sub in the posting country,
+// so it correctly gets no badge. Without a location hint we can't tell a real
+// brand from a namesake pile-up, so we don't guess.
 function brandFallback(results, name, hint) {
+  if (!hint) return null; // no location evidence → a namesake guess is worse than no badge
   const want = keyOf(name);
-  const subs = results.filter((c) => keyOf(c.name).startsWith(want + ' '));
+  const subs = results.filter((c) =>
+    keyOf(c.name).startsWith(want + ' ') &&
+    (COUNTRY[c.country] || null) === hint &&      // the sub really is in the posting country
+    nGames(c) > 0);                               // …and has a catalogue behind it
   if (!subs.length) return null;
-  subs.sort((a, b) => {
-    const ac = hint && (COUNTRY[a.country] || null) === hint ? 1 : 0;
-    const bc = hint && (COUNTRY[b.country] || null) === hint ? 1 : 0;
-    if (ac !== bc) return bc - ac;                  // prefer the posting-country one
-    return nGames(b) - nGames(a);                   // then the flagship (most games)
-  });
-  const best = subs[0];
-  const strong = (hint && (COUNTRY[best.country] || null) === hint) || nGames(best) >= 3;
-  return strong ? best : null;
+  subs.sort((a, b) => nGames(b) - nGames(a));     // the flagship among the in-country subs
+  return subs[0];
 }
 
 // A first-pass exact hit we can trust without widening the search: exact name
@@ -331,7 +437,7 @@ function isConfident(match, name, hint) {
  * Resolve one studio by company name. Returns a normalized studio object, or
  * null when IGDB has no match. Cached both ways (hit and miss).
  * @param {string} name
- * @param {{token?: string, refresh?: boolean, countryHint?: string|null}} [opts]
+ * @param {{token?: string, refresh?: boolean, countryHint?: string|null, companyUrl?: string|null}} [opts]
  */
 export async function lookupStudio(name, opts = {}) {
   const cache = await loadCache();
@@ -341,6 +447,9 @@ export async function lookupStudio(name, opts = {}) {
 
   const token = opts.token || (await getToken());
   const hint = opts.countryHint || null;
+  // The studio's own ATS handle (from its careers URL) disambiguates truncated
+  // display names ("Amber" → the "amberstudiocareers" slug prefers "Amber Studio").
+  const slugKey = slugKeyOf(opts.companyUrl);
   // IGDB's inline `search` returns nothing on the companies endpoint — use the
   // `~` operator instead (case-insensitive). Escape quotes so a studio like
   // O"Brien can't break the query.
@@ -348,24 +457,29 @@ export async function lookupStudio(name, opts = {}) {
 
   // Exact-ish name first (may return several namesakes → scored, not first-wins).
   let results = await apicalypse('companies', `${FIELDS} where name ~ "${safe}"; limit 10;`, token);
-  let match = bestMatch(results, name, hint);
+  let match = bestMatch(results, name, hint, slugKey);
 
-  // Widen to a contains search only when the exact set gave no confident winner
-  // (an obscure studio, a namesake in the wrong country, or nothing). Merge and
-  // dedupe by id so scoring weighs every candidate together.
-  if (!isConfident(match, name, hint)) {
-    const more = await apicalypse('companies', `${FIELDS} where name ~ *"${safe}"*; limit 20;`, token);
+  // Widen to a contains search when the exact set gave no confident winner (an
+  // obscure studio, a namesake in the wrong country, or nothing) — or whenever we
+  // have a slug, since the suffixed name it points to ("Amber Studio") never comes
+  // back from an exact search on the truncated name. Merge + dedupe by id.
+  if (!isConfident(match, name, hint) || slugKey) {
+    // limit 50, not 20: a big brand ("Ubisoft") has 40+ sub-studios, and the one
+    // in the posting country must be in this set for brandFallback to find it.
+    const more = await apicalypse('companies', `${FIELDS} where name ~ *"${safe}"*; limit 50;`, token);
     const byId = new Map();
     for (const c of [...results, ...more]) if (c && c.id != null) byId.set(c.id, c);
     results = [...byId.values()];
-    match = bestMatch(results, name, hint);
+    match = bestMatch(results, name, hint, slugKey);
   }
 
   // Nothing passed the strict matcher — try the brand → sub-studio fallback so an
   // umbrella name like "Ubisoft" still shows a sensible regional studio.
   if (!match) match = brandFallback(results, name, hint);
 
-  const studio = match ? normalize(match) : null;
+  // Second phase: fetch the winner's games only (top-by-popularity, filtered).
+  const games = match ? await fetchGames(match.id, token) : [];
+  const studio = match ? normalize(match, games) : null;
   cache[key] = studio;
   await saveCache();
   return studio;
