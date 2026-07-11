@@ -5,7 +5,7 @@ const HARD_EXPIRED_PATTERNS = [
   /this job has expired/i,
   /job posting has expired/i,
   /no longer accepting applications/i,
-  /this (position|role|job) (is )?no longer/i,
+  /this (position|role|job) (is |might )?no longer/i,
   /this job (listing )?is closed/i,
   /job (listing )?not found/i,
   /the page you are looking for doesn.t exist/i,
