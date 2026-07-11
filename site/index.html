@@ -2417,7 +2417,6 @@ function showGamePop(chip) {
   var id = chip.getAttribute("data-cover");
   var name = chip.getAttribute("data-name") || "";
   var yr = chip.getAttribute("data-year");
-  var rt = chip.getAttribute("data-rating");
   var key = (id || "") + "|" + name;
   if (!name && !id) return;
   var pop = ensureGamePop();
@@ -2428,11 +2427,8 @@ function showGamePop(chip) {
     // keep the caption.
     if (id) html += '<img src="' + esc(igdbImg(id, "t_cover_big")) +
       '" alt="" onload="this.classList.add(\'ok\')" onerror="this.remove()">';
-    var meta = [];
-    if (yr) meta.push(yr);
-    if (rt) meta.push("★ " + rt);
     html += '<div class="gpcap"><span class="gpname">' + esc(name) + '</span>' +
-      (meta.length ? '<span class="gpmeta">' + esc(meta.join(" · ")) + '</span>' : '') + '</div>';
+      (yr ? '<span class="gpmeta">' + esc(yr) + '</span>' : '') + '</div>';
     pop.innerHTML = html;
     gamePopFor = key;
   }
@@ -2477,17 +2473,15 @@ function showStudioPop(dotEl) {
       if (!full) return ""; // skip a malformed nameless entry rather than render an empty chip
       var cv = obj ? g.cover : null;
       var yr = obj ? g.year : null;
-      var rt = obj ? g.rating : null;
       // Cap long titles so a chip like "Horror of the High Seas: Episode 4 -
       // Pirate Ship of Fools" can't blow out the popover. Trim to a word boundary;
-      // the hover popover carries the full name plus year/rating.
+      // the hover popover carries the full name plus year.
       var nm = full;
       if (nm.length > 36) nm = nm.slice(0, 35).replace(/\s+\S*$/, "") + "…";
       var attrs = 'class="stgame' + (cv ? ' hascover"' : '"');
       if (cv) attrs += ' data-cover="' + esc(cv) + '"';
       attrs += ' data-name="' + esc(full) + '"';
       if (yr) attrs += ' data-year="' + esc(String(yr)) + '"';
-      if (rt) attrs += ' data-rating="' + esc(String(rt)) + '"';
       // Native tooltip as a fallback (coverless chips, no-JS).
       attrs += ' title="' + esc(full + (yr ? " (" + yr + ")" : "")) + '"';
       return '<span ' + attrs + '>' + esc(nm) + '</span>';

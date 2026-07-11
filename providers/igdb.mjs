@@ -300,10 +300,10 @@ async function fetchGames(companyId, token) {
     name: g.name,
     cover: g.cover,
     role: g.role,
-    // Release year (from the unix first_release_date) and IGDB rating (0-100,
-    // rounded) — small extras the board shows on hover. Null when IGDB had none.
+    // Release year (from the unix first_release_date) — shown on hover. Null when
+    // IGDB had no date. (total_rating still drives the sort tiebreak above, but we
+    // don't surface a score: it's meaningless without the vote count behind it.)
     year: g.year ? new Date(g.year * 1000).getUTCFullYear() : null,
-    rating: g.rating ? Math.round(g.rating) : null,
   }));
 }
 
