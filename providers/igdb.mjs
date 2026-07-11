@@ -295,14 +295,20 @@ async function fetchGames(companyId, token) {
     byName.set(k, { name: g.name, cover, role, pop: g.total_rating_count || 0, rating: g.total_rating || 0, year: g.first_release_date || 0 });
   }
   const games = [...byName.values()];
+  // Pick the shelf by notability (popularity, then rating), so a studio's
+  // flagships make the cut over obscure recent titles…
   games.sort((a, b) => b.pop - a.pop || b.rating - a.rating || b.year - a.year);
-  return games.slice(0, MAX_GAMES).map((g) => ({
+  const top = games.slice(0, MAX_GAMES);
+  // …then display that shelf newest-first, so it reads as a timeline. Undated
+  // games (year 0) sink to the bottom.
+  top.sort((a, b) => b.year - a.year);
+  return top.map((g) => ({
     name: g.name,
     cover: g.cover,
     role: g.role,
     // Release year (from the unix first_release_date) — shown on hover. Null when
-    // IGDB had no date. (total_rating still drives the sort tiebreak above, but we
-    // don't surface a score: it's meaningless without the vote count behind it.)
+    // IGDB had no date. (total_rating still drives the shelf selection above, but
+    // we don't surface a score: it's meaningless without the vote count behind it.)
     year: g.year ? new Date(g.year * 1000).getUTCFullYear() : null,
   }));
 }
