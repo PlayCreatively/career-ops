@@ -3223,7 +3223,7 @@ try {
 console.log('\n26. Provider — gamejobs-co sitemap + JSON-LD');
 
 try {
-  const { jobFromSlug, parseSitemapJobs } =
+  const { jobFromSlug, parseSitemapJobs, parsePostingHtml, parseRelativeDate } =
     await import(pathToFileURL(join(ROOT, 'providers/gamejobs.mjs')).href);
   const { parseJobPostingLd, cleanLdAddress } =
     await import(pathToFileURL(join(ROOT, 'providers/_jsonld.mjs')).href);
@@ -3327,6 +3327,66 @@ try {
       cleanLdAddress('Candy Crush Soda Saga in Stockholm, Stockholm County, Sweden'),
       cleanLdAddress('Berlin, Made in Germany region'),
     ])}`);
+  }
+
+  // HTML-header fallback: current GameJobs.co pages no longer embed JSON-LD — the
+  // location + posted date live in the main <article>'s header. Anchor to that
+  // header (company div → optional location div → date div); the "more jobs" list
+  // lower down carries its OWN class="c"/class="w" chips that must NOT win.
+  const pageHtml = `<html><body><header>nav</header>
+    <article class="w800"><p class="flash">This job might no longer be available.</p>
+      <h1>Unity Developer</h1>
+      <div><a href="/search?c=Virtuos" class="c">Virtuos</a></div>
+      <div><a href="/search?w=Ukraine%2C&#43;Kyiv" class="w">Ukraine, Kyiv</a></div>
+      <div>15 days ago</div>
+      <p>Job body here.</p>
+      <div><a href="/Marketing-at-Voodoo">Marketing</a><div><a href="/search?c=Voodoo" class="c">Voodoo</a> · <a href="/search?w=Paris" class="w">Paris</a> · 1 month ago</div></div>
+    </article></body></html>`;
+  const ph = parsePostingHtml(pageHtml);
+  if (ph && ph.title === 'Unity Developer' && ph.company === 'Virtuos' &&
+      ph.location === 'Ukraine, Kyiv' && ph.postedDate &&
+      ph.description && ph.description.includes('Job body here.')) {
+    pass('parsePostingHtml reads location/date/title from the main <article> header, ignoring the related-jobs list');
+  } else {
+    fail(`parsePostingHtml = ${JSON.stringify(ph)}`);
+  }
+
+  // Remote posting with NO location chip: header is company div → date div. The
+  // optional location group must stay empty rather than grabbing a sidebar city.
+  const noLocHtml = `<article class="w800"><h1>Remote Engineer</h1>
+    <div><a href="/search?c=Acme" class="c">Acme</a></div>
+    <div>today</div>
+    <p>body</p>
+    <div><a href="/x">Other</a><div><a href="/search?c=Other" class="c">Other</a> · <a href="/search?w=Tokyo" class="w">Tokyo</a> · 2 days ago</div></div>
+  </article>`;
+  const nl = parsePostingHtml(noLocHtml);
+  if (nl && nl.company === 'Acme' && nl.location === '' && nl.workMode === undefined) {
+    pass('parsePostingHtml leaves location empty when the header has no chip (never borrows a sidebar city)');
+  } else {
+    fail(`parsePostingHtml no-location = ${JSON.stringify(nl)}`);
+  }
+
+  // Fail-safe: no <h1>/header → null, never throws.
+  if (parsePostingHtml('<html>no header</html>') === null &&
+      parsePostingHtml('') === null && parsePostingHtml(null) === null) {
+    pass('parsePostingHtml returns null when no header anchors (fail-safe)');
+  } else {
+    fail('parsePostingHtml should return null without a header');
+  }
+
+  // parseRelativeDate: turn GameJobs.co's relative label into an ISO date; unknown
+  // text → '' so the caller omits the field.
+  const now = new Date('2026-07-11T00:00:00Z');
+  if (parseRelativeDate('15 days ago', now).startsWith('2026-06-26') &&
+      parseRelativeDate('1 month ago', now).startsWith('2026-06-11') &&
+      parseRelativeDate('today', now).startsWith('2026-07-11') &&
+      parseRelativeDate('yesterday', now).startsWith('2026-07-10') &&
+      parseRelativeDate('3 weeks ago', now).startsWith('2026-06-20') &&
+      parseRelativeDate('garbage', now) === '' && parseRelativeDate('', now) === '') {
+    pass('parseRelativeDate maps "N days/months ago"/today/yesterday to ISO, fails safe on junk');
+  } else {
+    fail(`parseRelativeDate = ${JSON.stringify([
+      parseRelativeDate('15 days ago', now), parseRelativeDate('1 month ago', now)])}`);
   }
 } catch (e) {
   fail(`gamejobs-co provider tests crashed: ${e.message}`);

@@ -2,6 +2,7 @@
 /** @typedef {import('./_types.js').Provider} Provider */
 
 import { parseJobPostingLd } from './_jsonld.mjs';
+import { splitLocationMode, toIsoDate, stripHtml } from './_util.mjs';
 
 // GameJobs.co provider — an AGGREGATOR board (like Hitmarker / Work With Indies /
 // Games Jobs Direct), not a single company. One tracked_companies entry yields
@@ -12,10 +13,12 @@ import { parseJobPostingLd } from './_jsonld.mjs';
 // open posting (~6,700 URLs). Each job URL is `/{Title}-at-{Company}` (punctuation
 // stripped, spaces → hyphens, an optional `-{n}` dedup suffix), so the sitemap
 // alone yields a title + company for every posting with ZERO per-job fetches.
-// Each posting page also carries a schema.org JobPosting JSON-LD block with the
-// authoritative title, hiringOrganization, jobLocation and datePosted — which we
-// read during ENRICHMENT (below) to fill in location + posted date + a clean
-// title/company.
+// The authoritative title, company, location and posted date live on each posting
+// page and are read during ENRICHMENT (below) to fill in location + posted date +
+// a clean title/company. Older pages carried a schema.org JobPosting JSON-LD block;
+// current pages render those fields as visible header markup inside the main
+// <article> instead. Enrichment reads JSON-LD when present and falls back to the
+// header markup otherwise (see parsePostingHtml), so either layout works.
 //
 // Configure it explicitly in studios.yml:
 //
@@ -131,6 +134,74 @@ export function parseSitemapJobs(xml) {
     .map((r) => r.job);
 }
 
+// Turn GameJobs.co's relative "posted" label ("15 days ago", "1 month ago",
+// "today", "yesterday") into an ISO date. Best-effort: returns '' for anything
+// unrecognised so the caller simply omits the posted date. `now` is injectable
+// for tests.
+export function parseRelativeDate(text, now = new Date()) {
+  const s = String(text == null ? '' : text).trim().toLowerCase();
+  if (!s) return '';
+  const d = new Date(now.getTime());
+  if (s === 'today') return toIsoDate(d);
+  if (s === 'yesterday') { d.setUTCDate(d.getUTCDate() - 1); return toIsoDate(d); }
+  const m = s.match(/^(\d+)\s+(minute|hour|day|week|month|year)s?\s+ago$/);
+  if (!m) return '';
+  const n = Number(m[1]);
+  switch (m[2]) {
+    case 'minute': d.setUTCMinutes(d.getUTCMinutes() - n); break;
+    case 'hour': d.setUTCHours(d.getUTCHours() - n); break;
+    case 'day': d.setUTCDate(d.getUTCDate() - n); break;
+    case 'week': d.setUTCDate(d.getUTCDate() - n * 7); break;
+    case 'month': d.setUTCMonth(d.getUTCMonth() - n); break;
+    case 'year': d.setUTCFullYear(d.getUTCFullYear() - n); break;
+  }
+  return toIsoDate(d);
+}
+
+// Read the authoritative fields from a posting page's VISIBLE header markup — the
+// fallback for pages that no longer embed schema.org JSON-LD. The main posting sits
+// in `<article class="w800">` with a tight header:
+//
+//   <h1>Unity Developer</h1>
+//   <div><a href="/search?c=Virtuos" class="c">Virtuos</a></div>
+//   <div><a href="/search?w=Ukraine%2C+Kyiv" class="w">Ukraine, Kyiv</a></div>
+//   <div>15 days ago</div>
+//
+// The SAME page also renders a "more jobs" list lower down whose rows carry their
+// OWN class="c"/class="w" chips — so we bind location + date to the header block
+// (company div, then an OPTIONAL location div, then the date div) in one anchored
+// match, never "the first class="w" on the page". A remote posting with no location
+// chip therefore yields an empty location, not a neighbour's city. Returns the same
+// shape as parseJobPostingLd, or null when there's no <h1> to anchor to. Never throws.
+export function parsePostingHtml(html) {
+  if (typeof html !== 'string' || !html) return null;
+  // Header block, anchored at <h1>. Location div is optional; date div ends it.
+  const header = html.match(
+    /<h1[^>]*>([\s\S]*?)<\/h1>\s*<div>\s*<a\b[^>]*class="c"[^>]*>([^<]*)<\/a>\s*<\/div>\s*(?:<div>\s*<a\b[^>]*class="w"[^>]*>([^<]*)<\/a>\s*<\/div>\s*)?<div>\s*([^<]*?(?:ago|today|yesterday))\s*<\/div>/i,
+  );
+  if (!header) return null;
+
+  const title = decodeEntities(stripHtml(header[1])).trim();
+  const company = decodeEntities(header[2] || '').trim();
+  const rawLoc = decodeEntities(header[3] || '').trim();
+  const { location, workMode } = splitLocationMode(rawLoc);
+  const postedDate = parseRelativeDate(header[4]);
+
+  // Description body for detail-phase enrichers (sponsorship). The whole <article>
+  // includes the related-jobs list too, but that's harmless for a keyword scan.
+  const artM = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+  const description = artM ? stripHtml(artM[1]) : '';
+
+  return {
+    title,
+    company,
+    location,
+    ...(workMode ? { workMode } : {}),
+    ...(postedDate ? { postedDate } : {}),
+    ...(description ? { description } : {}),
+  };
+}
+
 // Normalise `query` (string | string[]) into a lowercased keyword list, or null
 // when nothing usable is configured (caller then returns the whole board).
 function normalizeQuery(query) {
@@ -189,15 +260,32 @@ export default {
   // falls back to the slug basics. detailConcurrency parallel fetches.
   detailConcurrency: DEFAULT_ENRICH_CONCURRENCY,
 
-  // Fetch one posting page and read its schema.org JobPosting. `overlay` carries the
-  // authoritative title/company/location/workMode/date; `text` is the description
-  // body for cross-cutting enrichers (sponsorship). Fail-safe: a page that doesn't
-  // parse returns null and the scanner keeps the slug fields.
+  // Fetch one posting page and read its authoritative fields. Prefer the schema.org
+  // JobPosting JSON-LD (older layout); fall back to the visible header markup for
+  // pages that no longer embed it (current layout). Merge field-by-field so a value
+  // missing from one source is filled from the other — JSON-LD wins where both have
+  // it. `overlay` carries title/company/location/workMode/date; `text` is the
+  // description body for cross-cutting enrichers (sponsorship). Fail-safe: when
+  // neither source parses, return null and the scanner keeps the slug fields.
   async fetchDetail(job, ctx) {
     const html = await ctx.fetchText(job.url, { redirect: 'error' });
     const ld = parseJobPostingLd(html);
-    if (!ld) return null;
-    const { description, ...overlay } = ld;
+    const htmlLd = parsePostingHtml(html);
+    if (!ld && !htmlLd) return null;
+
+    const a = ld || {};
+    const b = htmlLd || {};
+    const pick = (k) => (a[k] ? a[k] : b[k] ? b[k] : '');
+    const overlay = {
+      title: pick('title'),
+      company: pick('company'),
+      location: pick('location'),
+    };
+    const workMode = pick('workMode');
+    if (workMode) overlay.workMode = workMode;
+    const postedDate = pick('postedDate');
+    if (postedDate) overlay.postedDate = postedDate;
+    const description = pick('description');
     return { overlay, ...(description ? { text: description } : {}) };
   },
 };
