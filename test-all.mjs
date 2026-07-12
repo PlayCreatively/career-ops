@@ -1677,6 +1677,8 @@ try {
             id: '1700866',
             title: 'Gameplay Programmer',
             url: 'https://hitmarker.net/jobs/larian-studios-gameplay-programmer-1700866',
+            jobApplicationType: 'url',
+            jobApplicationUrl: 'https://larian.recruitee.com/o/gameplay-programmer',
             jobCompany: { title: 'Larian Studios' },
             jobLevel: { id: 'junior', title: 'Junior (1–2 years)' },
             jobLocation: [{
@@ -1695,6 +1697,9 @@ try {
             id: '2',
             title: 'Technical Artist',
             url: 'https://hitmarker.net/jobs/remote-ta-2',
+            // Email application → no jobApplicationUrl, so applyUrl must be omitted.
+            jobApplicationType: 'email',
+            jobApplicationEmail: 'jobs@remotestudio.example',
             jobCompany: { title: 'Remote Studio' },
             jobLocation: [{ title: 'Remote', parents: [] }],
           },
@@ -1725,6 +1730,12 @@ try {
     pass('parseHitmarkerResponse maps jobLevel.title to experienceLevel (FREE from list), omits it when absent');
   } else {
     fail(`experienceLevel wrong: row0=${JSON.stringify(jobs[0]?.experienceLevel)} row1 has field=${'experienceLevel' in (jobs[1] || {})}`);
+  }
+
+  if (jobs[0]?.applyUrl === 'https://larian.recruitee.com/o/gameplay-programmer' && !('applyUrl' in jobs[1])) {
+    pass('parseHitmarkerResponse surfaces jobApplicationUrl as applyUrl (url type), omits it for email applications');
+  } else {
+    fail(`applyUrl wrong: row0=${JSON.stringify(jobs[0]?.applyUrl)} row1 has field=${'applyUrl' in (jobs[1] || {})}`);
   }
 
   if (parseHitmarkerResponse({}).length === 0 && parseHitmarkerResponse({ results: [{ hits: null }] }).length === 0) {
@@ -1942,6 +1953,111 @@ try {
   } else {
     fail('a different-city aggregator row must be kept — location guard prevents a silent drop');
   }
+
+  // Derived company compatibility: the same posting relabelled by an aggregator must
+  // still collapse WITHOUT any curated alias, because the acronym is derived ("WB" ==
+  // initials of "Warner Bros"). The direct Workday row is the survivor.
+  const aliased = [
+    { title: 'Advanced Software Engineer, Gameplay', company: 'Warner Bros. Games', location: 'Utah', url: 'https://warnerbros.wd5.myworkdayjobs.com/global/job/Remote-Utah/Advanced-Software-Engineer--Gameplay_R000104427' },
+    { title: 'Advanced Software Engineer, Gameplay', company: 'WB Games', location: 'Utah, United States of America', url: 'https://gamejobs.co/Advanced-Software-Engineer-Gameplay-at-WB-Games' },
+  ];
+  const { jobs: aout, collapsedByHeuristic: ah } = dedupeSnapshot(aliased);
+  if (ah === 1 && aout.length === 1 && aout[0].url.includes('myworkdayjobs.com')) {
+    pass('derived acronym ("WB Games" ~ "Warner Bros. Games") collapses the aggregator mirror with no alias table');
+  } else {
+    fail(`WB acronym mirror should collapse to the direct Workday row, got ${aout.length} kept (${ah} by heuristic)`);
+  }
+  // Derived subset: "Riot" ⊆ "Riot Games Montreal" (generic word "Games" stripped) →
+  // the aggregator mirror collapses onto the direct posting, no alias needed.
+  const subsetPair = [
+    { title: 'Tools Programmer', company: 'Riot Games Montreal', location: 'Montreal', url: 'https://riot.wd5.myworkdayjobs.com/job/tp_R2' },
+    { title: 'Tools Programmer', company: 'Riot', location: 'Montreal', url: 'https://gamejobs.co/Tools-Programmer-at-Riot' },
+  ];
+  if (dedupeSnapshot(subsetPair).jobs.length === 1) {
+    pass('derived token-subset ("Riot" ~ "Riot Games Montreal") collapses the mirror');
+  } else {
+    fail('significant-token subset should collapse the aggregator mirror');
+  }
+  // Fail-safe: two genuinely different employers with the same title share no
+  // significant token and aren't acronyms of each other → never merged.
+  const notAliased = [
+    { title: 'Gameplay Engineer', company: 'Ubisoft', location: 'Montreal', url: 'https://ubisoft.wd3.myworkdayjobs.com/job/x_R1' },
+    { title: 'Gameplay Engineer', company: 'Riot Games', location: 'Montreal', url: 'https://gamejobs.co/Gameplay-Engineer-at-Riot' },
+  ];
+  if (dedupeSnapshot(notAliased).jobs.length === 2) {
+    pass('fail-safe: two different employers with the same title are never merged by the company guard');
+  } else {
+    fail('distinct employers must not be merged — no shared token, no acronym');
+  }
+  // Manual alias escape hatch: a pair the heuristic genuinely CANNOT derive (no shared
+  // token, not acronyms) stays split by default, and collapses only when a config alias
+  // pairs them. Config aliases EXTEND the shipped defaults ([...DEFAULT, ...cfg]).
+  const { DEFAULT_COMPANY_ALIASES } = await import(pathToFileURL(join(ROOT, 'scan.mjs')).href);
+  const undivinable = [
+    { title: 'Combat Designer', company: 'Foo Studios', location: 'Berlin', url: 'https://foo.wd1.myworkdayjobs.com/job/z_R9' },
+    { title: 'Combat Designer', company: 'Bar Interactive', location: 'Berlin', url: 'https://gamejobs.co/Combat-Designer-at-Bar' },
+  ];
+  const withoutAlias = dedupeSnapshot(undivinable).jobs.length;
+  const merged = [...DEFAULT_COMPANY_ALIASES, ['Foo Studios', 'Bar Interactive']];
+  const withAlias = dedupeSnapshot(undivinable, { companyAliases: merged }).jobs.length;
+  if (withoutAlias === 2 && withAlias === 1) {
+    pass('manual company_aliases collapse a pair the heuristic cannot derive; extend the shipped defaults');
+  } else {
+    fail(`alias override failed: without=${withoutAlias} (want 2), with=${withAlias} (want 1)`);
+  }
+
+  // ── Pass 0: exact apply-link identity. When an aggregator surfaces the real
+  // destination (applyUrl), the mirror collapses onto its direct twin by a
+  // byte-identical canonical link — no title/company guessing at all. This is
+  // the durable path the click-through aggregators will feed once wired.
+  const linked = [
+    // Direct SmartRecruiters posting we scanned; the Hitmarker mirror carries the
+    // same jobs.smartrecruiters.com link as applyUrl (differing title/company/loc,
+    // trailing slash) → collapse by link, keep the direct row.
+    { title: 'Expert Animation Programmer', company: 'CD PROJEKT RED', location: 'Vancouver, CA', url: 'https://jobs.smartrecruiters.com/CDPROJEKTRED/744000137095661-expert-animation-programmer' },
+    { title: 'Expert Animation Programmer R&D', company: 'CD Projekt Red', location: 'Remote', url: 'https://hitmarker.net/jobs/cd-projekt-red-expert-animation-programmer-1981834', applyUrl: 'https://jobs.smartrecruiters.com/CDPROJEKTRED/744000137095661-expert-animation-programmer/' },
+  ];
+  const { jobs: lout, collapsedByLink: ll, collapsedByHeuristic: lh } = dedupeSnapshot(linked);
+  if (ll === 1 && lh === 0 && lout.length === 1 && lout[0].url.includes('smartrecruiters.com')) {
+    pass('pass 0: aggregator applyUrl equal to a direct url collapses by link, keeps the direct row');
+  } else {
+    fail(`pass 0 link identity should collapse to the direct row, got ${lout.length} (byLink ${ll}, byHeuristic ${lh})`);
+  }
+
+  // gh_jid identity survives a branded domain + tracking params: the aggregator's
+  // applyUrl adds &utm_source but keeps the same gh_jid → same canonical key.
+  const ghLinked = [
+    { title: 'Gameplay Engineer', company: 'Bungie', location: 'Bellevue, WA', url: 'https://careers.bungie.com/jobs/x?gh_jid=6543210' },
+    { title: 'Gameplay Engineer', company: 'Bungie', location: '', url: 'https://hitmarker.net/jobs/bungie-gameplay-engineer-777', applyUrl: 'https://careers.bungie.com/jobs/x?gh_jid=6543210&utm_source=hitmarker' },
+  ];
+  const { jobs: gout, collapsedByLink: gl } = dedupeSnapshot(ghLinked);
+  if (gl === 1 && gout.length === 1 && gout[0].url.includes('careers.bungie.com')) {
+    pass('pass 0: gh_jid canonical key ignores extra tracking params, keeps the direct branded row');
+  } else {
+    fail(`pass 0 gh_jid identity should collapse to the direct row, got ${gout.length} (byLink ${gl})`);
+  }
+
+  // Two aggregators exposing the SAME source link (no direct twin) collapse to one.
+  const twoAggs = [
+    { title: 'VFX Artist', company: 'Studio Z', location: '', url: 'https://hitmarker.net/jobs/studio-z-vfx-1', applyUrl: 'https://boards.greenhouse.io/studioz/jobs/500100' },
+    { title: 'VFX Artist', company: 'Studio Z', location: '', url: 'https://remotegamejobs.com/jobs/studio-z-vfx', applyUrl: 'https://boards.greenhouse.io/studioz/jobs/500100' },
+  ];
+  const { jobs: tao, collapsedByLink: tl } = dedupeSnapshot(twoAggs);
+  if (tl === 1 && tao.length === 1) {
+    pass('pass 0: two aggregators exposing the same applyUrl collapse to one');
+  } else {
+    fail(`two aggregator mirrors of one source should collapse by link, got ${tao.length} (byLink ${tl})`);
+  }
+
+  // mailto: apply targets (WWI email applications) yield no link key → ignored by
+  // Pass 0, never merged on the strength of a non-http destination.
+  const mailtoCase = [
+    { title: 'Concept Artist', company: 'Alpha', location: '', url: 'https://alpha.example/jobs/1' },
+    { title: 'Level Designer', company: 'Beta', location: '', url: 'https://wwi.example/careers/beta', applyUrl: 'mailto:hi@beta.example' },
+  ];
+  const { collapsedByLink: ml } = dedupeSnapshot(mailtoCase, { aggregators: [], lastResort: [] });
+  if (ml === 0) pass('pass 0: mailto: apply targets get no link key and are never merged');
+  else fail(`mailto apply target must not produce a link key, got byLink ${ml}`);
 } catch (e) {
   fail(`snapshot dedup tests crashed: ${e.message}`);
 }
@@ -2389,6 +2505,76 @@ try {
     pass('parseRemoteGameJobsFeed handles null/empty input without crashing');
   } else {
     fail('parseRemoteGameJobsFeed should yield empty result for null/empty input');
+  }
+
+  // ── Direct apply-link resolution via /goto/ ──
+  const { gotoUrlFor, applyUrlFromLocation } = await import(pathToFileURL(join(ROOT, 'providers/remotegamejobs.mjs')).href);
+
+  if (
+    gotoUrlFor('https://remotegamejobs.com/jobs/turtle-rock-senior-producer-remote-job')
+      === 'https://remotegamejobs.com/goto/turtle-rock-senior-producer-remote-job' &&
+    gotoUrlFor('https://remotegamejobs.com/') === '' &&
+    gotoUrlFor('not a url') === ''
+  ) {
+    pass('gotoUrlFor maps /jobs/{slug} → /goto/{slug}, else ""');
+  } else {
+    fail(`gotoUrlFor = ${JSON.stringify(gotoUrlFor('https://remotegamejobs.com/jobs/x'))}`);
+  }
+
+  if (
+    applyUrlFromLocation('https://boards.greenhouse.io/turtlerock/jobs/123?utm_source=RemoteGameJobs')
+      === 'https://boards.greenhouse.io/turtlerock/jobs/123' &&
+    applyUrlFromLocation('mailto:jobs@studio.games') === '' &&
+    applyUrlFromLocation('https://www.remotegamejobs.com/jobs/x') === '' &&
+    applyUrlFromLocation('') === '' &&
+    applyUrlFromLocation('::nonsense::') === ''
+  ) {
+    pass('applyUrlFromLocation keeps http(s) (utm stripped), drops mailto/self/invalid');
+  } else {
+    fail(`applyUrlFromLocation = ${JSON.stringify(applyUrlFromLocation('https://boards.greenhouse.io/turtlerock/jobs/123?utm_source=RemoteGameJobs'))}`);
+  }
+
+  // fetch() surfaces the resolved http(s) destination as job.applyUrl and leaves
+  // mailto: postings untouched. Stub the feed + the /goto/ redirect resolver.
+  {
+    const feedXml = `<rss><channel>
+      <item><title>Turtle Rock is hiring a Senior Producer (Remote Job)</title>
+        <link>https://remotegamejobs.com/jobs/turtle-rock-senior-producer-remote-job</link></item>
+      <item><title>Bampot is hiring a Brand Designer (Remote Job)</title>
+        <link>https://remotegamejobs.com/jobs/bampot-brand-designer-remote-job</link></item>
+    </channel></rss>`;
+    const seen = [];
+    const ctx = {
+      fetchText: async () => feedXml,
+      fetchLocation: async (u) => {
+        seen.push(u);
+        return u.includes('turtle-rock')
+          ? 'https://boards.greenhouse.io/turtlerock/jobs/456?utm_source=RemoteGameJobs'
+          : 'mailto:zach@bampot.studio';
+      },
+    };
+    const out = await rgj.fetch({}, ctx);
+    const producer = out.find(j => j.title === 'Senior Producer');
+    const designer = out.find(j => j.title === 'Brand Designer');
+    if (
+      producer?.applyUrl === 'https://boards.greenhouse.io/turtlerock/jobs/456' &&
+      !('applyUrl' in designer) &&
+      seen.length === 2 &&
+      seen.every(u => u.startsWith('https://remotegamejobs.com/goto/'))
+    ) {
+      pass('remote-game-jobs fetch() surfaces http(s) applyUrl via /goto/, skips mailto');
+    } else {
+      fail(`fetch() resolution: producer=${JSON.stringify(producer)} designer=${JSON.stringify(designer)} seen=${JSON.stringify(seen)}`);
+    }
+
+    // resolve_apply:false and a ctx without fetchLocation both keep feed-only behaviour.
+    const optOut = await rgj.fetch({ resolve_apply: false }, ctx);
+    const noResolver = await rgj.fetch({}, { fetchText: async () => feedXml });
+    if (optOut.every(j => !('applyUrl' in j)) && noResolver.every(j => !('applyUrl' in j))) {
+      pass('remote-game-jobs fetch() honours resolve_apply:false and a resolver-less ctx');
+    } else {
+      fail('resolve_apply:false / missing fetchLocation should skip apply resolution');
+    }
   }
 } catch (e) {
   fail(`remote-game-jobs provider tests crashed: ${e.message}`);
@@ -3416,6 +3602,29 @@ try {
   } else {
     fail(`gamejobs fetchDetail drop-gating = ${JSON.stringify({ dExpired, dLive, dBlocked })}`);
   }
+
+  // extractApplyUrl: the Apply button carries the studio's REAL destination link.
+  const { extractApplyUrl } = await import(pathToFileURL(join(ROOT, 'providers/gamejobs.mjs')).href);
+  const aDirect = extractApplyUrl('<a class="btn mr10" href="https://job-boards.eu.greenhouse.io/tactilegames/jobs/4781166101" target="_blank" rel="noopener nofollow">Apply</a>');
+  const aRecruitics = extractApplyUrl('<a class="btn" href="https://jsv3.recruitics.com/redirect?rx_cid=3680&amp;rx_url=https%3A%2F%2Faristocrat.wd3.myworkdayjobs.com%2Fsite%2Fjob%2FAssociate-GameOps-Manager_R0021614&amp;source=GameJobs.co">Apply</a>');
+  const aEmail = extractApplyUrl('<a class="btn" href="/cdn-cgi/l/email-protection#abcdef">Apply</a>');
+  const aNone = extractApplyUrl('<a href="/login">Sign in</a><p>no apply button here</p>');
+  if (aDirect === 'https://job-boards.eu.greenhouse.io/tactilegames/jobs/4781166101' &&
+      aRecruitics === 'https://aristocrat.wd3.myworkdayjobs.com/site/job/Associate-GameOps-Manager_R0021614' &&
+      aEmail === '' && aNone === '') {
+    pass('extractApplyUrl pulls the ATS href, unwraps recruitics rx_url, skips email-protection + missing buttons');
+  } else {
+    fail(`extractApplyUrl = ${JSON.stringify({ aDirect, aRecruitics, aEmail, aNone })}`);
+  }
+
+  // fetchDetail surfaces applyUrl in the overlay so snapshot dedup Pass 0 can use it.
+  const liveApplyHtml = liveHtml.replace('</body>', '<a class="btn mr10" href="https://jobs.lever.co/xsolla/df434055" target="_blank" rel="noopener nofollow">Apply</a></body>');
+  const dApply = await gjProvider.fetchDetail({ url: 'https://gamejobs.co/Tools-Programmer-at-Triband' }, ctxOf(liveApplyHtml));
+  if (dApply && dApply.overlay && dApply.overlay.applyUrl === 'https://jobs.lever.co/xsolla/df434055') {
+    pass('gamejobs fetchDetail emits overlay.applyUrl from the Apply button (feeds dedup Pass 0)');
+  } else {
+    fail(`gamejobs fetchDetail applyUrl = ${JSON.stringify(dApply && dApply.overlay)}`);
+  }
 } catch (e) {
   fail(`gamejobs-co provider tests crashed: ${e.message}`);
 }
@@ -4113,7 +4322,7 @@ try {
   const { detectSponsorship } = await import(pathToFileURL(join(ROOT, 'providers/enrichers/sponsorship.mjs')).href);
   const { DETAIL } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
   const { parseHitmarkerResponse } = await import(pathToFileURL(join(ROOT, 'providers/hitmarker.mjs')).href);
-  const { parseWorkWithIndiesFeed, extractJobBody } = await import(pathToFileURL(join(ROOT, 'providers/workwithindies.mjs')).href);
+  const { parseWorkWithIndiesFeed, extractJobBody, extractApplyUrl: wwiApplyUrl } = await import(pathToFileURL(join(ROOT, 'providers/workwithindies.mjs')).href);
 
   const NONE_LINE = 'You must have the right to work in the UK. We are unable to provide or take over visa sponsorship.';
   const readable = (j) => !!(j && j[DETAIL] && detectSponsorship(j[DETAIL].text) === 'none');
@@ -4155,6 +4364,22 @@ try {
     pass('work-with-indies attaches RSS blurb; extractJobBody isolates the richtext body for the enricher');
   } else {
     fail(`wwi inline: blurb=${readable(wwi)} hidden=${hidden(wwi)} bodyReads=${bodyReads}`);
+  }
+
+  // WWI extractApplyUrl: the "Apply for this Job" button carries the real
+  // destination. http(s) targets (ATS/job board/careers page) are surfaced for
+  // snapshot dedup; mailto:/tel: and same-host links yield '' (dedup the old way).
+  const wwiHttp = wwiApplyUrl('<a id="apply-top" href="https://boards.greenhouse.io/foo/jobs/123?src=x&amp;y=2" target="_blank" class="apply-button w-inline-block"><div>Apply for this Job</div></a>');
+  const wwiIndeed = wwiApplyUrl('<a href="https://www.indeed.com/job/abc-592bf58d" id="apply-top" class="apply-button-copy w-button">Apply for this Job</a>');
+  const wwiMailto = wwiApplyUrl('<a id="apply-top" href="mailto:jobs@studio.games" target="_blank" class="apply-button w-inline-block"><div>Apply for this Job</div></a>');
+  const wwiSelf = wwiApplyUrl('<a id="apply-top" href="https://www.workwithindies.com/careers/x" class="apply-button">Apply</a>');
+  const wwiNone = wwiApplyUrl('<a href="/careers">Back</a><p>no apply button</p>');
+  if (wwiHttp === 'https://boards.greenhouse.io/foo/jobs/123?src=x&y=2'
+    && wwiIndeed === 'https://www.indeed.com/job/abc-592bf58d'
+    && wwiMailto === '' && wwiSelf === '' && wwiNone === '') {
+    pass('work-with-indies extractApplyUrl: surfaces http(s) apply destination (entity-decoded), drops mailto/self/absent');
+  } else {
+    fail(`wwi applyUrl: http=${wwiHttp} indeed=${wwiIndeed} mailto="${wwiMailto}" self="${wwiSelf}" none="${wwiNone}"`);
   }
 } catch (e) {
   fail(`aggregator inline-detail tests crashed: ${e.message}`);

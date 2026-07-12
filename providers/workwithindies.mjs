@@ -19,6 +19,17 @@ import { toIsoDate, stripHtml, attachDetail } from './_util.mjs';
 // title ever breaks that shape we fall back to the raw title with empty
 // company/location — fail-safe: a job is never dropped just because it didn't
 // parse.
+//
+// DIRECT APPLY LINK. WWI's own `url` is its Webflow posting page, but the page's
+// "Apply for this Job" button links STRAIGHT at where the studio actually takes
+// applications — a direct ATS URL (greenhouse/lever/…), a job board (Indeed), the
+// studio's own careers page, or (the common indie case) a `mailto:`. When that
+// destination is an http(s) URL we surface it as `applyUrl` so snapshot dedup can
+// collapse this mirror onto a first-party posting we scanned directly, by exact
+// link identity rather than title/company guessing. The closed-check below
+// already fetches every job page, so reading the button costs no extra request.
+// Email-only postings (and any non-http target) yield no applyUrl and dedup the
+// old way — fail-safe. See extractApplyUrl.
 
 const FEED_URL = 'https://www.workwithindies.com/careers/rss.xml';
 
@@ -122,6 +133,31 @@ export function extractJobBody(html) {
   return stripHtml(html.slice(open, end));
 }
 
+// Pull the direct apply destination from a WWI job page. The "Apply for this Job"
+// call-to-action is one or more anchors carrying `id="apply-top"`/`"apply-bottom"`
+// or the `apply-button` class; their href is the real destination (an ATS URL, a
+// job board, a careers page, or a `mailto:`). We return the FIRST http(s) target
+// — a `mailto:`/`tel:` (or any non-http scheme) yields '' so the row keeps
+// deduping on its WWI url. A same-host href (WWI linking back to itself) is
+// skipped too. The closed-check already fetched this HTML, so this is free.
+// Exported for unit tests. Returns '' when no usable apply link is present.
+export function extractApplyUrl(html) {
+  if (typeof html !== 'string' || !html) return '';
+  for (const m of html.matchAll(/<a\b([^>]*)>/gi)) {
+    const attrs = m[1];
+    if (!/\bid=["'](?:apply-top|apply-bottom)["']/i.test(attrs)
+      && !/\bclass=["'][^"']*\bapply-button\b/i.test(attrs)) continue;
+    const hrefM = attrs.match(/href=["']([^"']+)["']/i);
+    if (!hrefM) continue;
+    let u;
+    try { u = new URL(decodeEntities(hrefM[1].trim())); } catch { continue; }
+    if (!/^https?:$/.test(u.protocol)) continue;   // mailto:/tel: → no direct link
+    if (u.hostname.replace(/^www\./, '').toLowerCase() === 'workwithindies.com') continue;
+    return u.toString();
+  }
+  return '';
+}
+
 // Run async `worker` over `items` with a fixed concurrency cap, preserving order.
 async function mapConcurrent(items, limit, worker) {
   const results = new Array(items.length);
@@ -176,8 +212,11 @@ export default {
       try {
         const html = await ctx.fetchText(job.url, { timeoutMs: 8000 });
         if (isClosedPosting(html)) return null;
-        // Same fetch, no extra request: upgrade the shallow RSS blurb to the full
-        // page body so the sponsorship enricher sees the requirements section.
+        // Same fetch, no extra request: (1) surface the direct apply link for
+        // snapshot dedup, and (2) upgrade the shallow RSS blurb to the full page
+        // body so the sponsorship enricher sees the requirements section.
+        const applyUrl = extractApplyUrl(html);
+        if (applyUrl) job.applyUrl = applyUrl;
         const body = extractJobBody(html);
         return body ? attachDetail(job, { text: body }) : job;
       } catch {

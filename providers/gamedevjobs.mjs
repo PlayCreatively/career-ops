@@ -19,11 +19,21 @@ import { parseJobPostingLd } from './_jsonld.mjs';
 // hiringOrganization + jobLocation override the slug-derived title.
 //
 // Verified independent of GameJobs.co: in a 40-job sample ~half the companies
-// aren't on GameJobs.co at all, and each posting's JSON-LD `sameAs` points at the
-// studio's real source ATS (Workable/BambooHR/Breezy/King/ArenaNet/…), not back
-// at GameJobs.co — so it's a genuine second feed, not a mirror. It is also
-// noisier (generic "Unity/C#" roles from non-game shops); scan.mjs's own
+// aren't on GameJobs.co at all — so it's a genuine second feed, not a mirror. It
+// is also noisier (generic "Unity/C#" roles from non-game shops); scan.mjs's own
 // title/location targeting + the aggregator company blocklist do the filtering.
+//
+// NO DIRECT APPLY LINK (probed 2026-07, 15 postings across the sitemap): the
+// JobPosting JSON-LD carries none of `url` / `sameAs` / `directApply`, and the
+// page's only apply control is `/jobs/{slug}/apply`, which redirects to `/login`
+// — the real source ATS is never exposed. So this board can't feed snapshot
+// dedup's apply-link identity pass (Pass 0); it stays `lastResort` (below) and
+// relies on the title/location heuristic (Pass 2) to collapse its mirrors. The
+// only extra structured field is `identifier` = { name: <company>, value:
+// <gamedevjobs internal UUID> } — the company name is already in
+// hiringOrganization and the UUID is gamedevjobs-private, so neither helps
+// cross-source dedup. (An earlier note here claimed `sameAs` pointed at the
+// studio's ATS; that is not true on the current site.)
 //
 // Configure it explicitly in studios.yml:
 //
@@ -223,8 +233,9 @@ export default {
 
   // Multi-studio board — hosts must be in scan.mjs DEFAULT_AGGREGATORS (see hitmarker).
   // `lastResort` additionally requires these hosts in DEFAULT_LAST_RESORT: the apply
-  // path hides behind /login and the JSON-LD carries no direct posting link, so any
-  // other source (a direct ATS OR a normal aggregator) wins over a GameDevJobs mirror.
+  // path hides behind /login and the JSON-LD carries no direct posting link (probed —
+  // see the NO DIRECT APPLY LINK note above), so any other source (a direct ATS OR a
+  // normal aggregator) wins over a GameDevJobs mirror.
   aggregatorHosts: ['gamedevjobs.com'],
   lastResort: true,
 

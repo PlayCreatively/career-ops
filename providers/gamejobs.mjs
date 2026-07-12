@@ -52,6 +52,21 @@ import { classifyLiveness } from '../liveness-core.mjs';
 // a failed/blocked/unparseable page keeps the slug-derived fields and never drops
 // the posting. Opt out entirely with `enrich: false` (fast, slug-only, single
 // request for the whole board).
+//
+// DIRECT APPLY LINK (probed 2026-07). Each LIVE posting's "Apply" button is a
+// plain anchor whose href is the studio's REAL destination — the source ATS
+// (greenhouse / lever / workable / workday / …) or the studio's own careers page.
+// It is NOT in the JSON-LD (which carries no url/sameAs/directApply); it's the
+// button in the page body. We read it during enrichment (extractApplyUrl below)
+// and surface it as `applyUrl`, which feeds snapshot dedup's Pass 0 (exact
+// apply-link identity): a GameJobs.co mirror then collapses onto its first-party
+// twin by link, not by title/company guessing. Two cases extractApplyUrl guards:
+// (1) email-only postings point the button at a Cloudflare-obfuscated
+// /cdn-cgi/l/email-protection link (a studio mailto, not an ATS) — those yield no
+// applyUrl (fail-safe: they dedup the old way); (2) some studios route the button
+// through a recruitics tracking redirect (jsv3.recruitics.com/redirect?…&rx_url=
+// <real URL>), which we UNWRAP — left wrapped, every recruitics job would share
+// one canonical key (host+path, query stripped) and Pass 0 would false-merge them.
 
 const BASE = 'https://gamejobs.co';
 const SITEMAP_URL = `${BASE}/sitemap.xml`;
@@ -104,6 +119,39 @@ function slugOf(url) {
   } catch {
     return '';
   }
+}
+
+// Pull the real destination link out of a LIVE posting page's "Apply" button. The
+// button is a plain <a> whose visible text is exactly "Apply" and whose href is the
+// studio's source ATS / careers URL (see the DIRECT APPLY LINK note at the top).
+// Returns '' when there's no usable http(s) ATS link — an email-only posting (whose
+// button href is a same-host /cdn-cgi/l/email-protection link), a relative/non-http
+// href, or a page with no Apply button. A jsv3.recruitics.com/redirect wrapper is
+// unwrapped to its `rx_url` target so every recruitics job doesn't collapse to one
+// canonical key in dedup Pass 0. Never throws. Exported for unit tests.
+export function extractApplyUrl(html) {
+  if (typeof html !== 'string' || !html) return '';
+  for (const m of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const text = m[2].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    if (text.toLowerCase() !== 'apply') continue;
+    const hrefM = m[1].match(/href=["']([^"']+)["']/i);
+    if (!hrefM) return '';
+    let u;
+    try { u = new URL(decodeEntities(hrefM[1].trim())); } catch { return ''; }
+    if (!/^https?:$/.test(u.protocol)) return '';
+    // Same-host hrefs are GameJobs.co internals (email-protection, /login, …), never
+    // a real destination.
+    if (u.hostname.replace(/^www\./, '').toLowerCase() === 'gamejobs.co') return '';
+    // Unwrap a recruitics tracking redirect to the true ATS/careers URL.
+    if (u.hostname.toLowerCase().endsWith('recruitics.com')) {
+      const rx = u.searchParams.get('rx_url');
+      if (!rx) return '';
+      try { u = new URL(rx); } catch { return ''; }
+      if (!/^https?:$/.test(u.protocol)) return '';
+    }
+    return u.toString();
+  }
+  return '';
 }
 
 // Extract every job URL from the sitemap. Job postings are the `<loc>`s that look
@@ -213,9 +261,13 @@ export default {
     if (live.result === 'expired' && (live.code === 'expired_body' || live.code === 'expired_url')) {
       return { drop: true };
     }
+    // The real destination link lives in the page's Apply button, not the JSON-LD;
+    // surface it as applyUrl for snapshot dedup Pass 0 (exact apply-link identity).
+    const applyUrl = extractApplyUrl(html);
     const ld = parseJobPostingLd(html);
-    if (!ld) return null;
+    if (!ld) return applyUrl ? { overlay: { applyUrl } } : null;
     const { description, ...overlay } = ld;
+    if (applyUrl) overlay.applyUrl = applyUrl;
     return { overlay, ...(description ? { text: description } : {}) };
   },
 };

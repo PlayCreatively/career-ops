@@ -72,6 +72,17 @@ export function parseHitmarkerResponse(json) {
         doc.jobLevel && typeof doc.jobLevel.title === 'string' && doc.jobLevel.title.trim()
           ? doc.jobLevel.title.trim()
           : '';
+      // Real destination link. Hitmarker's own `url` is its posting page; the
+      // Typesense document ALSO carries `jobApplicationUrl` — the ATS/source link
+      // the "Apply" button points at (e.g. jobs.smartrecruiters.com/…). When it's
+      // an http(s) URL we surface it as `applyUrl` so snapshot dedup can collapse
+      // this mirror onto the first-party posting we scanned directly, by exact
+      // link identity rather than title/company guessing. Email applications
+      // (jobApplicationType 'email' → a bare address in jobApplicationEmail) have
+      // no jobApplicationUrl and are simply left without one. Fail-safe: a missing
+      // or non-http value yields no applyUrl and the row dedups the old way.
+      const rawApply = typeof doc.jobApplicationUrl === 'string' ? doc.jobApplicationUrl.trim() : '';
+      const applyUrl = /^https?:\/\//i.test(rawApply) ? rawApply : '';
       return attachDetail({
         title: String(doc.title),
         url: String(doc.url),
@@ -79,6 +90,7 @@ export function parseHitmarkerResponse(json) {
         location: formatLocation(Array.isArray(doc.jobLocation) ? doc.jobLocation[0] : null),
         ...(postedDate ? { postedDate } : {}),
         ...(experienceLevel ? { experienceLevel } : {}),
+        ...(applyUrl ? { applyUrl } : {}),
       }, { text: detailText });
     });
 }

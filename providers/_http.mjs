@@ -89,6 +89,30 @@ export async function fetchText(url, opts = {}) {
   return await res.text();
 }
 
+// Resolve a SINGLE redirect hop and return its `Location` header verbatim (as the
+// server sent it — may be absolute or relative), or '' when the response is not a
+// redirect or carries no Location. Aggregator boards whose "Apply" button is an
+// internal /goto/{slug} endpoint 302-redirect the browser straight to the real
+// destination (a first-party ATS URL, or a mailto:); this reads that target in
+// one request without following the hop or downloading a body. Timeouts and
+// network errors propagate — the caller decides whether a miss is fatal.
+export async function fetchLocation(url, opts = {}) {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, headers = {} } = opts;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { 'user-agent': DEFAULT_USER_AGENT, ...headers },
+      redirect: 'manual',
+      signal: controller.signal,
+    });
+    return res.headers.get('location') || '';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Classify a fetch failure so the scanner can tell a real "miss" (we were
 // blocked/throttled and never saw this company's jobs) apart from a benign
 // outcome (genuine 404, or a successful fetch that returned 0 jobs). Returns
@@ -115,5 +139,6 @@ export function makeHttpCtx() {
     transport: 'http',
     fetchJson,
     fetchText,
+    fetchLocation,
   };
 }

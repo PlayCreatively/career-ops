@@ -430,36 +430,76 @@ export const DEFAULT_AGGREGATORS = [
 // so it stays a normal aggregator.
 export const DEFAULT_LAST_RESORT = ['gamedevjobs.com'];
 
+// Company-name aliases for dedup KEYING ONLY (never changes the displayed name).
+// Aggregators relabel employers — the same posting shows as "WB Games" on GameJobs.co
+// but "Warner Bros. Games" from the direct Workday feed — which would split a mirror
+// from its direct twin into two groups and collapse nothing. Each entry is a set of
+// names that mean the SAME employer; the first is the canonical key the rest fold to.
+//
+// This is an OPTIONAL manual escape hatch, not the primary mechanism. The dedup pass
+// derives company compatibility algorithmically (generic-word stripping + significant-
+// token subset + acronym match, see `companyCompatible` below), so common relabellings
+// like "Warner Bros. Games" ↔ "WB Games" collapse WITHOUT being listed here. Only add an
+// entry for a pair the heuristic genuinely can't derive (e.g. two names that share no
+// tokens and aren't acronyms of each other but are the same employer). Keep entries
+// high-confidence: a wrong alias silently merges two real employers. Extend via
+// portals.yml → snapshot_dedup.company_aliases (that list is ADDED to this default).
+export const DEFAULT_COMPANY_ALIASES = [];
+
 // Collapse duplicate postings in the board snapshot. The same role is sometimes
-// discovered through two sources, producing two rows with different URLs. Two
-// independent, conservative passes — neither ever merges two genuinely distinct
+// discovered through two sources, producing two rows with different URLs. Three
+// independent, conservative passes — none ever merges two genuinely distinct
 // direct postings:
 //
+//   0. Apply-link identity (highest confidence). The strongest possible signal
+//      that two rows are the same posting: they resolve to the SAME application
+//      URL. A direct ATS feed puts that URL in `url`; an aggregator that exposes
+//      the real destination carries it in `applyUrl` (e.g. Hitmarker's
+//      jobApplicationUrl → jobs.smartrecruiters.com/…). We canonicalise the
+//      resolved URL (lowercase host sans www, path sans trailing slash, keep only
+//      gh_jid) and collapse rows whose canonical form is byte-identical — no
+//      name/title guessing, effectively zero false positives. This is the durable
+//      version of Passes 1-2: when the aggregator hands us the link, the employer
+//      relabelling ("WB Games" vs "Warner Bros.") stops mattering entirely. The
+//      direct (non-aggregator) row is preferred as the survivor. Rows without a
+//      usable http(s) apply link (empty, mailto:, unparseable) get no key and
+//      fall through to Passes 1-2 untouched.
 //   1. Posting ID (high confidence). Rows with the SAME company AND the SAME ATS
 //      requisition ID are the same posting even if their location strings differ
 //      slightly; keep one. Scoping by company makes a cross-ATS ID collision
 //      effectively impossible. Aggregators are excluded here — they reassign
 //      their own IDs, so an aggregator ID would never legitimately match a real
 //      req ID.
-//   2. Title/company heuristic, AGGREGATOR-GATED, two tiers. Rows are grouped by
-//      company + a punctuation-folded title (NOT location — aggregators serve the
-//      same posting with an empty or reformatted location, so a raw-location key
-//      would never group a mirror with its direct twin). Location is used instead
-//      as a primary-city compatibility guard inside each group. Within a group:
-//        a. if a direct (non-aggregator) row exists, each aggregator mirror
-//           (Hitmarker / WorkWithIndies / GameJobs.co / GameDevJobs / …) whose
-//           primary city is compatible with a direct row is dropped;
-//        b. otherwise, among aggregator-only rows a LAST-RESORT one (GameDevJobs —
-//           login wall, no direct link) is dropped when a location-compatible
-//           normal aggregator (which links out to the source) covers the same role.
-//      Direct rows are never merged with each other, so an Epic-style pair of
-//      distinct same-title reqs is always preserved; an aggregator row in a
-//      genuinely different city, and all-normal-aggregator / all-last-resort
-//      groups, are left untouched.
+//   2. Title heuristic, AGGREGATOR-GATED, two tiers. Rows are grouped by a
+//      punctuation-folded title only (NOT location — aggregators serve the same
+//      posting with an empty or reformatted location, so a raw-location key would
+//      never group a mirror with its direct twin; and NOT company — an aggregator's
+//      relabelling of the employer, "WB Games" vs "Warner Bros. Games", would split a
+//      mirror from its direct twin). Company and location are used instead as
+//      compatibility GUARDS when deciding whether one specific row is a mirror of
+//      another. Within a title group, an aggregator row is dropped when a
+//      company-compatible AND city-compatible partner covers it:
+//        a. Tier 1 — a direct (non-aggregator) partner exists → the aggregator mirror
+//           (Hitmarker / WorkWithIndies / GameJobs.co / GameDevJobs / …) is dropped;
+//        b. Tier 2 — no direct partner, but a normal aggregator (which links out to
+//           the source) covers a LAST-RESORT row (GameDevJobs — login wall, no direct
+//           link) → the last-resort row is dropped.
+//      Direct rows are never dropped, so an Epic-style pair of distinct same-title
+//      reqs is always preserved; an aggregator row for a different employer or in a
+//      genuinely different city, and all-normal-aggregator / all-last-resort groups,
+//      are left untouched. Because grouping is title-only, a single group may hold
+//      rows for several employers; the per-row company guard keeps them separate.
 //
-// The aggregator + last-resort host lists are configurable (portals.yml →
-// snapshot_dedup.aggregators / .last_resort).
-export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastResort = DEFAULT_LAST_RESORT } = {}) {
+// Company compatibility is DERIVED, not enumerated: names are punctuation-folded, then
+// generic corporate/industry words ("Inc", "Games", "Studios", …) are stripped and the
+// remaining significant tokens are compared by subset or acronym ("WB" == initials of
+// "Warner Bros"). An optional alias table (DEFAULT_COMPANY_ALIASES + portals.yml →
+// snapshot_dedup.company_aliases) is consulted first as a manual override for pairs the
+// heuristic can't derive. Guards only affect grouping, never the displayed name.
+//
+// The aggregator + last-resort host lists and the alias table are configurable
+// (portals.yml → snapshot_dedup.aggregators / .last_resort / .company_aliases).
+export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastResort = DEFAULT_LAST_RESORT, companyAliases = DEFAULT_COMPANY_ALIASES } = {}) {
   const aggs = aggregators.map(a => String(a).toLowerCase());
   // Last-resort hosts are always treated as aggregators too (so a direct posting
   // still wins over them), even if the caller left them out of `aggregators`.
@@ -472,6 +512,91 @@ export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastRe
   const isAgg = (u) => { const h = hostOf(u); return matchHost(aggs, h) || matchHost(lasts, h); };
   const isLastResort = (u) => matchHost(lasts, hostOf(u));
   const norm = (s) => (s || '').toLowerCase();
+  // Company key: lowercase + punctuation-fold ("Warner Bros. Games" == "Warner Bros
+  // Games"), then map through the alias table so abbreviations ("WB Games") collapse
+  // onto the canonical employer. Display names are never touched — this only affects
+  // how rows are grouped for dedup. Folding alone is always safe (it only removes
+  // punctuation); the alias table is the curated, high-confidence part.
+  const foldCompany = (s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const aliasMap = new Map();
+  for (const group of companyAliases || []) {
+    if (!Array.isArray(group) || group.length < 2) continue;
+    const canonical = foldCompany(group[0]);
+    if (!canonical) continue;
+    for (const name of group) { const f = foldCompany(name); if (f) aliasMap.set(f, canonical); }
+  }
+  const canonCompany = (s) => { const f = foldCompany(s); return aliasMap.get(f) || f; };
+
+  // Derived company compatibility (used only as a merge guard in Pass 2). Two names
+  // are compatible when they plausibly denote the same employer WITHOUT relying on a
+  // curated list. Strip generic corporate/industry words, then compare the remaining
+  // significant tokens: equal/subset ("Riot" ⊆ "Riot Montreal") or acronym ("wb" ==
+  // initials of "warner bros"). Fail-safe: unrelated names ("Ubisoft" vs "Riot") share
+  // no significant token and aren't acronyms, so they never merge. The optional alias
+  // table wins first, for the rare pair the heuristic genuinely can't derive.
+  const GENERIC_CO = new Set([
+    'inc', 'llc', 'ltd', 'ltda', 'gmbh', 'co', 'corp', 'corporation', 'company',
+    'the', 'games', 'game', 'studio', 'studios', 'interactive', 'entertainment',
+    'media', 'group', 'holdings', 'productions', 'sarl', 'sa', 'bv', 'ab', 'oy',
+    'as', 'plc', 'limited', 'sl', 'srl', 'kk', 'pte', 'pty', 'ug', 'gaming',
+  ]);
+  const coreTokens = (s) => foldCompany(s).split(' ').filter(t => t && !GENERIC_CO.has(t));
+  const initialsOf = (toks) => toks.map(t => t[0]).join('');
+  const companyCompatible = (a, b) => {
+    const fa = foldCompany(a), fb = foldCompany(b);
+    if (!fa || !fb) return false;
+    if (canonCompany(a) === canonCompany(b)) return true; // exact fold or manual alias
+    const ca = coreTokens(a), cb = coreTokens(b);
+    if (!ca.length || !cb.length) return fa === fb; // all-generic name → require exact fold
+    const sa = new Set(ca), sb = new Set(cb);
+    const subset = (x, y) => [...x].every(t => y.has(t));
+    if (subset(sa, sb) || subset(sb, sa)) return true; // significant-token subset
+    if (ca.length === 1 && ca[0] === initialsOf(cb)) return true; // acronym, either dir
+    if (cb.length === 1 && cb[0] === initialsOf(ca)) return true;
+    return false;
+  };
+
+  // ── Pass 0: exact canonical apply-link identity (highest confidence). ─────
+  // Resolve each row's application URL — `applyUrl` when a provider surfaced the
+  // real destination, else the row's own `url` (already the ATS link for direct
+  // feeds). Canonicalise and collapse byte-identical twins; a direct row wins
+  // over an aggregator mirror. Non-http(s) targets (mailto:, unparseable) get no
+  // key and pass through.
+  const resolvedApplyUrl = (j) =>
+    (typeof j.applyUrl === 'string' && j.applyUrl.trim()) ? j.applyUrl.trim() : j.url;
+  const canonLinkKey = (u) => {
+    let x;
+    try { x = new URL(u); } catch { return null; }
+    if (!/^https?:$/.test(x.protocol)) return null;
+    const host = x.hostname.replace(/^www\./, '').toLowerCase();
+    const path = x.pathname.replace(/\/+$/, '').toLowerCase();
+    const gh = x.searchParams.get('gh_jid');
+    return host + path + (gh ? `?gh_jid=${gh}` : '');
+  };
+  const linkCount = new Map();
+  for (const j of jobs) {
+    const k = canonLinkKey(resolvedApplyUrl(j));
+    if (k) linkCount.set(k, (linkCount.get(k) || 0) + 1);
+  }
+  const linkWinner = new Map(); // canonical link key → the row we keep
+  for (const j of jobs) {
+    const k = canonLinkKey(resolvedApplyUrl(j));
+    if (!k || linkCount.get(k) < 2) continue;
+    const cur = linkWinner.get(k);
+    if (!cur) { linkWinner.set(k, j); continue; }
+    // Prefer a direct (non-aggregator) survivor; otherwise keep the first seen.
+    if (isAgg(cur.url) && !isAgg(j.url)) linkWinner.set(k, j);
+  }
+  let collapsedByLink = 0;
+  const stage0 = [];
+  for (const j of jobs) {
+    const k = canonLinkKey(resolvedApplyUrl(j));
+    if (k && linkCount.get(k) >= 2 && linkWinner.get(k) !== j) {
+      collapsedByLink++; // a byte-identical apply-link twin already wins
+      continue;
+    }
+    stage0.push(j);
+  }
 
   // ── Pass 1: company + posting ID. Aggregators get no ID (null) so they never
   //    participate here and fall through to the gated heuristic below. ────────
@@ -479,16 +604,16 @@ export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastRe
   const idKey = (j) => {
     if (isAgg(j.url)) return null;
     const id = postingId(j.url);
-    return id == null ? null : `${norm(j.company)}::${id}`;
+    return id == null ? null : `${canonCompany(j.company)}::${id}`;
   };
-  for (const j of jobs) {
+  for (const j of stage0) {
     const k = idKey(j);
     if (k) idCount.set(k, (idCount.get(k) || 0) + 1);
   }
   let collapsedById = 0;
   const idSeen = new Set();
   const stage1 = [];
-  for (const j of jobs) {
+  for (const j of stage0) {
     const k = idKey(j);
     if (k && idCount.get(k) > 1) {
       if (idSeen.has(k)) { collapsedById++; continue; } // keep first, drop later mirrors
@@ -517,7 +642,7 @@ export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastRe
     const pa = primaryLoc(a), pb = primaryLoc(b);
     return !pa || !pb || pa === pb;
   };
-  const keyOf = (j) => `${norm(j.company)}::${normTitle(j.title)}`;
+  const keyOf = (j) => normTitle(j.title);
   const groups = new Map();
   const order = [];
   for (const j of stage1) {
@@ -529,41 +654,35 @@ export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastRe
   let collapsedByHeuristic = 0;
   for (const k of order) {
     const arr = groups.get(k);
+    // Grouping is title-only, so one group may hold rows for several employers. Both
+    // tiers require a company-compatible partner, which keeps distinct employers apart
+    // even when they share a title.
     const directs = arr.filter(j => !isAgg(j.url));
+    const normalAggs = arr.filter(j => isAgg(j.url) && !isLastResort(j.url));
     const keep = new Set(arr);
-    if (directs.length) {
-      // Tier 1: a direct (first-party) posting exists → drop each aggregator mirror
-      // whose primary city is compatible with SOME direct. Directs are never merged
-      // with each other (Epic guard); an aggregator row in a genuinely different
-      // city is kept (it's a distinct posting, not a mirror).
-      for (const j of arr) {
-        if (!isAgg(j.url)) continue;
-        if (directs.some(d => locCompatible(d.location, j.location))) {
-          keep.delete(j);
-          collapsedByHeuristic++;
-        }
+    for (const j of arr) {
+      if (!isAgg(j.url)) continue; // never drop a direct posting (Epic guard)
+      // Tier 1: a company- and city-compatible direct twin exists → this is a mirror.
+      if (directs.some(d => companyCompatible(d.company, j.company) && locCompatible(d.location, j.location))) {
+        keep.delete(j);
+        collapsedByHeuristic++;
+        continue;
       }
-    } else {
-      // No direct posting. Tier 2: among aggregator-only rows, a normal aggregator
-      // (which links out to the source) beats a last-resort one (login wall / no
-      // direct link) → drop each last-resort mirror covered by a location-compatible
-      // normal aggregator. All-normal or all-last-resort groups are left untouched.
-      const normalAggs = arr.filter(j => !isLastResort(j.url));
-      if (normalAggs.length) {
-        for (const j of arr) {
-          if (!isLastResort(j.url)) continue;
-          if (normalAggs.some(n => locCompatible(n.location, j.location))) {
-            keep.delete(j);
-            collapsedByHeuristic++;
-          }
-        }
+      // Tier 2: no direct twin, but j is a last-resort aggregator (login wall / no
+      // direct link) covered by a company- and city-compatible normal aggregator
+      // (which links out to the source) → drop the last-resort row.
+      if (isLastResort(j.url) &&
+          normalAggs.some(n => n !== j && companyCompatible(n.company, j.company) && locCompatible(n.location, j.location))) {
+        keep.delete(j);
+        collapsedByHeuristic++;
       }
     }
     result.push(...arr.filter(j => keep.has(j)));
   }
   return {
     jobs: result,
-    collapsed: collapsedById + collapsedByHeuristic,
+    collapsed: collapsedByLink + collapsedById + collapsedByHeuristic,
+    collapsedByLink,
     collapsedById,
     collapsedByHeuristic,
   };
@@ -1230,6 +1349,13 @@ async function main() {
               url: job.url,
               company: job.company,
               location: job.location || '',
+              // Real application/destination URL when an aggregator exposed it
+              // (e.g. Hitmarker's jobApplicationUrl). Lets snapshot dedup collapse
+              // an aggregator mirror onto its direct twin by exact link identity
+              // (Pass 0), and gives the board a direct apply link. Absent for
+              // direct feeds (their `url` already IS the apply link) and for
+              // aggregators that only route through a click. See dedupeSnapshot.
+              ...(job.applyUrl ? { applyUrl: job.applyUrl } : {}),
               // Optional provider metadata — only set when known, so jobs.json
               // stays lean. postedDate is ISO-8601; workMode is the tri-state
               // remote/hybrid/onsite; department is a label; experienceLevel is a
@@ -1354,13 +1480,17 @@ async function main() {
     const dedupCfg = config.snapshot_dedup || {};
     let snapJobs = snapshot;
     if (dedupCfg.enabled !== false) {
-      const { jobs: deduped, collapsed, collapsedById, collapsedByHeuristic } = dedupeSnapshot(snapshot, {
+      // Config aliases EXTEND the shipped defaults (not replace) so a user adding
+      // one pair keeps the built-in high-confidence ones.
+      const cfgAliases = dedupCfg.company_aliases || dedupCfg.companyAliases || [];
+      const { jobs: deduped, collapsed, collapsedByLink, collapsedById, collapsedByHeuristic } = dedupeSnapshot(snapshot, {
         aggregators: dedupCfg.aggregators || DEFAULT_AGGREGATORS,
         lastResort: dedupCfg.last_resort || dedupCfg.lastResort || DEFAULT_LAST_RESORT,
+        companyAliases: [...DEFAULT_COMPANY_ALIASES, ...(Array.isArray(cfgAliases) ? cfgAliases : [])],
       });
       snapJobs = deduped;
       if (collapsed > 0) {
-        console.log(`Dedup: collapsed ${collapsed} duplicate(s) — ${collapsedById} by posting ID, ${collapsedByHeuristic} aggregator mirror(s)`);
+        console.log(`Dedup: collapsed ${collapsed} duplicate(s) — ${collapsedByLink} by apply link, ${collapsedById} by posting ID, ${collapsedByHeuristic} aggregator mirror(s)`);
       }
     }
     // Optional weekly staleness recheck: curl-recheck the aged tail and drop only

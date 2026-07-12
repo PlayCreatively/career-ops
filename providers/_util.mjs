@@ -136,15 +136,15 @@ export function slugifyTitle(title) {
  */
 export function stripHtml(html) {
   if (typeof html !== 'string' || !html) return '';
-  return html
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&#39;|&apos;/gi, "'")
-    .replace(/&quot;/gi, '"')
+  // Strip tags first, then hand the plain text to decodeEntities — it covers the
+  // full named + numeric set (`&#43;` → '+', hex, the double-escaped `&amp;…` case),
+  // so a Workday feed that writes "8&#43; years" / "C&#43;&#43;" decodes cleanly and
+  // the experience/skills enrichers see real "+" instead of a raw entity.
+  return decodeEntities(
+    html
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<[^>]+>/g, ' '),
+  )
     .replace(/\s+/g, ' ')
     .trim();
 }
