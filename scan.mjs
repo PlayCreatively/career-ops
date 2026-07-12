@@ -430,6 +430,78 @@ export const DEFAULT_AGGREGATORS = [
 // so it stays a normal aggregator.
 export const DEFAULT_LAST_RESORT = ['gamedevjobs.com'];
 
+// Country detection for the Pass-0 country-union step (below). Aggregators emit
+// one mirror row PER office when a req spans countries; collapsing them onto a
+// single survivor would hide a country the user could actually apply from
+// (Epic posts Montreal 🇨🇦 *and* Cary NC 🇺🇸 as one req). We preserve the union.
+//
+// The name→ISO-code table is NOT hand-kept — it's built from the runtime's own
+// CLDR data via `Intl.DisplayNames`, so every ISO country is covered, correctly
+// spelled, and the set tracks the platform (a new country appears for free). Over
+// it we lay a SMALL overlay of the informal spellings that show up in job feeds
+// but aren't the CLDR canonical name (USA, England/Scotland/Wales → GB, Deutschland,
+// Brasil, Hong Kong, …). Names that collide with a US state ("Georgia") are dropped
+// so the state can't be misread as the country.
+//
+// Two rules keep it one-directional — under-detect, never fabricate: only whole
+// SPELLED-OUT names count (bare 2-letter codes are refused, because US "City, ST"
+// strings collide with ISO codes — "San Francisco, CA" is California, not Canada,
+// "Indianapolis, IN" is Indiana, not India); and the union step only ever ADDS a
+// country the data spells out, so at worst we miss one and behave like today.
+const _regionNames = (() => {
+  try { return new Intl.DisplayNames(['en'], { type: 'region' }); }
+  catch { return null; }
+})();
+// A couple of CLDR names read awkwardly when appended; override for display only.
+const COUNTRY_DISPLAY_OVERRIDE = { HK: 'Hong Kong', GB: 'United Kingdom' };
+export function countryDisplay(code) {
+  if (COUNTRY_DISPLAY_OVERRIDE[code]) return COUNTRY_DISPLAY_OVERRIDE[code];
+  if (_regionNames) { try { const n = _regionNames.of(code); if (n && n !== code) return n; } catch { /* fall through */ } }
+  return code;
+}
+// Informal spellings that appear in feeds but aren't the CLDR canonical name.
+const COUNTRY_ALIAS_OVERLAY = {
+  'usa': 'US', 'u.s.a.': 'US', 'u.s.': 'US', 'america': 'US', 'united states of america': 'US',
+  'uk': 'GB', 'u.k.': 'GB', 'england': 'GB', 'scotland': 'GB', 'wales': 'GB', 'northern ireland': 'GB', 'britain': 'GB', 'great britain': 'GB',
+  'uae': 'AE', 'holland': 'NL', 'the netherlands': 'NL', 'deutschland': 'DE', 'españa': 'ES',
+  'brasil': 'BR', 'méxico': 'MX', 'turkiye': 'TR', 'türkiye': 'TR', 'hong kong': 'HK',
+  'south korea': 'KR', 'republic of korea': 'KR', 'czech republic': 'CZ',
+};
+// name (lowercased) → ISO alpha-2 code. CLDR base + overlay, ambiguous names removed.
+const COUNTRY_NAME_TO_CODE = (() => {
+  const map = new Map();
+  if (_regionNames) {
+    for (let a = 65; a <= 90; a++) for (let b = 65; b <= 90; b++) {
+      const code = String.fromCharCode(a, b);
+      let name;
+      try { name = _regionNames.of(code); } catch { continue; }
+      if (!name || name === code) continue; // not a real ISO region
+      map.set(name.toLowerCase(), code);
+    }
+  }
+  for (const [name, code] of Object.entries(COUNTRY_ALIAS_OVERLAY)) map.set(name, code);
+  for (const ambiguous of ['georgia']) map.delete(ambiguous); // US state ⇄ country clash
+  return map;
+})();
+
+// Ordered list of ISO country codes named by a freeform location string. Two
+// matchers, both conservative: exact whole-segment hits (comma/slash/paren/dash
+// separated) and multi-word substring hits (catches a country buried mid string,
+// e.g. "...Country: United States of America"). Order = first appearance.
+export function detectCountries(loc) {
+  const out = [];
+  if (!loc || typeof loc !== 'string') return out;
+  const low = loc.toLowerCase();
+  const add = (c) => { if (c && !out.includes(c)) out.push(c); };
+  for (const p of low.split(/[,;/()\-–—]| at | in /g).map(s => s.trim()).filter(Boolean)) {
+    if (COUNTRY_NAME_TO_CODE.has(p)) add(COUNTRY_NAME_TO_CODE.get(p));
+  }
+  for (const [name, code] of COUNTRY_NAME_TO_CODE) {
+    if (name.includes(' ') && low.includes(name)) add(code);
+  }
+  return out;
+}
+
 // Company-name aliases for dedup KEYING ONLY (never changes the displayed name).
 // Aggregators relabel employers — the same posting shows as "WB Games" on GameJobs.co
 // but "Warner Bros. Games" from the direct Workday feed — which would split a mirror
@@ -587,6 +659,40 @@ export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastRe
     // Prefer a direct (non-aggregator) survivor; otherwise keep the first seen.
     if (isAgg(cur.url) && !isAgg(j.url)) linkWinner.set(k, j);
   }
+  // Country union: a group's mirrors may be the SAME role opened in different
+  // countries (one apply link, per-office rows). Collapsing to one survivor would
+  // hide a country the user can apply from. So when a dropped mirror names a
+  // country the survivor's location doesn't, preserve it by appending the country.
+  // Guard: only when the survivor itself resolves to a known country — if we can't
+  // even place the survivor we don't risk appending. This only ever ADDS a country
+  // the data spells out; it never removes or invents one.
+  const linkGroups = new Map();
+  for (const j of jobs) {
+    const k = canonLinkKey(resolvedApplyUrl(j));
+    if (!k || linkCount.get(k) < 2) continue;
+    if (!linkGroups.has(k)) linkGroups.set(k, []);
+    linkGroups.get(k).push(j);
+  }
+  const augmentedLoc = new Map(); // survivor row → location string with preserved countries
+  for (const [k, arr] of linkGroups) {
+    const survivor = linkWinner.get(k);
+    if (!survivor) continue;
+    const survC = detectCountries(survivor.location);
+    if (!survC.length) continue; // survivor country unknown → don't risk it
+    const survSet = new Set(survC);
+    const extras = [];
+    for (const j of arr) {
+      if (j === survivor) continue;
+      for (const c of detectCountries(j.location)) {
+        if (!survSet.has(c) && !extras.includes(c)) extras.push(c);
+      }
+    }
+    if (extras.length) {
+      const names = extras.map(c => countryDisplay(c)).join(' / ');
+      augmentedLoc.set(survivor, `${survivor.location} / ${names}`);
+    }
+  }
+
   let collapsedByLink = 0;
   const stage0 = [];
   for (const j of jobs) {
@@ -595,6 +701,7 @@ export function dedupeSnapshot(jobs, { aggregators = DEFAULT_AGGREGATORS, lastRe
       collapsedByLink++; // a byte-identical apply-link twin already wins
       continue;
     }
+    if (augmentedLoc.has(j)) j.location = augmentedLoc.get(j);
     stage0.push(j);
   }
 

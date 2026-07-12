@@ -2058,6 +2058,50 @@ try {
   const { collapsedByLink: ml } = dedupeSnapshot(mailtoCase, { aggregators: [], lastResort: [] });
   if (ml === 0) pass('pass 0: mailto: apply targets get no link key and are never merged');
   else fail(`mailto apply target must not produce a link key, got byLink ${ml}`);
+
+  // Country union: a req mirrored across countries on one apply link must not lose
+  // a country when it collapses. Epic-style Canada+US: survivor keeps its own
+  // location and gains the dropped country, spelled out cleanly.
+  const crossCountry = [
+    { title: 'Gameplay Programmer', company: 'Epic Games', location: 'Montreal, Quebec, Canada', url: 'https://hitmarker.net/jobs/epic-gameplay-1', applyUrl: 'https://epicgames.com/careers/jobs/12345' },
+    { title: 'Gameplay Programmer', company: 'Epic Games', location: 'Cary, North Carolina, United States', url: 'https://gamejobs.co/epic-gameplay', applyUrl: 'https://epicgames.com/careers/jobs/12345' },
+  ];
+  const { jobs: ccOut, collapsedByLink: ccl } = dedupeSnapshot(crossCountry);
+  if (ccl === 1 && ccOut.length === 1 && /Canada/.test(ccOut[0].location) && /United States/.test(ccOut[0].location)) {
+    pass('pass 0: cross-country mirror collapses but PRESERVES both countries on the survivor');
+  } else {
+    fail(`cross-country union failed: got ${ccOut.length} row(s), location "${ccOut[0] && ccOut[0].location}" (byLink ${ccl})`);
+  }
+
+  // Two US cities on one apply link must NOT invent a second country — same-country
+  // collapse stays a single location, no bogus "/ ..." appended. Guards the
+  // "City, ST" state-code trap (CA=California, not Canada).
+  const sameCountry = [
+    { title: 'Tools Engineer', company: 'Studio Q', location: 'San Francisco, CA', url: 'https://hitmarker.net/jobs/q-tools', applyUrl: 'https://boards.greenhouse.io/studioq/jobs/9001' },
+    { title: 'Tools Engineer', company: 'Studio Q', location: 'Austin, TX', url: 'https://gamejobs.co/q-tools', applyUrl: 'https://boards.greenhouse.io/studioq/jobs/9001' },
+  ];
+  const { jobs: scOut } = dedupeSnapshot(sameCountry);
+  if (scOut.length === 1 && !scOut[0].location.includes(' / ')) {
+    pass('pass 0: same-country cities collapse without inventing a country (state-code trap)');
+  } else {
+    fail(`same-country collapse should not append a country, got location "${scOut[0] && scOut[0].location}"`);
+  }
+
+  // detectCountries: spelled-out names resolve; bare 2-letter state codes do not.
+  const { detectCountries } = await import(pathToFileURL(join(ROOT, 'scan.mjs')).href);
+  const okNames = detectCountries('Cary, North Carolina, United States').includes('US')
+    && detectCountries('London, England, United Kingdom').includes('GB')
+    && detectCountries('Brookvale, Australia').includes('AU');
+  const noBareCode = detectCountries('San Francisco, CA').length === 0
+    && detectCountries('Indianapolis, IN').length === 0;
+  // "Georgia" is a US state AND a country → dropped from the table so the state
+  // is never misread as the country.
+  const noGeorgiaTrap = detectCountries('Atlanta, Georgia, United States').join(',') === 'US';
+  if (okNames && noBareCode && noGeorgiaTrap) {
+    pass('detectCountries: CLDR names map; bare state codes (CA/IN) + Georgia-state trap refused');
+  } else {
+    fail(`detectCountries mismatch: names=${okNames} noBareCode=${noBareCode} noGeorgia=${noGeorgiaTrap}`);
+  }
 } catch (e) {
   fail(`snapshot dedup tests crashed: ${e.message}`);
 }
