@@ -1092,6 +1092,10 @@ function prep(jobs) {
       // title/company/location are read directly by Rank.matchGroup (via
       // fieldText); _search backs the free-text box; _mem caches matches.
       title: j.title, url: j.url, company: j.company, location: loc,
+      // Direct apply destination for aggregator rows (studio ATS/careers page).
+      // Carried through so applyHref() can point the title link straight there
+      // instead of the aggregator; identity/status/dedup still key on url.
+      applyUrl: j.applyUrl || "",
       companyUrl: j.companyUrl || "",
       // Optional provider metadata (see providers/_types.js). postedDate is an
       // ISO string; _posted caches its epoch ms (0 when absent) for O(1) sort.
@@ -1475,7 +1479,7 @@ function render() {
     tr.innerHTML =
       '<td class="fit" style="color:' + fitColor(j._final) + '">' + acts + '<span class="fitval">' + j._final.toFixed(2) + '</span></td>' +
       '<td class="co">' + coCell + '</td>' +
-      '<td class="role"><a href="' + esc(j.url) + '" target="_blank" rel="noopener" draggable="false">' + highlightCell(j.title, "title", j) + '</a>' + expChip + sponsorChip + expReqChip + deptLine + '</td>' +
+      '<td class="role"><a href="' + esc(applyHref(j)) + '" target="_blank" rel="noopener" draggable="false">' + highlightCell(j.title, "title", j) + '</a>' + expChip + sponsorChip + expReqChip + deptLine + '</td>' +
       '<td class="loc">' + locCell + '</td>' +
       '<td class="tags"><div class="tagwrap">' + tags + '</div></td>' +
       '<td class="posted">' + postedCell(j.postedDate) + '</td>';
@@ -1538,7 +1542,7 @@ function buildRankedMd(list) {
       });
     });
     var title = mdCell(j.title).replace(/[\[\]]/g, "\\$&");
-    var role = j.url ? "[" + title + "](<" + String(j.url).trim() + ">)" : title;
+    var role = j.url ? "[" + title + "](<" + String(applyHref(j)).trim() + ">)" : title;
     out.push("| " + (i + 1) + " | " + (j._final != null ? j._final : fitOf(j)).toFixed(3) +
       " | " + mdCell(j.company) + " | " + role + " | " + (mdCell(j.location) || "—") +
       " | " + mdCell(tags.join(", ")) + " |");
@@ -1562,6 +1566,17 @@ function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
   });
+}
+
+// The href a job's title should link to. Prefer the direct apply destination
+// (applyUrl): for an aggregator row this bypasses the middleman board and sends
+// the click straight to the studio's own ATS/careers page. Only http(s) targets
+// qualify — a mailto: never becomes applyUrl upstream, but we guard anyway so an
+// email link never sneaks into an href. Identity, status tracking and dedup all
+// still key on j.url, which is left untouched.
+function applyHref(j) {
+  var a = j && j.applyUrl;
+  return (typeof a === "string" && /^https?:\/\//i.test(a)) ? a : (j ? j.url : "");
 }
 
 // ── Unsaved-changes diff (localhost "Save to portals.yml") ────────────────────
