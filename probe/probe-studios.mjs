@@ -49,6 +49,9 @@
 //   ... --no-timeout                              # run until EXHAUSTIVELY resolved (no cap) — for
 //                                                 #   the final slow drain once a throttle clears
 //   ... --reprobe-all                             # ignore the ledger; fresh full probe of every studio
+//   ... --reject "Bloom=lever"                    # mark a reviewed false positive (repeatable): that
+//                                                 #   namesake slug never re-probes/re-surfaces, but the
+//                                                 #   studio stays open on every other ATS. Ledger-only.
 //
 // Progressive draining (data/probe-state.tsv ledger): each run records, per
 // studio, which ATSes were definitively CLEARED (cleanly missed) or HIT plus a
@@ -266,21 +269,24 @@ export function loadLedger(file = LEDGER_PATH) {
   if (!existsSync(file)) return m;
   for (const line of readFileSync(file, 'utf8').split('\n')) {
     const t = line.trimEnd(); if (!t || t.startsWith('#')) continue;
-    const [key, name, version, hit, missed, last, conf] = t.split('\t');
+    const [key, name, version, hit, missed, last, conf, rejected] = t.split('\t');
     if (!key) continue;
-    m.set(key, { name: name || '', version: Number(version) || 0, hit: hit || '', hitConf: conf || '', missed: new Set((missed || '').split(',').filter(Boolean)), last: last || '' });
+    m.set(key, { name: name || '', version: Number(version) || 0, hit: hit || '', hitConf: conf || '', missed: new Set((missed || '').split(',').filter(Boolean)), last: last || '', rejected: new Set((rejected || '').split(',').filter(Boolean)) });
   }
   return m;
 }
 function writeLedger(m, file = LEDGER_PATH) {
   const rows = [
     '# probe-state ledger — per-studio ATS coverage so re-runs skip already-cleared work.',
-    '# Written by probe-studios.mjs. name_norm and missed_ats use provider ids.',
+    '# Written by probe-studios.mjs. name_norm, missed_ats and rejected_ats use provider ids.',
     '# hit_confidence: high|medium = trusted win, verify = namesake risk (needs review), empty = legacy.',
-    '# name_norm\tname\tscan_version\thit_ats\tmissed_ats(csv)\tlast_probe\thit_confidence',
+    '# rejected_ats: ATSes whose hit a human reviewed and rejected as a namesake/false positive.',
+    '#   Never re-probed and never re-surfaced, but the studio stays OPEN on every other ATS.',
+    '#   Durable — a scan-version bump wipes missed_ats but PRESERVES rejected_ats.',
+    '# name_norm\tname\tscan_version\thit_ats\tmissed_ats(csv)\tlast_probe\thit_confidence\trejected_ats(csv)',
   ];
   for (const [key, v] of [...m.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
-    rows.push([key, v.name, v.version, v.hit, [...v.missed].sort().join(','), v.last, v.hitConf || ''].join('\t'));
+    rows.push([key, v.name, v.version, v.hit, [...v.missed].sort().join(','), v.last, v.hitConf || '', [...(v.rejected || [])].sort().join(',')].join('\t'));
   }
   writeFileSync(file, rows.join('\n') + '\n');
 }
@@ -289,19 +295,24 @@ function writeLedger(m, file = LEDGER_PATH) {
 // An empty Set = nothing open (fully cleared / already hit) → caller skips it.
 export function ledgerOpen(led, key, providerIds) {
   const e = led.get(key);
-  if (!e || e.version < SCAN_VERSION) return null;     // never probed at this version → all open
+  if (!e) return null;                                  // never probed → all open
+  const rejected = e.rejected || new Set();
+  // A scan-version bump invalidates stale misses (re-probe everything → null) — but
+  // a human-reviewed rejection is a durable fact, so if any exist, return the
+  // probe-all set minus those; with none, keep the plain null "probe-all" signal.
+  if (e.version < SCAN_VERSION) return rejected.size ? new Set(providerIds.filter(id => !rejected.has(id))) : null;
   if (e.hit && TRUSTED_TIERS.has(e.hitConf)) return new Set(); // trusted hit → resolved, skip
   // A verify/legacy-tier hit is NOT a confirmed win (namesake risk): keep the
   // studio OPEN so it stays in the needs-review bucket on every run until a human
-  // resolves it (adds the real careers_url to studios.yml, or confirms it's junk).
-  return new Set(providerIds.filter(id => !e.missed.has(id)));
+  // resolves it (adds the real careers_url to studios.yml, or rejects it as junk).
+  return new Set(providerIds.filter(id => !e.missed.has(id) && !rejected.has(id)));
 }
 // Fold one studio's result into the ledger: union the newly-cleared ATSes onto
 // what we already knew (reset first if the prior record predates SCAN_VERSION).
 // A hit also records the confidence tier the probe computed so re-runs and
 // downstream readers can tell a trusted win from a namesake-risk match.
 export function mergeLedger(led, key, name, result) {
-  const prev = led.get(key) || { version: 0, hit: '', hitConf: '', missed: new Set() };
+  const prev = led.get(key) || { version: 0, hit: '', hitConf: '', missed: new Set(), rejected: new Set() };
   const base = prev.version >= SCAN_VERSION ? prev.missed : new Set(); // version bump wipes stale misses
   const missed = new Set(base);
   for (const id of (result.missedAts || [])) missed.add(id);
@@ -309,7 +320,37 @@ export function mergeLedger(led, key, name, result) {
   // On a fresh hit, store its tier; otherwise carry the prior tier alongside the
   // prior hit (a no-hit pass must not blank an earlier hit's confidence).
   const hitConf = result.ats ? (result.confidence || '') : (prev.hitConf || '');
-  led.set(key, { name, version: SCAN_VERSION, hit, hitConf, missed, last: today() });
+  led.set(key, { name, version: SCAN_VERSION, hit, hitConf, missed, last: today(), rejected: prev.rejected || new Set() });
+}
+// Record a human-reviewed false positive: the studio is NOT the company on this
+// ATS's board (a namesake). Drops the hit (so it leaves the needs-review bucket)
+// and files the ATS under rejected_ats so it never re-probes or re-surfaces —
+// while every OTHER ATS stays open, so a real board can still be found later.
+// Version is stamped current so a stale row's rejection takes effect immediately.
+export function rejectHit(led, name, ats) {
+  const key = norm(name);
+  const prev = led.get(key) || { name, version: 0, hit: '', hitConf: '', missed: new Set(), rejected: new Set() };
+  const missed = prev.version >= SCAN_VERSION ? new Set(prev.missed) : new Set();
+  const rejected = new Set(prev.rejected || []);
+  rejected.add(ats);
+  // Clearing the hit only when it WAS this ATS keeps a genuine hit on another ATS.
+  const clearHit = prev.hit === ats;
+  led.set(key, {
+    name: prev.name || name,
+    version: SCAN_VERSION,
+    hit: clearHit ? '' : prev.hit,
+    hitConf: clearHit ? '' : prev.hitConf,
+    missed, rejected, last: today(),
+  });
+  return { key, name: prev.name || name, ats, clearedHit: clearHit };
+}
+// Load → reject → persist against `file`, in one call. The single entry point the
+// dashboard and any other tool use so all reject logic stays in this module.
+export function recordReject(name, ats, file = LEDGER_PATH) {
+  const led = loadLedger(file);
+  const r = rejectHit(led, name, ats);
+  writeLedger(led, file);
+  return r;
 }
 
 // ── slug + domain generation ────────────────────────────────────────
@@ -1066,6 +1107,28 @@ async function runPool(items, worker, limit, onDone, shouldAbort) {
 async function main() {
   const tracked = loadTracked();
   let probeProviders = await loadProbeProviders(PROVIDERS_DIR);
+
+  // --reject "Studio Name=ats"  (repeatable) — record a human-reviewed false
+  // positive so future runs skip that one namesake slug. Ledger-only, no probing.
+  const rejectArgs = process.argv.reduce((acc, a, i) => (a === '--reject' && process.argv[i + 1] ? [...acc, process.argv[i + 1]] : acc), []);
+  if (rejectArgs.length) {
+    const validIds = new Set(probeProviders.map(p => p.id));
+    const led = loadLedger();
+    let n = 0;
+    for (const spec of rejectArgs) {
+      const eq = spec.lastIndexOf('=');
+      if (eq < 1) { process.stderr.write(`reject: bad spec "${spec}" (want "Name=ats")\n`); continue; }
+      const name = spec.slice(0, eq).trim();
+      const ats = spec.slice(eq + 1).trim().toLowerCase();
+      if (!validIds.has(ats)) { process.stderr.write(`reject: unknown ATS "${ats}" (known: ${[...validIds].sort().join(', ')})\n`); continue; }
+      const r = rejectHit(led, name, ats);
+      process.stderr.write(`reject: ${r.name} — ${ats} filed as false positive${r.clearedHit ? ' (cleared its hit)' : ''}. Other ATSes stay open.\n`);
+      n++;
+    }
+    if (n) writeLedger(led);
+    process.stderr.write(`reject: ${n} recorded.\n`);
+    return;
+  }
   // --ats breezy,lever  → probe only these provider id(s). Targeted re-probes of a
   // single ATS (e.g. to recheck a rate-limited run) without re-hitting all of them.
   const atsIdx = process.argv.indexOf('--ats');

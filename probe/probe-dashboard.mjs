@@ -27,6 +27,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, readdirSync, copyFileSync } from 'node:fs';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { recordReject } from './probe-studios.mjs';
 
 // This server lives in probe/, so the repo root is its parent; data + providers
 // are resolved there, while the prober it spawns sits beside it in probe/.
@@ -192,9 +193,9 @@ function parseLedger(file) {
   if (!existsSync(file)) return m;
   for (const line of readFileSync(file, 'utf8').split('\n')) {
     const t = line.trimEnd(); if (!t || t.startsWith('#')) continue;
-    const [key, name, version, hit, missed, last, conf] = t.split('\t');
+    const [key, name, version, hit, missed, last, conf, rejected] = t.split('\t');
     if (!key) continue;
-    m.set(key, { name: name || '', version: Number(version) || 0, hit: hit || '', hitConf: conf || '', missed: new Set((missed || '').split(',').filter(Boolean)), last: last || '' });
+    m.set(key, { name: name || '', version: Number(version) || 0, hit: hit || '', hitConf: conf || '', missed: new Set((missed || '').split(',').filter(Boolean)), last: last || '', rejected: new Set((rejected || '').split(',').filter(Boolean)) });
   }
   return m;
 }
@@ -203,10 +204,12 @@ function serializeLedger(m) {
     '# probe-state ledger — per-studio ATS coverage so re-runs skip already-cleared work.',
     '# Written by probe-studios.mjs / probe-dashboard.mjs (per-ATS shard merge).',
     '# hit_confidence: high|medium = trusted win, verify = namesake risk (needs review), empty = legacy.',
-    '# name_norm\tname\tscan_version\thit_ats\tmissed_ats(csv)\tlast_probe\thit_confidence',
+    '# rejected_ats: ATSes whose hit a human rejected as a namesake — never re-probed/re-surfaced,',
+    '#   durable across scan-version bumps; the studio stays open on every other ATS.',
+    '# name_norm\tname\tscan_version\thit_ats\tmissed_ats(csv)\tlast_probe\thit_confidence\trejected_ats(csv)',
   ];
   for (const [key, v] of [...m.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
-    rows.push([key, v.name, v.version, v.hit, [...v.missed].sort().join(','), v.last, v.hitConf || ''].join('\t'));
+    rows.push([key, v.name, v.version, v.hit, [...v.missed].sort().join(','), v.last, v.hitConf || '', [...(v.rejected || [])].sort().join(',')].join('\t'));
   }
   return rows.join('\n') + '\n';
 }
@@ -221,8 +224,10 @@ function mergeShardsIntoMain(instances) {
     const shard = parseLedger(inst.ledgerFile);
     for (const [key, s] of shard) {
       const prev = main.get(key);
-      if (!prev) { main.set(key, { ...s, missed: new Set(s.missed) }); touched = true; continue; }
+      if (!prev) { main.set(key, { ...s, missed: new Set(s.missed), rejected: new Set(s.rejected || []) }); touched = true; continue; }
       for (const id of s.missed) { if (!prev.missed.has(id)) { prev.missed.add(id); touched = true; } }
+      if (!prev.rejected) prev.rejected = new Set();
+      for (const id of (s.rejected || [])) { if (!prev.rejected.has(id)) { prev.rejected.add(id); touched = true; } }
       if (!prev.hit && s.hit) { prev.hit = s.hit; prev.hitConf = s.hitConf; touched = true; }
       prev.version = Math.max(prev.version, s.version);
       if (s.last > prev.last) { prev.last = s.last; touched = true; }
@@ -683,6 +688,22 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // One-click: mark a review hit as a false positive (namesake). Records it in the
+  // ledger so future runs skip that one ATS, and drops it from the pending store.
+  if (url.pathname === '/api/reject' && req.method === 'POST') {
+    const body = await readBody(req);
+    const name = (body.name || '').trim();
+    const ats = (body.ats || '').trim().toLowerCase();
+    if (!name || !ats) { sendJSON(res, 400, { error: 'name and ats required' }); return; }
+    let r;
+    try { r = recordReject(name, ats, LEDGER_FILE); }
+    catch (e) { sendJSON(res, 500, { error: String(e && e.message || e) }); return; }
+    const key = `${name.toLowerCase()}|${body.careersUrl || ''}`;
+    savePendingHits(loadPendingHits().filter((h) => pendingHitKey(h) !== key));
+    sendJSON(res, 200, { ok: true, ...r });
+    return;
+  }
+
   // Active canary sweep: ping every ATS's known-live slug NOW (startup + Refresh).
   if (url.pathname === '/api/refresh' && req.method === 'POST') {
     await runCanarySweep();
@@ -782,6 +803,7 @@ input[type=number],input[type=text],select{width:100%;background:var(--panel2);b
 .hitact{display:flex;align-items:center;gap:8px;flex:none;white-space:nowrap}
 button.mini{padding:3px 9px;font-size:11px;border-radius:5px}
 button.mini.confirm{background:var(--warn);color:#1a1205}
+button.mini.reject{background:transparent;color:var(--muted);border:1px solid var(--muted);margin-left:4px}
 .added{color:var(--ok);font-weight:600;font-size:11px}
 .dup{color:var(--muted);font-size:11px}
 a{color:var(--accent)}
@@ -1062,6 +1084,10 @@ function hitRow(x, confirm){
   else if(!x.careersUrl||!x.provider) act='<span class="dup" title="prober gave no canonical URL — add manually">— manual</span>';
   else act='<a href="'+esc(x.careersUrl)+'" target="_blank" rel="noopener">check ↗</a>'+
     '<button class="mini add'+(confirm?' confirm':'')+'" data-name="'+esc(x.name)+'" data-provider="'+esc(x.provider)+'" data-url="'+esc(x.careersUrl)+'">'+(confirm?'confirm + add':'+ add')+'</button>';
+  // Review hits get a reject button: files this ATS as a namesake false positive so
+  // it never re-surfaces, while the studio stays open on every other ATS.
+  if(confirm && !addedStudios.has(hitKey(x)))
+    act+='<button class="mini reject" data-name="'+esc(x.name)+'" data-ats="'+esc(x.ats||x.provider||'')+'" data-url="'+esc(x.careersUrl||'')+'" title="not this studio — skip this ATS in future runs">✗ not them</button>';
   return '<div class="hit">'+meta+'<span class="hitact">'+act+'</span></div>';
 }
 function renderResults(r){
@@ -1101,8 +1127,22 @@ async function onAddClick(e){
     else { btn.disabled=false; btn.textContent='+ add'; alert('Add failed: '+(j.error||'unknown')); }
   }catch(err){ btn.disabled=false; btn.textContent='+ add'; alert('Add failed: '+err.message); }
 }
+// Delegated handler for the per-hit "✗ not them" reject buttons (review panel).
+async function onRejectClick(e){
+  const btn=e.target.closest('button.reject'); if(!btn) return;
+  const name=btn.dataset.name, ats=btn.dataset.ats, careersUrl=btn.dataset.url;
+  btn.disabled=true; btn.textContent='rejecting…';
+  try{
+    const res=await fetch('/api/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,ats,careersUrl})});
+    const j=await res.json();
+    if(j.ok){ btn.closest('.hitact').innerHTML='<span class="dup">✗ rejected ('+esc(ats)+')</span>'; load(); }
+    else { btn.disabled=false; btn.textContent='✗ not them'; alert('Reject failed: '+(j.error||'unknown')); }
+  }catch(err){ btn.disabled=false; btn.textContent='✗ not them'; alert('Reject failed: '+err.message); }
+}
 $('#resultsbody').addEventListener('click', onAddClick);
 $('#pendingbody').addEventListener('click', onAddClick);
+$('#resultsbody').addEventListener('click', onRejectClick);
+$('#pendingbody').addEventListener('click', onRejectClick);
 
 function buildPreview(){
   const p=collect(); const a=['probe-studios.mjs'];

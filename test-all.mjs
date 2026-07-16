@@ -3189,6 +3189,47 @@ try {
     fail(`loadLedger back-compat wrong: ${JSON.stringify([...loaded])}`);
   }
 
+  // ── reject (human-reviewed false positive) ──
+  // rejectHit files one namesake ATS under rejected_ats: it drops the hit (leaves
+  // the review bucket) and is skipped forever, but every OTHER ATS stays open.
+  const lr = new Map();
+  ps.mergeLedger(lr, 'bloom', 'Bloom', { ats: 'lever', confidence: 'verify', missedAts: ['ashby'] });
+  const rr = ps.rejectHit(lr, 'Bloom', 'lever');
+  const rrow = lr.get('bloom');
+  const openAfterReject = ps.ledgerOpen(lr, 'bloom', ['lever', 'greenhouse', 'breezy']);
+  if (rr.clearedHit && rrow.hit === '' && rrow.hitConf === '' && rrow.rejected.has('lever') &&
+      !openAfterReject.has('lever') && openAfterReject.has('greenhouse') && openAfterReject.has('breezy')) {
+    pass('rejectHit: clears the hit, files the ATS as rejected, keeps other ATSes open');
+  } else {
+    fail(`rejectHit wrong: cleared=${rr.clearedHit} hit=${JSON.stringify(rrow.hit)} rejected=${[...rrow.rejected]} open=${[...openAfterReject]}`);
+  }
+  // A rejection outlives a scan-version bump (unlike misses); a stale row with no
+  // rejection still returns the null "probe-all" signal.
+  rrow.version = ps.SCAN_VERSION - 1;
+  const openStaleRejected = ps.ledgerOpen(lr, 'bloom', ['lever', 'greenhouse', 'breezy']);
+  const lrNone = new Map([['n', { name: 'N', version: ps.SCAN_VERSION - 1, hit: '', missed: new Set(['lever']), last: 'x', rejected: new Set() }]]);
+  const openStaleNone = ps.ledgerOpen(lrNone, 'n', ['lever', 'greenhouse']);
+  if (openStaleRejected && !openStaleRejected.has('lever') && openStaleRejected.has('greenhouse') && openStaleNone === null) {
+    pass('reject is durable across a scan-version bump; a rejection-free stale row still re-probes all');
+  } else {
+    fail(`reject durability wrong: staleRejected=${openStaleRejected && [...openStaleRejected]} staleNone=${openStaleNone}`);
+  }
+  // loadLedger round-trips the 8th rejected_ats column; a 7-col row → empty set.
+  const tmpLedR = join(mkdtempSync(join(tmpdir(), 'probe-ledger-r-')), 'state.tsv');
+  writeFileSync(tmpLedR, [
+    '# header',
+    'seven\tSeven Co\t' + ps.SCAN_VERSION + '\tlever\t\t2026-07-15\tverify',                 // 7 cols → no rejected
+    'eight\tEight Co\t' + ps.SCAN_VERSION + '\t\tashby\t2026-07-15\t\tgreenhouse,lever',      // 8 cols → rejected set
+  ].join('\n') + '\n');
+  const loadedR = ps.loadLedger(tmpLedR);
+  rmSync(dirname(tmpLedR), { recursive: true, force: true });
+  if (loadedR.get('seven')?.rejected.size === 0 &&
+      loadedR.get('eight')?.rejected.has('greenhouse') && loadedR.get('eight')?.rejected.has('lever')) {
+    pass('loadLedger: 7-col row → empty rejected set; 8-col row reads rejected_ats');
+  } else {
+    fail(`loadLedger rejected col wrong: ${JSON.stringify([...loadedR].map(([k,v])=>[k,[...v.rejected]]))}`);
+  }
+
   // --quick must NOT close a provider that has an untried domain endpoint (it
   // skips the custom-domain sweep), so a later full run still probes it. A
   // slug-only provider IS fully covered by quick and DOES close. We re-import

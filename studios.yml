@@ -7163,9 +7163,10 @@ tracked_companies:
     notes: "DGA directory · Haastrecht · ~1"
   - name: tinyBuild
     country: NL
-    status: unresolved
-    careers_url: https://tinybuild.com/
-    notes: "DGA directory · Hilversum · ~100+ · jobs: https://www.tinybuild.com/jobs"
+    provider: breezy
+    careers_url: https://tinybuild.breezy.hr
+    status: resolved
+    notes: "DGA directory · Hilversum · ~100+ · breezy board live (empty at wire time 2026-07-15, repopulates when they post). Distinctive slug, confirmed theirs."
   - name: ToastieGames Studio
     country: NL
     status: unresolved
@@ -9029,3 +9030,827 @@ tracked_companies:
     status: unresolved
     notes: "Non-game media-art / installation studio (Berlin). Careers page is a WordPress `?job_description=slug` custom setup (no standard ATS feed, ~1 open role) — needs a `recipe:` or browser pass to wire. Parked as backlog; scanned once resolved. Kept filtered so it lands off the games board when it goes live."
     enabled: false
+
+  # ── Games Denmark import (gamesdenmark.dk/work) ──
+  # Active DK studios, bulk-imported tokenlessly (import-gamesdenmark.mjs).
+  # status: unresolved → scan.mjs skips; careers_url = own domain hint for
+  # probe-studios/`resolve`. Domain from Website field, else email domain.
+  - name: 2nd Studio
+    country: DK
+    status: unresolved
+    careers_url: https://2ndstudio.dk/
+    notes: "Games Denmark directory · København S · est. 2013 · CVR 35090436"
+  - name: 5th Planet Games
+    country: DK
+    status: unresolved
+    careers_url: https://hugogames.com/
+    notes: "Games Denmark directory · København K · est. 2011 · ~4 ppl · CVR 33597142"
+  - name: A-maze
+    country: DK
+    status: unresolved
+    careers_url: https://a-maze.dk/
+    notes: "Games Denmark directory · Langeskov · est. 2022 · ~1 ppl · CVR 43650351"
+  - name: AATE VR
+    country: DK
+    status: unresolved
+    careers_url: https://aatevr.com/
+    notes: "Games Denmark directory · Aarhus C · est. 2019 · ~4 ppl · CVR 40845550"
+  - name: After Midnight Enterprises
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Aarhus C · est. 2017 · ~1 ppl · CVR 38764845"
+  - name: ALL CAPS
+    country: DK
+    status: unresolved
+    careers_url: https://allcapsgames.com/
+    notes: "Games Denmark directory · Aalborg · est. 2013 · ~5 ppl · CVR 35049967"
+  - name: Amigos 500
+    country: DK
+    status: unresolved
+    careers_url: https://amigos500.dk/
+    notes: "Games Denmark directory · Kongens Lyngby · est. 2021 · CVR 42213357"
+  - name: Amigos Entertainment
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Ballerup · est. 2024 · ~1 ppl · CVR 44602636"
+  - name: Anappgames
+    country: DK
+    status: unresolved
+    careers_url: https://anappgames.com/
+    notes: "Games Denmark directory · København N · est. 2018 · CVR 39485532"
+  - name: Anton Creative
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Viborg · est. 2020 · CVR 41302771 · email: brokkr.studios.official@gmail.com"
+  - name: Arty Farty Games
+    country: DK
+    status: unresolved
+    careers_url: https://artyfartygames.com/
+    notes: "Games Denmark directory · Odense V · est. 2019 · CVR 40360891"
+  - name: Arusio
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Beder · est. 2017 · ~2 ppl · CVR 38833103"
+  - name: Augmented Reality Arts
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København N · est. 2021 · ~1 ppl · CVR 42818666"
+  - name: Autoscopia Interactive
+    country: DK
+    status: unresolved
+    careers_url: https://forgotten-game.com/
+    notes: "Games Denmark directory · Frederiksberg · est. 2021 · ~1 ppl · CVR 42023914"
+  - name: Averagegamesstudio
+    country: DK
+    status: unresolved
+    careers_url: https://averagegamesstudio.com/
+    notes: "Games Denmark directory · Odense M · est. 2022 · CVR 43415638"
+  - name: Awesome Blade Software
+    country: DK
+    status: unresolved
+    careers_url: https://awesomeblade.com/
+    notes: "Games Denmark directory · Svenstrup J · est. 2000 · CVR 25606884"
+  - name: Bakspace Interactive
+    country: DK
+    status: unresolved
+    careers_url: https://bakspace.dk/
+    notes: "Games Denmark directory · Aarhus C · est. 2014 · CVR 35927611"
+  - name: Barrelcry
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Struer · est. 2022 · CVR 43474049"
+  - name: Battle Your Talent
+    country: DK
+    status: unresolved
+    careers_url: https://mail.dk/
+    notes: "Games Denmark directory · Roskilde · est. 2024 · ~1 ppl · CVR 44934418"
+  - name: Bedtime Digital Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Aalborg · est. 2013 · ~12 ppl · CVR 25599780"
+  - name: Biodome Games
+    country: DK
+    status: unresolved
+    careers_url: https://biodome.games/
+    notes: "Games Denmark directory · København Ø · est. 2017 · ~2 ppl · CVR 38804022"
+  - name: Bitfire Games
+    country: DK
+    provider: breezy
+    careers_url: https://bitfire-games.breezy.hr
+    status: resolved
+    notes: "Games Denmark directory · København S · est. 2022 · ~8 ppl · CVR 43735209. Probe-confirmed breezy (1 job, Copenhagen DK)."
+  - name: Black Grain
+    country: DK
+    status: unresolved
+    careers_url: https://blackgrain.dk/
+    notes: "Games Denmark directory · Frederiksberg C · est. 2014 · CVR 35611479"
+  - name: Bolverk VR Games
+    country: DK
+    status: unresolved
+    careers_url: https://bolverkgames.com/
+    notes: "Games Denmark directory · Valby · est. 2015 · ~6 ppl · CVR 37235938"
+  - name: Borg Interactive
+    country: DK
+    status: unresolved
+    careers_url: https://borginteractive.com/
+    notes: "Games Denmark directory · Lejre · est. 2012 · CVR 34427682"
+  - name: Brainglyph
+    country: DK
+    status: unresolved
+    careers_url: https://brainglyph.com/
+    notes: "Games Denmark directory · København S · est. 2025 · ~2 ppl · CVR 45363384"
+  - name: BRTL Games
+    country: DK
+    status: unresolved
+    careers_url: https://brtl.dk/
+    notes: "Games Denmark directory · Nyborg · est. 2023 · CVR 44418304"
+  - name: Cameo Games
+    country: DK
+    status: unresolved
+    careers_url: https://cameogames.net/
+    notes: "Games Denmark directory · København K · est. 2018 · ~4 ppl · CVR 40079157"
+  - name: Campfire Games
+    country: DK
+    status: unresolved
+    careers_url: https://warofrights.com/
+    notes: "Games Denmark directory · Helsinge · est. 2015 · ~2 ppl · CVR 37252840"
+  - name: Ceracon Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København SV · est. 2025 · CVR 45565548 · email: danialhyatt@gmail.com"
+  - name: Character Localization
+    country: DK
+    status: unresolved
+    careers_url: https://character.dk/
+    notes: "Games Denmark directory · København N · est. 2010 · ~12 ppl · CVR 32761178"
+  - name: Chaserace
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København Ø · est. 2013 · CVR 35417788"
+  - name: CHOP CHOP Games
+    country: DK
+    status: unresolved
+    careers_url: https://chopchopgames.dk/
+    notes: "Games Denmark directory · Aarhus C · est. 2019 · ~3 ppl · CVR 40301674"
+  - name: Chosen
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København K · est. 2024 · ~4 ppl · CVR 45081737"
+  - name: Chuckle Warriors
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Grenaa · est. 2023 · CVR 44434946 · email: andpe17@gmail.com"
+  - name: Chungi
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Glostrup · est. 2020 · ~2 ppl · CVR 41954582"
+  - name: CMP Company
+    country: DK
+    status: unresolved
+    careers_url: https://cmp-company.com/
+    notes: "Games Denmark directory · København V · est. 2016 · ~1 ppl · CVR 38021966"
+  - name: Copenhagen GAME LAB
+    country: DK
+    status: unresolved
+    careers_url: https://cphgamelab.dk/
+    notes: "Games Denmark directory · København K · est. 2014 · ~7 ppl · CVR 36419970"
+  - name: Coredumping
+    country: DK
+    status: unresolved
+    careers_url: https://coredumping.com/
+    notes: "Games Denmark directory · Korsør · est. 2014 · ~2 ppl · CVR 36395826"
+  - name: Cozy Game Studio
+    country: DK
+    provider: breezy
+    careers_url: https://cozy-game-studio.breezy.hr
+    status: resolved
+    notes: "Games Denmark directory · København N · est. 2023 · ~2 ppl · CVR 43874497. Probe-confirmed breezy (0 jobs at probe time)."
+  - name: Creasaur Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København Ø · est. 2005 · CVR 28956339"
+  - name: Creative Spark Studios V/frederik Hermund
+    country: DK
+    status: unresolved
+    careers_url: https://creativesparkstudios.com/
+    notes: "Games Denmark directory · København Ø · est. 2006 · CVR 29903107"
+  - name: Crinkle Cut Games
+    country: DK
+    status: unresolved
+    careers_url: https://crinklecutgames.com/
+    notes: "Games Denmark directory · Aalborg · est. 2024 · ~3 ppl · CVR 44654504"
+  - name: Crumana
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Samsø · est. 2024 · CVR 44941945 · email: axelcruger@gmail.com"
+  - name: Daniko
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Glostrup · est. 2016 · ~1 ppl · CVR 37921246"
+  - name: DIE GUTE Fabrik
+    country: DK
+    status: unresolved
+    careers_url: https://gutefabrik.com/
+    notes: "Games Denmark directory · København K · est. 2011 · ~1 ppl · CVR 34091552"
+  - name: Dire Prism
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Sønderborg · est. 2005 · CVR 28924704 · email: yesnielsen@gmail.com"
+  - name: Dojo Entertainment
+    country: DK
+    status: unresolved
+    careers_url: https://drinkingdojo.com/
+    notes: "Games Denmark directory · København Ø · est. 2023 · CVR 44523884"
+  - name: Dondo Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Søborg · est. 2020 · CVR 41480556"
+  - name: Drohm
+    country: DK
+    status: unresolved
+    careers_url: https://drohm.dk/
+    notes: "Games Denmark directory · Frederikssund · est. 2020 · CVR 41648716"
+  - name: DUCK AND Cover Games
+    country: DK
+    status: unresolved
+    careers_url: https://duckandcovergames.com/
+    notes: "Games Denmark directory · København K · est. 2009 · ~1 ppl · CVR 32265243"
+  - name: Dytbaat Games
+    country: DK
+    status: unresolved
+    careers_url: https://dytbaat.com/
+    notes: "Games Denmark directory · København N · est. 2020 · ~1 ppl · CVR 41177306"
+  - name: Enlit Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København S · est. 2022 · CVR 43087592 · email: enlitgames@gmail.com"
+  - name: Eventgames
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Viborg · est. 2017 · ~1 ppl · CVR 38778579"
+  - name: Fable Systems
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København Ø · est. 2024 · CVR 44933756 · email: tokebarter@gmail.com"
+  - name: Fair Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Aarhus C · est. 2022 · ~8 ppl · CVR 43302981"
+  - name: Fight Like A Girl Games
+    country: DK
+    status: unresolved
+    careers_url: https://fightlikeagirlgames.com/
+    notes: "Games Denmark directory · Dragør · est. 2022 · ~1 ppl · CVR 43218190"
+  - name: Firebird Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Horsens · est. 2022 · ~5 ppl · CVR 43726412"
+  - name: Flashbulb
+    country: DK
+    status: unresolved
+    careers_url: https://flashbulbgames.com/
+    notes: "Games Denmark directory · København V · est. 2016 · ~30 ppl · CVR 37650706"
+  - name: Flatponies
+    country: DK
+    provider: bamboohr
+    careers_url: https://flatponies.bamboohr.com
+    status: resolved
+    notes: "Games Denmark directory · København S · est. 2017 · ~16 ppl · CVR 38555049. Probe-confirmed bamboohr (0 jobs at probe time)."
+  - name: Floppy Club
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København Ø · est. 2020 · ~1 ppl · CVR 41390182"
+  - name: Flying Hippo Studio
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Roskilde · est. 2023 · CVR 44450372"
+  - name: Footstomp Studios
+    country: DK
+    status: unresolved
+    careers_url: https://footstomp.studio/
+    notes: "Games Denmark directory · Aarhus C · est. 2017 · CVR 38644904"
+  - name: Freaking Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Stege · est. 2018 · ~1 ppl · CVR 39739089 · email: fjordhoj@hotmail.com"
+  - name: Freeze Frame Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København S · est. 2024 · CVR 45194620"
+  - name: Funday Games
+    country: DK
+    provider: teamtailor
+    careers_url: https://fundaygames.teamtailor.com
+    status: resolved
+    notes: "Games Denmark directory · Aarhus C · est. 2011 · ~51 ppl · CVR 33595123. Probe-confirmed teamtailor (specific slug; 1 job at probe time)."
+  - name: Fuzzy House
+    country: DK
+    status: unresolved
+    careers_url: https://tripledesign.dk/
+    notes: "Games Denmark directory · København K · est. 2016 · ~3 ppl · CVR 37361666"
+  - name: Galdra Studios
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Brædstrup · est. 2017 · ~4 ppl · CVR 38798707"
+  - name: Game Explorers Club
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Helsingør · est. 2024 · CVR 44696878"
+  - name: Game Swing
+    country: DK
+    status: unresolved
+    careers_url: https://game-swing.com/
+    notes: "Games Denmark directory · Virum · est. 2015 · ~5 ppl · CVR 36697423"
+  - name: Gamerce
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København K · est. 2017 · ~1 ppl · CVR 38762796"
+  - name: Gamucatex
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København S · est. 2020 · CVR 41745126 · email: mesterandreas@hotmail.com"
+  - name: Gearhead Games
+    country: DK
+    status: unresolved
+    careers_url: https://gearheadgames.com/
+    notes: "Games Denmark directory · Solrød Strand · est. 2018 · ~1 ppl · CVR 39641526"
+  - name: Gears FOR Breakfast
+    country: DK
+    provider: bamboohr
+    careers_url: https://gearsforbreakfast.bamboohr.com
+    status: resolved
+    notes: "Games Denmark directory · Frederiksberg · est. 2013 · ~2 ppl · CVR 35466525. Probe-confirmed bamboohr (0 jobs at probe time)."
+  - name: Geezer Games
+    country: DK
+    status: unresolved
+    careers_url: https://geezergames.dk/
+    notes: "Games Denmark directory · Hjørring · est. 2017 · CVR 38417878"
+  - name: Geometric Interactive
+    country: DK
+    status: unresolved
+    careers_url: https://geometricinteractive.com/
+    notes: "Games Denmark directory · København N · est. 2016 · ~8 ppl · CVR 38300156"
+  - name: Getagame
+    country: DK
+    status: unresolved
+    careers_url: https://pandaballgame.com/
+    notes: "Games Denmark directory · Glostrup · est. 2018 · ~1 ppl · CVR 39326000"
+  - name: "Getin! Games"
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Valby · est. 2024 · ~1 ppl · CVR 44797194"
+  - name: Ghost Ship Games
+    country: DK
+    provider: teamtailor
+    careers_url: https://jobs.ghostship.dk
+    status: resolved
+    notes: "Games Denmark directory · København K · est. 2016 · ~56 ppl · CVR 37989819. Probe-confirmed teamtailor own-domain (1 job)."
+  - name: Ghost Ship Publishing
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København K · est. 2023 · CVR 44471248"
+  - name: Glowlight
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København K · est. 2019 · ~4 ppl · CVR 40816674 · email: jonasgcontact@gmail.com"
+  - name: Go Go Galago Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Grenaa · est. 2022 · CVR 43305433 · email: gogogalagogames@gmail.com"
+  - name: Guidelight Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København Ø · est. 2023 · ~2 ppl · CVR 43916505"
+  - name: Half Past Yellow
+    country: DK
+    status: unresolved
+    careers_url: https://halfpastyellow.com/
+    notes: "Games Denmark directory · København N · est. 2017 · ~6 ppl · CVR 39115638"
+  - name: Hovgaard Games
+    country: DK
+    status: unresolved
+    careers_url: https://hovgaardgames.com/
+    notes: "Games Denmark directory · Vanløse · est. 2017 · ~12 ppl · CVR 38582747"
+  - name: Hutlihut
+    country: DK
+    status: unresolved
+    careers_url: https://hutlihut.dk/
+    notes: "Games Denmark directory · København K · est. 2018 · ~6 ppl · CVR 39891980"
+  - name: Immerspiele
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København K · est. 2022 · CVR 43730169"
+  - name: Indoor Sunglasses
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København N · est. 2022 · ~2 ppl · CVR 43426397"
+  - name: Internauterne
+    country: DK
+    status: unresolved
+    careers_url: https://internauterne.dk/
+    notes: "Games Denmark directory · Aalborg · est. 2000 · CVR 25395816"
+  - name: Invisible Walls
+    country: DK
+    provider: teamtailor
+    careers_url: https://jobs.invisiblewalls.co
+    status: resolved
+    notes: "Games Denmark directory · København K · est. 2017 · ~16 ppl · CVR 38999524. Probe-confirmed teamtailor own-domain (0 jobs at probe time)."
+  - name: Italic
+    country: DK
+    status: unresolved
+    careers_url: https://italic.dk/
+    notes: "Games Denmark directory · København K · est. 2015 · ~2 ppl · CVR 36534818"
+  - name: Jacys Studios
+    country: DK
+    status: unresolved
+    careers_url: https://juhl-kamp.dk/
+    notes: "Games Denmark directory · Lystrup · est. 2021 · CVR 41892781"
+  - name: Kasperdev
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Hobro · est. 2022 · CVR 43578707 · email: kasperflysoerensen@gmail.com"
+  - name: Keyquest Studio
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Roskilde · est. 2023 · ~2 ppl · CVR 44467240"
+  - name: Kiloo
+    country: DK
+    status: unresolved
+    careers_url: https://kiloo.com/
+    notes: "Games Denmark directory · Aarhus C · est. 2002 · ~1 ppl · CVR 26429463"
+  - name: Kitsunebi Games
+    country: DK
+    status: unresolved
+    careers_url: https://foxgirls.gay/
+    notes: "Games Denmark directory · Søndersø · est. 2023 · CVR 44197375"
+  - name: Knapnok Games
+    country: DK
+    status: unresolved
+    careers_url: https://knapnokgames.com/
+    notes: "Games Denmark directory · Frederiksberg C · est. 2009 · ~2 ppl · CVR 32664784"
+  - name: Kong Orange
+    country: DK
+    status: unresolved
+    careers_url: https://kongorange.com/
+    notes: "Games Denmark directory · Aarhus C · est. 2017 · ~18 ppl · CVR 38386069"
+  - name: Kongo Interactive
+    country: DK
+    status: unresolved
+    careers_url: https://kongo.dk/
+    notes: "Games Denmark directory · København K · est. 2004 · ~1 ppl · CVR 27602304"
+  - name: Konveks Studio
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København NV · est. 2024 · CVR 44982374"
+  - name: Laumania
+    country: DK
+    status: unresolved
+    careers_url: https://laumania.net/
+    notes: "Games Denmark directory · Rødovre · est. 2010 · ~2 ppl · CVR 32837557"
+  - name: Learnia
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Valby · est. 2024 · CVR 44581752"
+  - name: Light Brick
+    country: DK
+    status: unresolved
+    careers_url: https://lightbrick.com/
+    notes: "Games Denmark directory · København Ø · est. 2020 · ~15 ppl · CVR 41792663"
+  - name: Lindberg Tech Art
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Kastrup · est. 2013 · CVR 34954690 · email: generomachina@gmail.com"
+  - name: Lovable Hat Cult
+    country: DK
+    provider: breezy
+    careers_url: https://lovable-hat-cult.breezy.hr
+    status: resolved
+    notes: "Games Denmark directory · København N · est. 2020 · CVR 41702923. Probe-confirmed breezy (0 jobs at probe time)."
+  - name: Lunch Money Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Aarhus C · est. 2023 · CVR 43968424"
+  - name: Mads & Friends Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Frederiksberg C · est. 2021 · CVR 42203491 · email: madsvadsholt@gmail.com"
+  - name: Magnumizer Game Studio
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Frederiksberg · est. 2023 · CVR 43893076 · email: magnumizer@gmail.com"
+  - name: Malvzach Games
+    country: DK
+    status: unresolved
+    careers_url: https://malzachgames.com/
+    notes: "Games Denmark directory · Højbjerg · est. 2019 · CVR 40495134"
+  - name: Megabyte Magician
+    country: DK
+    status: unresolved
+    careers_url: https://megabytemagician.com/
+    notes: "Games Denmark directory · Viby J · est. 2023 · CVR 44104776"
+  - name: Midnight Munchies
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København SV · est. 2023 · ~1 ppl · CVR 44044102 · email: midnightmunchiesstudios@gmail.com"
+  - name: Momio
+    country: DK
+    status: unresolved
+    careers_url: https://company.momio.me/
+    notes: "Games Denmark directory · København K · est. 2014 · ~3 ppl · CVR 35837787"
+  - name: MOOD
+    country: DK
+    provider: teamtailor
+    careers_url: https://jobs.moodvisuals.com
+    status: resolved
+    notes: "Games Denmark directory · København K · est. 2013 · ~44 ppl · CVR 35482679. Teamtailor own-domain (2 jobs, København). The breezy 'mood' slug was a namesake."
+  - name: Moviestarplanet
+    country: DK
+    provider: bamboohr
+    careers_url: https://moviestarplanet.bamboohr.com
+    status: resolved
+    notes: "Games Denmark directory · København S · est. 2008 · ~33 ppl · CVR 31269008. Probe-confirmed bamboohr (1 job); known DK kids-games company."
+  - name: Mp2 Games
+    country: DK
+    status: unresolved
+    careers_url: https://mp2.dk/
+    notes: "Games Denmark directory · København S · est. 2015 · ~2 ppl · CVR 36729090"
+  - name: Multiverse
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København S · est. 2010 · ~6 ppl · CVR 33384807"
+  - name: Mumukshu Software
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Valby · est. 2024 · CVR 44963744"
+  - name: Mygind Mathorne
+    country: DK
+    status: unresolved
+    careers_url: https://wicker.works/
+    notes: "Games Denmark directory · Aarhus C · est. 2020 · ~2 ppl · CVR 41661860"
+  - name: Next World Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Brabrand · est. 2023 · ~1 ppl · CVR 44011875"
+  - name: Niila
+    country: DK
+    status: unresolved
+    careers_url: https://niila.io/
+    notes: "Games Denmark directory · Frederiksberg · est. 2017 · ~1 ppl · CVR 38430343"
+  - name: Nordic Softworks
+    country: DK
+    status: unresolved
+    careers_url: https://nordicsoftworks.com/
+    notes: "Games Denmark directory · Viborg · est. 2022 · ~1 ppl · CVR 43208225"
+  - name: Nordisk Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Valby · est. 2020 · ~5 ppl · CVR 41484918"
+  - name: Northplay
+    country: DK
+    status: unresolved
+    careers_url: https://northplay.co/
+    notes: "Games Denmark directory · København S · est. 2016 · ~13 ppl · CVR 37649090"
+  - name: Octato
+    country: DK
+    status: unresolved
+    careers_url: https://octato.dk/
+    notes: "Games Denmark directory · København K · est. 2017 · ~1 ppl · CVR 39209624"
+  - name: Octocube Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Roskilde · est. 2021 · ~11 ppl · CVR 42514241 · email: brincks94@gmail.com"
+  - name: One Cut Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Viborg · est. 2023 · ~2 ppl · CVR 44205432"
+  - name: Other Tales Interactive
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København S · est. 2016 · ~3 ppl · CVR 38200909"
+  - name: Out Of Bounds Games
+    country: DK
+    status: unresolved
+    careers_url: https://outofboundsgames.com/
+    notes: "Games Denmark directory · Valby · est. 2020 · ~2 ppl · CVR 41610646"
+  - name: Paction Games
+    country: DK
+    status: unresolved
+    careers_url: https://pactiongames.com/
+    notes: "Games Denmark directory · Ringsted · est. 2020 · CVR 41830174"
+  - name: Petri
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København V · est. 2024 · CVR 44752115"
+  - name: Pixelsplosion Studios
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Aalborg · est. 2024 · ~2 ppl · CVR 44923793"
+  - name: Playwood Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Farum · est. 2014 · CVR 36411937"
+  - name: Polyspice
+    country: DK
+    status: unresolved
+    careers_url: https://polyspice.com/
+    notes: "Games Denmark directory · København Ø · est. 2016 · CVR 37355968"
+  - name: Portaplay
+    country: DK
+    status: unresolved
+    careers_url: https://portaplay.dk/
+    notes: "Games Denmark directory · København S · est. 2007 · ~1 ppl · CVR 30546768"
+  - name: Professional Villains
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Aarhus V · est. 2006 · CVR 29492239 · email: john.mediedramaturg@gmail.com"
+  - name: Rabalder Games
+    country: DK
+    status: unresolved
+    careers_url: https://rabaldergames.dk/
+    notes: "Games Denmark directory · Aalborg · est. 2024 · CVR 44706067"
+  - name: Raw Power Games
+    country: DK
+    provider: teamtailor
+    careers_url: https://careers.rawpowergames.com
+    status: resolved
+    notes: "Games Denmark directory · København K · est. 2020 · ~24 ppl · CVR 41456841. Probe-confirmed teamtailor own-domain (5 jobs)."
+  - name: Real Fast
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Værløse · est. 2018 · ~1 ppl · CVR 40094660. No valid own domain (realfast.dk is dead); ashby 'realfast' is a namesake."
+  - name: Recursion Games
+    country: DK
+    status: unresolved
+    careers_url: https://recursiongames.com/
+    notes: "Games Denmark directory · Roskilde · est. 2022 · CVR 43184938"
+  - name: Rhombico Games
+    country: DK
+    status: unresolved
+    careers_url: https://rhombicogames.com/
+    notes: "Games Denmark directory · Odense C · est. 2019 · ~1 ppl · CVR 40947191"
+  - name: Rooftop Panda
+    country: DK
+    status: unresolved
+    careers_url: https://rooftoppanda.com/
+    notes: "Games Denmark directory · Horsens · est. 2016 · CVR 37988618"
+  - name: Rovio Copenhagen
+    country: DK
+    status: unresolved
+    careers_url: https://wargaming,com/
+    notes: "Games Denmark directory · København K · est. 2017 · ~24 ppl · CVR 38831976"
+  - name: Rylander Game Studio
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Ringsted · est. 2023 · CVR 43901222 · email: mikkelrylanderpetersen@gmail.com"
+  - name: Savannah Entertainment
+    country: DK
+    status: unresolved
+    careers_url: https://savannah.dk/
+    notes: "Games Denmark directory · København K · est. 2008 · CVR 31622352"
+  - name: Semag Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Aalborg SØ · est. 2019 · CVR 40957987"
+  - name: Serious Games Interactive
+    country: DK
+    status: unresolved
+    careers_url: https://seriousgames.net/
+    notes: "Games Denmark directory · København Ø · est. 2006 · ~11 ppl · CVR 29529779"
+  - name: SET Snail
+    country: DK
+    status: unresolved
+    careers_url: https://setsnail.com/
+    notes: "Games Denmark directory · Aarhus C · est. 2012 · ~13 ppl · CVR 34695881"
+  - name: Silkroad Studios
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København SV · est. 2021 · ~4 ppl · CVR 42536148"
+  - name: Simplebit Studios
+    country: DK
+    status: unresolved
+    careers_url: https://simplebitstudios.com/
+    notes: "Games Denmark directory · Aalborg · est. 2020 · ~3 ppl · CVR 41519193"
+  - name: Sirenix
+    country: DK
+    status: unresolved
+    careers_url: https://manticoregames.net/
+    notes: "Games Denmark directory · København Ø · est. 2015 · ~5 ppl · CVR 37068594"
+  - name: Skidos Labs
+    country: DK
+    status: unresolved
+    careers_url: https://skidos.com/
+    notes: "Games Denmark directory · København N · est. 2015 · ~2 ppl · CVR 37212962"
+  - name: Slipgate Ironworks
+    country: DK
+    status: unresolved
+    careers_url: https://slipgate-studios.com/
+    notes: "Games Denmark directory · Aalborg SV · est. 2017 · ~31 ppl · CVR 38541161"
+  - name: "Spræld"
+    country: DK
+    status: unresolved
+    careers_url: https://monstermatematik.dk/
+    notes: "Games Denmark directory · Kongens Lyngby · est. 2017 · CVR 39003457"
+  - name: Starsight Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Lille Skensved · est. 2024 · CVR 44902699"
+  - name: Sublab Games
+    country: DK
+    status: unresolved
+    careers_url: https://sublabgames.com/
+    notes: "Games Denmark directory · Aarhus C · est. 2019 · ~3 ppl · CVR 40352740"
+  - name: Swinehold Games
+    country: DK
+    status: unresolved
+    careers_url: https://swineholdgames.com/
+    notes: "Games Denmark directory · Vejle · est. 2024 · CVR 44534010"
+  - name: Teacup Games
+    country: DK
+    status: unresolved
+    careers_url: https://teacupgames.com/
+    notes: "Games Denmark directory · København S · est. 2023 · ~3 ppl · CVR 44124475"
+  - name: Team Lone Survivor
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København N · est. 2022 · CVR 43460919"
+  - name: Team Wood Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København Ø · est. 2021 · ~2 ppl · CVR 42805157 · email: arkuniweb@gmail.com"
+  - name: Tencell Studios
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Virum · est. 2025 · CVR 45715981"
+  - name: The Outer Zone
+    country: DK
+    status: unresolved
+    careers_url: https://theouterzone.net/
+    notes: "Games Denmark directory · København NV · est. 2020 · ~3 ppl · CVR 41409282"
+  - name: Think Glorious
+    country: DK
+    status: unresolved
+    careers_url: https://thinktoscore.om/
+    notes: "Games Denmark directory · Hellerup · est. 2014 · CVR 35679537"
+  - name: Those Eyes
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København Ø · est. 2019 · ~6 ppl · CVR 40779485 · email: trine.laier@gmail.com"
+  - name: Throughline Games
+    country: DK
+    provider: breezy
+    careers_url: https://throughline.breezy.hr
+    status: resolved
+    notes: "Games Denmark directory · København SV · est. 2014 · ~1 ppl · CVR 36541091. Probe-confirmed breezy (0 jobs at probe time)."
+  - name: Trans Digital Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Charlottenlund · est. 2023 · CVR 44255685"
+  - name: Triheart
+    country: DK
+    status: unresolved
+    careers_url: https://triheart.dk/
+    notes: "Games Denmark directory · Borup · est. 2017 · ~1 ppl · CVR 39124653"
+  - name: Trinor Entertainment
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Rødovre · est. 2022 · ~4 ppl · CVR 43664360"
+  - name: Trophy Games Development
+    country: DK
+    status: unresolved
+    careers_url: https://trophy-games.com/
+    notes: "Games Denmark directory · København K · est. 2006 · ~31 ppl · CVR 29240299"
+  - name: Ugly Duckling Games
+    country: DK
+    status: unresolved
+    careers_url: https://uglyducklinggames.com/
+    notes: "Games Denmark directory · Galten · est. 2021 · ~1 ppl · CVR 42566276"
+  - name: Unbound
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Horsens · est. 2005 · ~1 ppl · CVR 28688504"
+  - name: "Vølven Studio"
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Viborg · est. 2025 · CVR 45777987"
+  - name: Waveborn Media
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Frederiksberg C · est. 2024 · CVR 45288714"
+  - name: Wombo Games
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · København Ø · est. 2023 · ~18 ppl · CVR 44145626"
+  - name: Woodhound
+    country: DK
+    status: unresolved
+    notes: "Games Denmark directory · Kongens Lyngby · est. 2020 · CVR 41257032"
+  - name: Zaxis
+    country: DK
+    status: unresolved
+    careers_url: https://zaxis.dk/
+    notes: "Games Denmark directory · Holte · est. 1999 · ~1 ppl · CVR 21730246"
+  - name: Zillo Games
+    country: DK
+    status: unresolved
+    careers_url: https://zillo-systems.com/
+    notes: "Games Denmark directory · Helsingør · est. 2013 · CVR 35309837"
