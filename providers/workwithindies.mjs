@@ -1,7 +1,7 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
-import { toIsoDate, stripHtml, attachDetail } from './_util.mjs';
+import { toIsoDate, stripHtml, attachDetail, normalizeWorkMode } from './_util.mjs';
 
 // Work With Indies provider — an AGGREGATOR board (like Hitmarker), not a single
 // company. One tracked_companies entry yields jobs across many indie studios.
@@ -30,6 +30,18 @@ import { toIsoDate, stripHtml, attachDetail } from './_util.mjs';
 // already fetches every job page, so reading the button costs no extra request.
 // Email-only postings (and any non-http target) yield no applyUrl and dedup the
 // old way — fail-safe. See extractApplyUrl.
+//
+// WORK MODE. The feed title only says "to work remotely" for postings with NO
+// place at all; a job that is both located AND remote ("to work from Canada")
+// arrives place-only and looks on-site to the ranker, which then applies region
+// excludes a remote posting is meant to escape. The job page carries the real
+// arrangement in its own tag chip, right next to the location chip:
+//
+//   <div class="tags location">Canada</div><div class="tags remote">Remote</div>
+//
+// The closed-check already fetches that page, so we read the chip there and let
+// it fill in / correct the work mode. Location and remoteness are independent on
+// WWI, not mutually exclusive. See extractWorkMode.
 
 const FEED_URL = 'https://www.workwithindies.com/careers/rss.xml';
 
@@ -133,6 +145,21 @@ export function extractJobBody(html) {
   return stripHtml(html.slice(open, end));
 }
 
+// Read the work arrangement from a WWI job page. Every posting renders a row of
+// `<div class="tags {kind}">{value}</div>` chips — job-type, location, remote,
+// salary — where the `remote` chip's VALUE is the arrangement ("Remote",
+// "Hybrid", "On-site"). The class name is only the chip's category, so it says
+// nothing on its own; the text inside it does. Normalized through the shared
+// vocabulary ('remote' | 'hybrid' | 'onsite' | 'anywhere'). Exported for unit
+// tests. Returns '' when the chip is missing or unrecognised — fail-safe: the
+// caller then keeps whatever the feed title gave us.
+export function extractWorkMode(html) {
+  if (typeof html !== 'string' || !html) return '';
+  const m = html.match(/<div\b[^>]*\bclass=["'][^"']*\btags\s+remote\b[^"']*["'][^>]*>([^<]*)</i);
+  if (!m) return '';
+  return normalizeWorkMode(decodeEntities(m[1]).trim());
+}
+
 // Pull the direct apply destination from a WWI job page. The "Apply for this Job"
 // call-to-action is one or more anchors carrying `id="apply-top"`/`"apply-bottom"`
 // or the `apply-button` class; their href is the real destination (an ATS URL, a
@@ -217,6 +244,11 @@ export default {
         // body so the sponsorship enricher sees the requirements section.
         const applyUrl = extractApplyUrl(html);
         if (applyUrl) job.applyUrl = applyUrl;
+        // The page's remote chip beats the feed title: the title only marks
+        // placeless postings remote, so a located-AND-remote job arrives here
+        // with no workMode at all. Only overwrite on a value we could read.
+        const workMode = extractWorkMode(html);
+        if (workMode) job.workMode = workMode;
         const body = extractJobBody(html);
         return body ? attachDetail(job, { text: body }) : job;
       } catch {

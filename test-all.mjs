@@ -4407,7 +4407,7 @@ try {
   const { detectSponsorship } = await import(pathToFileURL(join(ROOT, 'providers/enrichers/sponsorship.mjs')).href);
   const { DETAIL } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
   const { parseHitmarkerResponse } = await import(pathToFileURL(join(ROOT, 'providers/hitmarker.mjs')).href);
-  const { parseWorkWithIndiesFeed, extractJobBody, extractApplyUrl: wwiApplyUrl } = await import(pathToFileURL(join(ROOT, 'providers/workwithindies.mjs')).href);
+  const { parseWorkWithIndiesFeed, extractJobBody, extractApplyUrl: wwiApplyUrl, extractWorkMode: wwiWorkMode } = await import(pathToFileURL(join(ROOT, 'providers/workwithindies.mjs')).href);
 
   const NONE_LINE = 'You must have the right to work in the UK. We are unable to provide or take over visa sponsorship.';
   const readable = (j) => !!(j && j[DETAIL] && detectSponsorship(j[DETAIL].text) === 'none');
@@ -4465,6 +4465,23 @@ try {
     pass('work-with-indies extractApplyUrl: surfaces http(s) apply destination (entity-decoded), drops mailto/self/absent');
   } else {
     fail(`wwi applyUrl: http=${wwiHttp} indeed=${wwiIndeed} mailto="${wwiMailto}" self="${wwiSelf}" none="${wwiNone}"`);
+  }
+
+  // WWI extractWorkMode: the page's remote chip carries the arrangement, and it
+  // is INDEPENDENT of the location chip — a located job can still be remote, and
+  // the feed title only marks the placeless ones. Without this a "work from
+  // Canada" remote posting looks on-site and dies on a region exclude.
+  const chips = (mode) => `<div class="tags job-type">Part Time</div><div class="tags location">Canada</div><div class="tags remote">${mode}</div><div class="tags salary">$20 / hr</div>`;
+  const wmRemote = wwiWorkMode(chips('Remote'));
+  const wmHybrid = wwiWorkMode(chips('Hybrid'));
+  const wmOnsite = wwiWorkMode(chips('On-site'));
+  const wmJunk = wwiWorkMode(chips('Whenever'));
+  const wmAbsent = wwiWorkMode('<div class="tags location">Berlin, DE</div>');
+  if (wmRemote === 'remote' && wmHybrid === 'hybrid' && wmOnsite === 'onsite'
+    && wmJunk === '' && wmAbsent === '' && wwiWorkMode('') === '') {
+    pass('work-with-indies extractWorkMode: reads the remote chip beside a location chip, normalizes, blanks on junk/absent');
+  } else {
+    fail(`wwi workMode: remote=${wmRemote} hybrid=${wmHybrid} onsite=${wmOnsite} junk="${wmJunk}" absent="${wmAbsent}"`);
   }
 } catch (e) {
   fail(`aggregator inline-detail tests crashed: ${e.message}`);
