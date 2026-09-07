@@ -360,6 +360,41 @@ function nGames(c) {
   return ((c.developed && c.developed.length) || 0) + ((c.published && c.published.length) || 0);
 }
 
+// IGDB's widen query (`name ~ *"HP"*`) is a raw substring match, so it happily
+// returns companies where the searched name lands in the MIDDLE of a word: "HP"
+// came back matching Sout(hP)eak Interactive, which then won on catalogue size
+// plus a US country hint and hung a 90s publisher's badge on HP's postings.
+// A name that starts mid-word is a coincidence of letters, not a name; and a
+// two- or three-letter name is too ambiguous to accept on containment at all.
+const CONTAINS_MIN = 4; // shorter than this needs a real name tie, not a substring
+const isAlnum = (ch) => (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9');
+// Does `needle` start at a word boundary inside `hay`? Both are lowercased keys
+// already, so "frontier" hits "frontier developments" while "hp" misses
+// "southpeak interactive".
+function startsAtWord(hay, needle) {
+  if (!hay || !needle) return false;
+  for (let i = hay.indexOf(needle); i !== -1; i = hay.indexOf(needle, i + 1)) {
+    if (i === 0 || !isAlnum(hay[i - 1])) return true;
+  }
+  return false;
+}
+// Is this candidate plausibly the same studio as the name we searched for —
+// either an outright name tie, or whole-word containment in either direction
+// (boards truncate names, and they also append words IGDB doesn't carry)?
+function isRelated(candidateName, want, core) {
+  const cn = keyOf(candidateName);
+  if (cn === want) return true;
+  const ck = coreName(candidateName);
+  if (core && ck === core) return true;
+  return [[cn, want], [want, cn], [ck, core], [core, ck]]
+    .some(([hay, needle]) => needle && needle.length >= CONTAINS_MIN && startsAtWord(hay, needle));
+}
+// Same question asked with just the two names — used by the cache audit in
+// audit-studio-cache.mjs to find badges an older, looser matcher let through.
+export function nameLooksRelated(candidateName, boardName) {
+  return isRelated(candidateName, keyOf(boardName), coreName(boardName));
+}
+
 // Score one IGDB candidate against the name we searched for plus the country
 // hint derived from the studio's job postings. The point is to beat "first
 // result wins": a namesake in the right country with a real game catalogue
@@ -405,8 +440,13 @@ function bestMatch(results, name, hint, slugKey) {
     if (bySlug.length) return bySlug[0].c;
   }
 
+  // Drop the substring coincidences before scoring, so a mid-word hit with a big
+  // catalogue can't outrank (or crowd out) a genuinely related candidate.
+  const plausible = results.filter((c) => c && c.name && isRelated(c.name, want, core));
+  if (!plausible.length) return null;
+
   let best = null, bestScore = -Infinity;
-  for (const c of results) {
+  for (const c of plausible) {
     const sc = scoreCandidate(c, want, core, hint);
     if (sc > bestScore) { bestScore = sc; best = c; }
   }
