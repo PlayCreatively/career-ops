@@ -4548,6 +4548,147 @@ try {
   fail(`enterprise ATS fetchDetail tests crashed: ${e.message}`);
 }
 
+console.log('\n37. Provider — ninehire (Korean ATS, keyless homepage API)');
+
+try {
+  const { default: ninehire, resolveNinehire, mapNinehireRecruitments } =
+    await import(pathToFileURL(join(ROOT, 'providers/ninehire.mjs')).href);
+
+  // Tenant comes only from https://<site>.ninehire.site; look-alikes, other
+  // hosts and plain http are refused (the API host is pinned).
+  const t = resolveNinehire({ careers_url: 'https://madngine.ninehire.site/job_posting/abc' });
+  if (t && t.site === 'madngine' && t.origin === 'https://madngine.ninehire.site'
+      && resolveNinehire({ careers_url: 'https://madngine.ninehire.site.evil.com' }) === null
+      && resolveNinehire({ careers_url: 'http://madngine.ninehire.site' }) === null
+      && resolveNinehire({ careers_url: 'https://recruit.madngine.com' }) === null) {
+    pass('resolveNinehire takes the site slug from *.ninehire.site and rejects look-alikes/http/custom domains');
+  } else {
+    fail(`resolveNinehire = ${JSON.stringify(t)}`);
+  }
+
+  const rows = mapNinehireRecruitments([
+    { addressKey: 'K1', externalTitle: '[NX] 리거 모집', status: 'in_progress', isPrivate: false, createdAt: '2026-09-18T01:27:18.000Z',
+      jobGroup: { title: '아트' }, jobLocations: [{ addressName: '대한민국 경기도 성남시 분당구' }] },
+    { addressKey: 'K2', externalTitle: '[인재풀] 상시 인재풀', status: 'in_progress', isPrivate: false },
+    { addressKey: 'K3', externalTitle: 'Private role', status: 'in_progress', isPrivate: true },
+    { addressKey: 'K4', externalTitle: 'Closed role', status: 'finished', isPrivate: false },
+    { addressKey: 'K1', externalTitle: 'Duplicate', status: 'in_progress', isPrivate: false },
+  ], 'MadNgine', 'https://madngine.ninehire.site');
+  const r0 = rows[0];
+  if (rows.length === 1 && r0.url === 'https://madngine.ninehire.site/job_posting/K1'
+      && r0.location === '대한민국 경기도 성남시 분당구, South Korea' && r0.department === '아트'
+      && r0.postedDate && mapNinehireRecruitments(null, 'X', 'https://x.ninehire.site').length === 0) {
+    pass('mapNinehireRecruitments keeps open public postings, drops talent pool/private/closed/dupes, appends South Korea');
+  } else {
+    fail(`mapNinehireRecruitments = ${JSON.stringify(rows)}`);
+  }
+
+  // fetch(): info → companyId → recruitments, every request on api.ninehire.com.
+  const seen = [];
+  const jobs = await ninehire.fetch({ name: 'MadNgine', careers_url: 'https://madngine.ninehire.site' }, {
+    transport: 'http',
+    fetchJson: async (u) => {
+      seen.push(u);
+      if (!u.startsWith('https://api.ninehire.com/')) throw new Error(`off-host fetch: ${u}`);
+      if (u.includes('/information?')) return { companyId: 'cid-1' };
+      return { count: 1, results: [{ addressKey: 'A', externalTitle: 'TA', status: 'in_progress', isPrivate: false }] };
+    },
+  });
+  if (jobs.length === 1 && seen.length === 2 && seen[0].includes('siteUrl=madngine') && seen[1].includes('companyId=cid-1')) {
+    pass('ninehire.fetch resolves companyId from the site slug, then lists recruitments (API host pinned)');
+  } else {
+    fail(`ninehire.fetch jobs=${jobs.length} requests=${JSON.stringify(seen)}`);
+  }
+} catch (e) {
+  fail(`ninehire provider tests crashed: ${e.message}`);
+}
+
+console.log('\n38. Provider — manatal (careers-page.com keyless jobs API)');
+
+try {
+  const { default: manatal, resolveManatalSlug, mapManatalJobs } =
+    await import(pathToFileURL(join(ROOT, 'providers/manatal.mjs')).href);
+  const { DETAIL } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
+
+  if (resolveManatalSlug({ careers_url: 'https://www.careers-page.com/tinybuild' }) === 'tinybuild'
+      && resolveManatalSlug({ careers_url: 'https://www.careers-page.com/tinybuild/job/4R4933X7' }) === 'tinybuild'
+      && resolveManatalSlug({ careers_url: 'https://careers-page.com.evil.com/tinybuild' }) === null
+      && resolveManatalSlug({ careers_url: 'https://www.careers-page.com/api/v1.0/c/x/jobs/' }) === null) {
+    pass('resolveManatalSlug reads the slug off careers-page.com and rejects look-alike hosts / the api path');
+  } else {
+    fail('resolveManatalSlug mis-resolved a careers_url');
+  }
+
+  const rows = mapManatalJobs([
+    { hash: '4R4933X7', position_name: 'Associate Producer', location_display: 'Belgrade, Serbia',
+      organization_name: 'Publishing Team', description: '<p>Ship games.</p>' },
+    { hash: 'R2', position_name: 'Remote QA', location_display: 'Remote' },
+    { hash: '', position_name: 'No hash' },
+    { hash: '4R4933X7', position_name: 'Duplicate' },
+  ], 'tinyBuild', 'tinybuild');
+  const r0 = rows[0];
+  if (rows.length === 2 && r0.url === 'https://www.careers-page.com/tinybuild/job/4R4933X7'
+      && r0.location === 'Belgrade, Serbia' && r0.department === 'Publishing Team'
+      && r0[DETAIL]?.text === 'Ship games.' && !JSON.stringify(r0).includes('Ship games')
+      && rows[1].workMode === 'remote' && rows[1].location === '') {
+    pass('mapManatalJobs builds job URLs, splits work mode, attaches the description as hidden inline detail, dedups');
+  } else {
+    fail(`mapManatalJobs = ${JSON.stringify(rows)}`);
+  }
+
+  // fetch(): follows `next` page by page on the pinned host.
+  const seen = [];
+  const jobs = await manatal.fetch({ name: 'tinyBuild', careers_url: 'https://www.careers-page.com/tinybuild' }, {
+    transport: 'http',
+    fetchJson: async (u) => {
+      seen.push(u);
+      if (!u.startsWith('https://www.careers-page.com/api/v1.0/c/tinybuild/jobs/')) throw new Error(`off-host fetch: ${u}`);
+      return u.includes('page=1&')
+        ? { next: 'x', results: [{ hash: 'A', position_name: 'One' }] }
+        : { next: null, results: [{ hash: 'B', position_name: 'Two' }] };
+    },
+  });
+  if (jobs.length === 2 && seen.length === 2) pass('manatal.fetch paginates until next is null');
+  else fail(`manatal.fetch jobs=${jobs.length} requests=${seen.length}`);
+} catch (e) {
+  fail(`manatal provider tests crashed: ${e.message}`);
+}
+
+console.log('\n39. Custom recipe work_mode + middle-dot location cleanup');
+
+try {
+  const { parseJsonRecipe, parseHtmlRecipe } = await import(pathToFileURL(join(ROOT, 'providers/custom.mjs')).href);
+  const { splitLocationMode } = await import(pathToFileURL(join(ROOT, 'providers/_util.mjs')).href);
+
+  const js = parseJsonRecipe(
+    { jobs: [{ title: 'Backend Engineer', shortcode: 'AB12', location: { location_str: 'United Kingdom', workplace_type: 'remote' } },
+             { title: 'No mode', shortcode: 'CD34', location: { location_str: 'London' } }] },
+    { list_path: 'jobs', fields: { title: 'title', location: 'location.location_str', work_mode: 'location.workplace_type' },
+      url_template: 'https://spiderware.gg/careers/{shortcode}' },
+    { name: 'Spiderware' });
+  const html = parseHtmlRecipe(
+    '<a class="job-card" href="/jobs/a"><div class="title">Gameplay Programmer</div><div class="meta">München, Germany</div><span class="mode">Hybrid</span></a>',
+    { list_selector: 'a.job-card', fields: { title: '.title', url: '@href', location: '.meta', work_mode: '.mode' } },
+    { name: 'Welevel', careers_url: 'https://career.welevel.com/' });
+  if (js[0].workMode === 'remote' && js[0].url === 'https://spiderware.gg/careers/AB12' && !('workMode' in js[1])
+      && html[0].workMode === 'hybrid' && html[0].url === 'https://career.welevel.com/jobs/a') {
+    pass('custom json/html recipes map an optional work_mode field; omitted when absent');
+  } else {
+    fail(`custom work_mode: json=${JSON.stringify(js)} html=${JSON.stringify(html)}`);
+  }
+
+  const a = splitLocationMode('München, Germany · Full-time · Onsite');
+  const b = splitLocationMode('Berlin · Hybrid');
+  if (a.location === 'München, Germany · Full-time' && a.workMode === 'onsite'
+      && b.location === 'Berlin' && b.workMode === 'hybrid') {
+    pass('splitLocationMode trims a dangling "·" left after stripping the mode token, keeps inner dots');
+  } else {
+    fail(`splitLocationMode middle-dot: ${JSON.stringify([a, b])}`);
+  }
+} catch (e) {
+  fail(`custom work_mode tests crashed: ${e.message}`);
+}
+
 // ── SUMMARY ─────────────────────────────────────────────────────
 
 console.log('\n' + '='.repeat(50));

@@ -905,8 +905,8 @@ tracked_companies:
     notes: "Istanbul. Mobile puzzle (ex-Peak / Dream Games founders)."
     enabled: true
   - name: Medal.tv
-    careers_url: https://jobs.ashbyhq.com/medal
-    notes: "NYC + remote. Games clip-capture platform."
+    careers_url: https://jobs.ashbyhq.com/generalintuition-medal
+    notes: "NYC + remote. Games clip-capture platform. Ashby slug moved medal → generalintuition-medal (medal.tv/careers redirects there; 17 jobs, 2026-10-01)."
     enabled: true
   - name: HYPERHUG
     careers_url: https://jobs.ashbyhq.com/hyperhug
@@ -1267,11 +1267,11 @@ tracked_companies:
     notes: "Mobile/casual maker (ex-GameBerry; Eclipse SLG, GameBerry Studio). Pangyo/Seoul. Feed mixes in MartiniAI martech roles — title filter handles relevance. ~30 openings (2026-06-26)."
     enabled: true
   - name: MadNgine
-    provider: greetinghr
-    careers_url: https://madngine.career.greetinghr.com
+    provider: ninehire
+    careers_url: https://madngine.ninehire.site
     status: resolved
-    last_probe: 2026-06-26
-    notes: "Night Crow studio (WeMade group), Pangyo. NX/Mono/Frontier studios. ~25 openings (2026-06-26)."
+    last_probe: 2026-10-01
+    notes: "Night Crow studio (WeMade group), Pangyo. NX/Mono/Frontier studios. Moved Greeting → Ninehire mid-2026; public board is recruit.madngine.com (custom domain on madngine.ninehire.site). 20 openings (2026-10-01)."
     enabled: true
   - name: BigFire Games
     provider: greetinghr
@@ -1414,9 +1414,9 @@ tracked_companies:
     notes: "Stockholm. AAA studio founded by Avalanche/MachineGames vets."
     enabled: true
   - name: Kavalri Games
-    provider: teamtailor
-    careers_url: https://kavalrigames.teamtailor.com
-    notes: "Swedish indie studio."
+    provider: jobylon
+    careers_url: https://emp.jobylon.com/companies/1402-kavalri-games/
+    notes: "Swedish indie studio. Moved Teamtailor → Jobylon (company 1402); board empty 2026-10-01."
     enabled: true
   - name: MindArk
     provider: teamtailor
@@ -7163,10 +7163,10 @@ tracked_companies:
     notes: "DGA directory · Haastrecht · ~1"
   - name: tinyBuild
     country: NL
-    provider: breezy
-    careers_url: https://tinybuild.breezy.hr
+    provider: manatal
+    careers_url: https://www.careers-page.com/tinybuild
     status: resolved
-    notes: "DGA directory · Hilversum · ~100+ · breezy board live (empty at wire time 2026-07-15, repopulates when they post). Distinctive slug, confirmed theirs."
+    notes: "DGA directory · Hilversum · ~100+ · Breezy portal deleted mid-2026; moved to Manatal (tinybuild.com/jobs iframes careers-page.com/tinybuild). 3 jobs, 2026-10-01."
   - name: ToastieGames Studio
     country: NL
     status: unresolved
@@ -7780,10 +7780,16 @@ tracked_companies:
     status: resolved
     notes: "ASGC-mined; breezy-confirmed live (6 jobs, 2026-06-21). Auto-added (high-confidence)."
   - name: Welevel
-    provider: personio
-    careers_url: https://welevel.jobs.personio.com
+    careers_url: https://career.welevel.com/
+    recipe:
+      kind: html
+      list_selector: "a.job-card"
+      fields:
+        title: ".title"
+        url: "@href"
+        location: ".meta"
     status: resolved
-    notes: "ASGC-mined; personio-confirmed live (24 jobs, 2026-06-21). Auto-added (high-confidence)."
+    notes: "ASGC-mined. Personio tenant deleted mid-2026 (subdomain redirects to personio.com); now a self-hosted Next.js board, server-rendered a.job-card list. 28 jobs, 2026-10-01."
   - name: Playdead
     provider: breezy
     careers_url: https://playdead.breezy.hr
@@ -8188,11 +8194,19 @@ tracked_companies:
     careers_url: https://jobs.lever.co/skyboxlabs
     status: resolved
     notes: "rehm-mined; lever-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
-  - name: Soulbound
-    provider: workable
-    careers_url: https://apply.workable.com/soulbound
+  - name: Spiderware
+    careers_url: https://spiderware.gg/careers
+    recipe:
+      kind: json
+      endpoint: https://spiderware.gg/api/jobs
+      list_path: jobs
+      fields:
+        title: title
+        location: location.location_str
+        work_mode: location.workplace_type
+      url_template: https://spiderware.gg/careers/{shortcode}
     status: resolved
-    notes: "rehm-mined; workable-confirmed live (4 jobs, 2026-06-25). Auto-added (high-confidence)."
+    notes: "Soulbound: Online dev (London, fully remote). Was Workable slug `soulbound` (deleted mid-2026). spiderware.gg/api/jobs proxies their Workable account (`spiderware`, which publishes 0 jobs publicly). CAVEAT 2026-10-01: each posting's Apply button points at spiderware.workable.com and lands on Workable not_found, so applying may need contacting them directly."
   - name: Meta4
     provider: smartrecruiters
     careers_url: https://careers.smartrecruiters.com/meta4
@@ -9522,10 +9536,10 @@ tracked_companies:
     notes: "Games Denmark directory · Kastrup · est. 2013 · CVR 34954690 · email: generomachina@gmail.com"
   - name: Lovable Hat Cult
     country: DK
-    provider: breezy
-    careers_url: https://lovable-hat-cult.breezy.hr
-    status: resolved
-    notes: "Games Denmark directory · København N · est. 2020 · CVR 41702923. Probe-confirmed breezy (0 jobs at probe time)."
+    careers_url: https://lovablehatcult.dk/
+    recipe: { kind: blocked, reason: "Breezy portal deleted mid-2026; site (behind a 454 browser check) is a one-pager, no jobs link, contact info@lovablehatcult.dk" }
+    last_probe: 2026-10-01
+    notes: "Games Denmark directory · København N · est. 2020 · CVR 41702923."
   - name: Lunch Money Games
     country: DK
     status: unresolved

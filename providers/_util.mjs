@@ -227,8 +227,8 @@ export function splitLocationMode(rawLocation) {
     .replace(/\s+([,;])/g, '$1')                       // space before , or ;
     .replace(/([,;])\s*(?=[,;]|$)/g, ' ')              // doubled / trailing , ;
     .replace(/\s{2,}/g, ' ')
-    .replace(/^[\s,;/|–—-]+/, '')                      // leading junk
-    .replace(/[\s,;/|–—-]+$/, '')                      // trailing junk
+    .replace(/^[\s,;/|·•–—-]+/, '')                    // leading junk (incl. "·" meta-line dots)
+    .replace(/[\s,;/|·•–—-]+$/, '')                    // trailing junk
     .trim();
   // If the whole remainder is a single parenthetical region, unwrap it.
   const wrapped = loc.match(/^\((.+)\)$/);

@@ -1,6 +1,8 @@
 // @ts-check
 /** @typedef {import('./_types.js').Provider} Provider */
 
+import { normalizeWorkMode } from './_util.mjs';
+
 // Custom provider — the Tier-2 catch-all for homemade careers pages that no
 // shared ATS provider covers. It executes a DECLARATIVE `recipe:` captured (once)
 // during a manual/browser pass, so every later scan replays it for zero tokens.
@@ -40,6 +42,7 @@
 //         url: applyUrl                                  # or omit + use url_template
 //         location: office.city
 //         company: studio.name                           # optional (falls back to name)
+//         work_mode: workplace_type                      # optional: remote|hybrid|onsite|anywhere
 //       url_template: https://somestudio.com/jobs/{id}   # optional, {field} from item
 //       url_base: https://somestudio.com                 # optional, resolves relative urls
 //
@@ -52,6 +55,7 @@
 //         title: "h3"                              # text of first match
 //         url: "a@href"                            # attribute of first match
 //         location: ".loc"
+//         work_mode: ".badge"                      # optional, same values as json
 //       url_base: https://anotherstudio.com
 
 const SCANNABLE_KINDS = new Set(['json', 'html']);
@@ -111,7 +115,12 @@ export function parseJsonRecipe(payload, recipe, entry) {
     url = normalizeJobUrl(url, recipe.url_base || entry.careers_url);
     if (!title || !url) continue;
     const company = (f.company ? String(getPath(item, f.company) ?? '').trim() : '') || entry.name || '';
-    out.push({ title, url, company, location: normalizeLocation(f.location ? getPath(item, f.location) : '') });
+    const workMode = f.work_mode ? normalizeWorkMode(getPath(item, f.work_mode)) : '';
+    out.push({
+      title, url, company,
+      location: normalizeLocation(f.location ? getPath(item, f.location) : ''),
+      ...(workMode ? { workMode } : {}),
+    });
   }
   return out;
 }
@@ -229,11 +238,13 @@ export function parseHtmlRecipe(html, recipe, entry) {
     const title = extractField(block.html, f.title);
     const url = normalizeJobUrl(extractField(block.html, f.url), base);
     if (!title || !url) continue;
+    const workMode = f.work_mode ? normalizeWorkMode(extractField(block.html, f.work_mode)) : '';
     out.push({
       title,
       url,
       company: (f.company ? extractField(block.html, f.company) : '') || entry.name || '',
       location: f.location ? extractField(block.html, f.location) : '',
+      ...(workMode ? { workMode } : {}),
     });
   }
   return out;
